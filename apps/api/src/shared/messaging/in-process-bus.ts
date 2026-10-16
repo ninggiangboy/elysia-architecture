@@ -1,6 +1,7 @@
 import type { IntegrationEventHandler, MessagePublisher } from '#/shared/application/ports'
 import type { Logger } from '#/shared/infrastructure/logger'
 import type { Envelope } from './envelope'
+import { RetryLaterError } from './errors'
 
 /**
  * Default transport: calls handlers directly in-process. Each handler's errors are isolated:
@@ -25,6 +26,8 @@ export class InProcessMessageBus implements MessagePublisher {
     results.forEach((result, i) => {
       if (result.status === 'rejected') {
         errors.push(result.reason)
+        // A deferral (rate limit) is expected; the relay logs it at info, so don't raise an error here.
+        if (result.reason instanceof RetryLaterError) return
         this.logger.error(
           {
             err: result.reason,
