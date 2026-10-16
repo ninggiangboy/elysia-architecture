@@ -1,0 +1,107 @@
+name: elysia-architecture
+
+x-api-env: &api-env
+  PORT: 3000
+  APP_ROLES: api,relay
+  DATABASE_URL: postgres://app:app@postgres:5432/app
+  WEB_APP_URL: http://localhost:8080
+  CORS_ORIGINS: http://localhost:8080
+  JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:-}
+  JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:-}
+  JWT_KID: ${JWT_KID:-dev-1}
+  S3_ENDPOINT: http://seaweedfs:8333
+  S3_PUBLIC_ENDPOINT: http://localhost:8333
+  S3_BUCKET: avatars
+  S3_ACCESS_KEY_ID: app-access-key
+  S3_SECRET_ACCESS_KEY: app-secret-key
+  SMTP_HOST: mailpit
+  SMTP_PORT: 1025
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports: ["${POSTGRES_PORT:-5433}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    environment:
+      # Không reverse-DNS client của kết nối SMTP (mặc định chậm ~12s trên Docker Desktop/OrbStack).
+      MP_SMTP_DISABLE_RDNS: "true"
+    ports: ["1025:1025", "8025:8025"]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json -s3.port=8333 -ip.bind=0.0.0.0
+    ports: ["8333:8333"]
+    volumes:
+      - seaweed:/data
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9333/cluster/status || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # Tạo bucket + CORS cho presigned PUT từ trình duyệt. Chạy một lần rồi thoát.
+  seaweedfs-init:
+    image: amazon/aws-cli:latest
+    profiles: ["init"]
+    depends_on:
+      seaweedfs: { condition: service_healthy }
+    environment:
+      AWS_ACCESS_KEY_ID: app-access-key
+      AWS_SECRET_ACCESS_KEY: app-secret-key
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        aws --endpoint-url http://seaweedfs:8333 s3api head-bucket --bucket avatars 2>/dev/null \
+          || aws --endpoint-url http://seaweedfs:8333 s3api create-bucket --bucket avatars
+        aws --endpoint-url http://seaweedfs:8333 s3api put-bucket-cors --bucket avatars --cors-configuration \
+          '{"CORSRules":[{"AllowedOrigins":["*"],"AllowedMethods":["GET","PUT","HEAD"],"AllowedHeaders":["*"],"ExposeHeaders":["ETag"],"MaxAgeSeconds":3000}]}' \
+          || echo "warn: put-bucket-cors not supported by this SeaweedFS build"
+        echo "bucket ready"
+
+  # ---- profile `app`: chạy nhiều replica API sau nginx để thử multi-instance ----
+  api:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment: *api-env
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      mailpit: { condition: service_healthy }
+      seaweedfs: { condition: service_healthy }
+    deploy: { replicas: 2 }
+
+  migrate:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    command: ["bun", "scripts/db.ts", "migrate"]
+    environment: *api-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  web:
+    profiles: ["app"]
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    ports: ["8080:80"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  seaweed:

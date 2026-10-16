@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "app",
+      "credentials": [{ "accessKey": "app-access-key", "secretKey": "app-secret-key" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}
