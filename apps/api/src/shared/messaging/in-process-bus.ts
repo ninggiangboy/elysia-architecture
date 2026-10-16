@@ -26,8 +26,19 @@ export class InProcessMessageBus implements MessagePublisher {
     results.forEach((result, i) => {
       if (result.status === 'rejected') {
         errors.push(result.reason)
-        // A deferral (rate limit) is expected; the relay logs it at info, so don't raise an error here.
-        if (result.reason instanceof RetryLaterError) return
+        // A deferral (rate limit) is expected, not a failure: warn without the stack.
+        if (result.reason instanceof RetryLaterError) {
+          this.logger.warn(
+            {
+              handler: handlers[i]?.name,
+              messageId: message.id,
+              type: message.type,
+              retryAfterMs: result.reason.retryAfterMs,
+            },
+            result.reason.message,
+          )
+          return
+        }
         this.logger.error(
           {
             err: result.reason,
