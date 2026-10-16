@@ -486,11 +486,18 @@ describe('messaging guarantees', () => {
       })
       await waitForMail(email, 'Welcome')
       expect(failures).toBe(2) // 1st attempt failed, 2nd (after backoff) succeeded
-      const row = await mod.db.execute<{ attempts: number; published_at: Date | null }>(
-        sql`select attempts, published_at from identity.outbox_messages where id = ${id}`,
+      // The relay marks the row published after the handlers finish, which can land just after the mail arrives.
+      const row = await eventually(
+        async () => {
+          const rows = await mod.db.execute<{ attempts: number; published_at: Date | null }>(
+            sql`select attempts, published_at from identity.outbox_messages where id = ${id}`,
+          )
+          return rows[0]?.published_at ? rows[0] : null
+        },
+        5_000,
+        'outbox row marked published',
       )
-      expect(row[0]?.attempts).toBe(2)
-      expect(row[0]?.published_at).not.toBeNull()
+      expect(row.attempts).toBe(2)
     } finally {
       t.container.bus.publish = original
     }
