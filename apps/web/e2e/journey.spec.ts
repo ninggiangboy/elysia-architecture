@@ -52,8 +52,12 @@ test.describe
     test('edit the profile; it survives a reload because the refresh cookie restores the session', async () => {
       await page.getByLabel('Display name').fill('Playwright Tester')
       await page.getByLabel('Bio').fill('Hello from the browser')
-      await page.getByRole('button', { name: 'Save changes' }).click()
-      await expect(page.getByText('Changes saved')).toBeVisible()
+      // The profile row is created asynchronously after sign-up. If the page loaded before that (version 0), the first save
+      // gets a "changed elsewhere" notice, the page reloads the latest version, and saving again succeeds.
+      await expect(async () => {
+        await page.getByRole('button', { name: 'Save changes' }).click()
+        await expect(page.getByText('Changes saved')).toBeVisible({ timeout: 3_000 })
+      }).toPass({ timeout: 20_000 })
       await expect(page.getByTestId('display-name')).toHaveText('Playwright Tester')
 
       await page.reload()
