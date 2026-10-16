@@ -1,6 +1,7 @@
 import type { InboxGuard, IntegrationEventHandler, ObjectStorage } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
 import { type AvatarChangedPayload, ProfileEvents } from '../../contracts/events'
+import { avatarThumbnailKeys } from '../avatar-thumbnails'
 
 export class DeleteOldAvatar implements IntegrationEventHandler {
   readonly name = 'profile.delete-old-avatar'
@@ -14,7 +15,11 @@ export class DeleteOldAvatar implements IntegrationEventHandler {
   async handle(message: Envelope): Promise<void> {
     const { oldKey } = message.payload as unknown as AvatarChangedPayload
     if (!oldKey) return
-    // Deleting a non-existent object still succeeds → idempotent.
-    await this.inbox.afterSideEffect(message.id, this.name, () => this.storage.delete(oldKey))
+    // Deleting a non-existent object still succeeds → idempotent (and thumbnails may never have been made).
+    await this.inbox.afterSideEffect(message.id, this.name, async () => {
+      await Promise.all(
+        [oldKey, ...avatarThumbnailKeys(oldKey)].map((key) => this.storage.delete(key)),
+      )
+    })
   }
 }

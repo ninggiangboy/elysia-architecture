@@ -50,6 +50,20 @@ export class S3ObjectStorage implements ObjectStorage {
     }
   }
 
+  async read(key: string): Promise<Uint8Array | null> {
+    try {
+      return await this.internal.file(key).bytes()
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      if (code === 'NoSuchKey' || code === 'NotFound') return null
+      throw err
+    }
+  }
+
+  async write(key: string, data: Uint8Array, contentType: string): Promise<void> {
+    await this.internal.file(key).write(data, { type: contentType })
+  }
+
   async delete(key: string): Promise<void> {
     await this.internal.file(key).delete()
   }

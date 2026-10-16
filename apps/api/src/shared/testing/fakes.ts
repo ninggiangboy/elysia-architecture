@@ -43,6 +43,8 @@ export class PassthroughUnitOfWork implements UnitOfWork {
 
 export class FakeStorage implements ObjectStorage {
   objects = new Map<string, ObjectStat>()
+  /** Bytes of the objects that were written or seeded with content (`objects` only holds their metadata). */
+  data = new Map<string, Uint8Array>()
   deleted: string[] = []
   presignPut(key: string) {
     return `http://s3.test/put/${key}`
@@ -53,8 +55,16 @@ export class FakeStorage implements ObjectStorage {
   async stat(key: string) {
     return this.objects.get(key) ?? null
   }
+  async read(key: string) {
+    return this.data.get(key) ?? null
+  }
+  async write(key: string, bytes: Uint8Array, contentType: string) {
+    this.data.set(key, bytes)
+    this.objects.set(key, { size: bytes.byteLength, contentType })
+  }
   async delete(key: string) {
     this.deleted.push(key)
     this.objects.delete(key)
+    this.data.delete(key)
   }
 }

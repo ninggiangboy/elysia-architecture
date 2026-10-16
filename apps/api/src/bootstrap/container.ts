@@ -85,6 +85,7 @@ export async function createContainer(
     clock,
     ids,
     storage,
+    log: logger,
     identity: identity.api,
     verifier: identity.verifier,
   })
@@ -129,6 +130,7 @@ export async function createContainer(
       pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
       batchSize: config.OUTBOX_BATCH_SIZE,
       concurrency: Math.min(config.OUTBOX_CONCURRENCY, Math.max(1, config.DB_POOL_MAX - 2)),
+      leaseSeconds: config.OUTBOX_LEASE_SECONDS,
       deferBudgetMs: config.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
     },
   )

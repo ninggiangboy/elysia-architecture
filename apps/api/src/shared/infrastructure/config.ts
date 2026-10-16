@@ -36,11 +36,16 @@ const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
     PORT: z.coerce.number().int().default(3000),
+    /** `worker` is another name for `relay`: the process that runs the outbox handlers, including the heavy ones (avatar thumbnails). */
     APP_ROLES: z
       .string()
       .default('api,relay')
       .transform(csv)
-      .pipe(z.array(z.enum(['api', 'relay'])).min(1)),
+      .pipe(z.array(z.enum(['api', 'relay', 'worker'])).min(1))
+      .transform(
+        (roles) =>
+          [...new Set(roles.map((r) => (r === 'worker' ? 'relay' : r)))] as ('api' | 'relay')[],
+      ),
     /** Cluster mode: number of worker processes sharing `PORT` (`auto` = 3/4 of the CPUs, min 2 so a crash never takes the whole instance down). 1 = single process, no supervisor. */
     APP_WORKERS: z
       .string()
@@ -126,6 +131,8 @@ const schema = z
     OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().default(200),
     /** Aggregates processed in parallel per batch; keep below DB_POOL_MAX. Messages of one aggregate stay ordered. */
     OUTBOX_CONCURRENCY: z.coerce.number().int().positive().default(8),
+    /** How long a claimed message stays reserved for this relay. Past it another relay may take it, so keep it above the slowest handler (image processing). */
+    OUTBOX_LEASE_SECONDS: z.coerce.number().int().positive().default(30),
     /** Maximum time a message may be deferred by the rate limit before it is considered dead. */
     OUTBOX_DEFER_BUDGET_HOURS: z.coerce.number().positive().default(24),
   })

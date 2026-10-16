@@ -31,3 +31,21 @@ describe('APP_WORKERS', () => {
     expect(() => loadConfig({ ...base, APP_WORKERS: 'many' })).toThrow('APP_WORKERS')
   })
 })
+
+describe('APP_ROLES', () => {
+  test('defaults to api and relay', () => {
+    expect(loadConfig(base).APP_ROLES).toEqual(['api', 'relay'])
+  })
+
+  test('worker is another name for relay', () => {
+    expect(loadConfig({ ...base, APP_ROLES: 'worker' }).APP_ROLES).toEqual(['relay'])
+    expect(loadConfig({ ...base, APP_ROLES: 'api,worker,relay' }).APP_ROLES).toEqual([
+      'api',
+      'relay',
+    ])
+  })
+
+  test('rejects an unknown role', () => {
+    expect(() => loadConfig({ ...base, APP_ROLES: 'cron' })).toThrow('APP_ROLES')
+  })
+})

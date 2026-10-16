@@ -3,6 +3,7 @@ import type {
   Clock,
   IdGenerator,
   IntegrationEventHandler,
+  Log,
   ObjectStorage,
 } from '#/shared/application/ports'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
@@ -12,6 +13,7 @@ import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outb
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import { CreateProfileOnUserRegistered } from './application/handlers/create-profile-on-user-registered'
 import { DeleteOldAvatar } from './application/handlers/delete-old-avatar'
+import { GenerateAvatarThumbnails } from './application/handlers/generate-avatar-thumbnails'
 import { ProfileLoader } from './application/profile-loader'
 import { GetMe } from './application/use-cases/get-me'
 import { RequestAvatarUpload } from './application/use-cases/request-avatar-upload'
@@ -19,6 +21,7 @@ import { SetAvatar } from './application/use-cases/set-avatar'
 import { UpdateProfile } from './application/use-cases/update-profile'
 import { DrizzleProfileRepository } from './infrastructure/persistence/drizzle-profile-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
+import { SharpImageResizer } from './infrastructure/sharp-image-resizer'
 import { profileRoutes } from './presentation/routes'
 
 export interface ProfileModuleDeps {
@@ -26,6 +29,7 @@ export interface ProfileModuleDeps {
   clock: Clock
   ids: IdGenerator
   storage: ObjectStorage
+  log: Log
   /** Depends only on identity's CONTRACT, not on its internal implementation. */
   identity: IdentityApi
   verifier: TokenVerifier
@@ -39,7 +43,7 @@ export interface ProfileModule {
 }
 
 export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
-  const { database, clock, ids, storage, identity, verifier } = deps
+  const { database, clock, ids, storage, log, identity, verifier } = deps
 
   const profiles = new DrizzleProfileRepository(database)
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
@@ -60,6 +64,7 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
     handlers: [
       new CreateProfileOnUserRegistered(profiles, inboxGuard, clock),
       new DeleteOldAvatar(storage, inboxGuard),
+      new GenerateAvatarThumbnails(storage, new SharpImageResizer(), inboxGuard, log),
     ],
     outbox: { name: 'profile', table: outbox },
   }
