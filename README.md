@@ -62,6 +62,7 @@ Revoke a device from another browser and it signs out **instantly** instead of a
 `notification.created.v1` feeds both the SSE bell and **Web Push** (VAPID, service worker) — neither knows about the other.
 Subscriptions are bound to the login session that created them (sign out → stop receiving), SSRF-guarded (public `https` endpoints only),
 and delivery handles 404/410 cleanup, retries on 429/5xx and skips stale pushes.
+A burst of events is stored in full but alerts once: per user, only the first notification in each `PUSH_QUIET_WINDOW_SECONDS` window (default 30) is pushed and toasted, and security alerts always are.
 
 ### 8. Mail that survives a provider's rate limits
 A token bucket + daily quota in Postgres shared across instances, adaptive back-off when the provider throttles
@@ -112,7 +113,7 @@ Things worth trying:
 - **Profile** — view the account and profile in a single call, and edit the profile with an optimistic lock (`If-Match`) so concurrent edits never silently overwrite each other.
 - **Avatar upload** — the browser uploads straight to S3 through a presigned URL; the server then validates the file, and the old avatar is cleaned up asynchronously.
 - **In-app notifications** — a bell with an unread count, cursor-paged history and mark-as-read (one or all) that stays in sync across the user's open devices.
-- **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed.
+- **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.
 - **Transactional mail** — magic-link, welcome and email-confirmation mails sent through the outbox, with provider-aware rate limiting and retries.
 - **Token verification for other services** — a public JWKS endpoint (`/.well-known/jwks.json`).
