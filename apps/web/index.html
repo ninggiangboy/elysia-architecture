@@ -8,9 +8,69 @@
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090c" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Elysia Architecture</title>
+    <style>
+      /* Painted before the bundle arrives, so the first frame already has the app's background (keep in sync with --background in src/index.css). */
+      html {
+        background: #f8f8fa;
+      }
+      @media (prefers-color-scheme: dark) {
+        html {
+          background: #09090c;
+        }
+      }
+      /* Boot splash, replaced by the first render. It only fades in when loading is slow, so a fast load goes straight to the page. */
+      .boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        animation: boot-in 0.3s ease-out 0.4s forwards;
+      }
+      .boot svg {
+        width: 44px;
+        height: 44px;
+        animation: boot-pulse 1.6s ease-in-out 0.7s infinite;
+      }
+      @keyframes boot-in {
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes boot-pulse {
+        50% {
+          opacity: 0.5;
+          transform: scale(0.94);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot svg {
+          animation: none;
+        }
+      }
+    </style>
+    <script>
+      // Fetch the runtime config while the bundle downloads instead of after it (see src/lib/config.ts).
+      window.__config = fetch('/config.json', { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : {}))
+        .catch(() => ({}))
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" role="status" aria-label="Loading">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="boot-g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#6d4aff" />
+              <stop offset="1" stop-color="#d946ef" />
+            </linearGradient>
+          </defs>
+          <rect width="32" height="32" rx="8" fill="url(#boot-g)" />
+          <path d="M22 9.5H11.5v13H22M11.5 16H20" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" />
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

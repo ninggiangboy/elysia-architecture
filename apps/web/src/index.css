@@ -73,6 +73,8 @@
 
   html {
     -webkit-tap-highlight-color: transparent;
+    /* Reserve the scrollbar's space so pages don't shift sideways when it appears or disappears. */
+    scrollbar-gutter: stable;
   }
 
   ::selection {
@@ -106,4 +108,21 @@ body {
     );
   background-size: 44px 44px;
   mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* The first render (and a switch between the app and the auth screens) fades in instead of popping over the background. */
+@keyframes app-in {
+  from {
+    opacity: 0;
+  }
+}
+
+#root > :not(.boot) {
+  animation: app-in 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root > :not(.boot) {
+    animation: none;
+  }
 }

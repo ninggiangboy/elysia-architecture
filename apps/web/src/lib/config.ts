@@ -6,15 +6,27 @@ interface RuntimeConfig {
   apiOrigin: string
 }
 
+declare global {
+  interface Window {
+    /** Started by an inline script in index.html so the request overlaps the bundle download. */
+    __config?: Promise<Partial<RuntimeConfig>>
+  }
+}
+
 let config: RuntimeConfig = { apiOrigin: '' }
 
-export async function loadRuntimeConfig(): Promise<void> {
+async function fetchConfig(): Promise<Partial<RuntimeConfig>> {
   try {
     const res = await fetch('/config.json', { cache: 'no-store' })
-    if (res.ok) config = { ...config, ...(await res.json()) }
+    if (res.ok) return await res.json()
   } catch {
     // use the defaults
   }
+  return {}
+}
+
+export async function loadRuntimeConfig(): Promise<void> {
+  config = { ...config, ...(await (window.__config ?? fetchConfig())) }
 }
 
 export const apiOrigin = () => config.apiOrigin || window.location.origin

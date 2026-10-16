@@ -7,14 +7,26 @@ import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/features/auth/queries'
 import { NotificationBell } from '@/features/notifications/notification-bell'
+import { unreadCountQuery } from '@/features/notifications/queries'
 import { meQuery } from '@/features/profile/queries'
 import { useLiveSession } from '@/features/realtime/use-live-session'
 import { useAuth } from '@/lib/auth-store'
 import { ensureSession } from '@/lib/session'
+import { preloadImage } from '@/lib/utils'
 
 export const Route = createFileRoute('/_authed')({
   beforeLoad: async () => {
     if (!(await ensureSession())) throw redirect({ to: '/login' })
+  },
+  // The header needs these on every page: load them with the page so it does not fill in piece by piece.
+  // prefetchQuery never throws — a failure here only leaves the header without them, the page still renders.
+  loader: async ({ context: { queryClient } }) => {
+    await Promise.all([
+      queryClient.prefetchQuery(meQuery),
+      queryClient.prefetchQuery(unreadCountQuery),
+    ])
+    const avatarUrl = queryClient.getQueryData(meQuery.queryKey)?.avatarUrl
+    if (avatarUrl) await preloadImage(avatarUrl)
   },
   component: AuthedLayout,
 })

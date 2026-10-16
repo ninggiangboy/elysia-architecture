@@ -8,6 +8,17 @@ import { refreshSession } from './session'
 const isAuthEndpoint = (input: RequestInfo | URL) =>
   String(input instanceof Request ? input.url : input).includes('/api/auth/')
 
+/**
+ * Dev only: mutations get 300-800ms of latency so loading/pending states are visible and feel like a real network.
+ * Skipped under automation (Playwright sets navigator.webdriver) so e2e runs stay fast.
+ */
+const simulateLatency = async (input: RequestInfo | URL, init?: RequestInit) => {
+  if (!import.meta.env.DEV || navigator.webdriver) return
+  const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
+  if (method === 'GET' || method === 'HEAD') return
+  await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 500))
+}
+
 /** fetch with a Bearer token; on 401 it refreshes (single-flight) and retries exactly once. */
 const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const send = () => {
@@ -16,6 +27,7 @@ const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (token) headers.set('authorization', `Bearer ${token}`)
     return fetch(input, { ...init, headers, credentials: 'include' })
   }
+  await simulateLatency(input, init)
   const res = await send()
   if (res.status === 401 && !isAuthEndpoint(input) && authStore.get().accessToken) {
     if (await refreshSession()) return send()
