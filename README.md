@@ -44,7 +44,7 @@ NATS/Kafka without touching a handler.
 ### 4. Stateless and correct with N instances
 No sticky sessions, no Redis. Rate limits, throttles and token consumption live in Postgres as single atomic statements
 (`UPDATE … WHERE unused AND not expired RETURNING`); optimistic locking via `If-Match` (409 `version_conflict`); one-place-only jobs take
-an advisory lock; process roles (`APP_ROLES=api,relay`) let you peel off a worker from the same image.
+an advisory lock; process roles (`APP_ROLES=api,relay`) let you peel off a worker from the same image, and `APP_WORKERS=N` runs N processes per container (cluster mode).
 `docker compose --profile app up` runs 2 API replicas behind nginx so you can see it work.
 
 ### 5. Passwordless auth done properly

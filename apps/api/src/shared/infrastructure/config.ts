@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os'
 import { z } from 'zod'
 import { parseDurationSeconds } from './duration'
 
@@ -40,6 +41,19 @@ const schema = z
       .default('api,relay')
       .transform(csv)
       .pipe(z.array(z.enum(['api', 'relay'])).min(1)),
+    /** Cluster mode: number of worker processes sharing `PORT` (`auto` = one per CPU). 1 = single process, no supervisor. */
+    APP_WORKERS: z
+      .string()
+      .default('1')
+      .transform((v, ctx) => {
+        if (v === 'auto') return availableParallelism()
+        const n = Number(v)
+        if (Number.isInteger(n) && n >= 1) return n
+        ctx.addIssue({ code: 'custom', message: 'must be a positive integer or "auto"' })
+        return z.NEVER
+      }),
+    /** Set by the cluster supervisor (0-based). The outbox relay only runs in slot 0. Do not set by hand. */
+    WORKER_SLOT: z.coerce.number().int().nonnegative().optional(),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
