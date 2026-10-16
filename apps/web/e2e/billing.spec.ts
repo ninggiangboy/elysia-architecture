@@ -31,8 +31,15 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
   const { context, page } = await signUp(browser, 'wallet')
   const nav = page.getByRole('navigation', { name: 'Main' }).first()
 
-  await nav.getByRole('link', { name: 'Top up' }).click()
-  await expect(page).toHaveURL(/\/topup$/)
+  // Balance and history are one page; the top-up form is a step off it.
+  await nav.getByRole('link', { name: 'Wallet' }).click()
+  await expect(page).toHaveURL(/\/wallet$/)
+  await expect(page.getByRole('heading', { name: 'Wallet', level: 1 })).toBeVisible()
+  await expect(page.getByTestId('no-balance')).toBeVisible()
+  await expect(page.getByTestId('no-transactions')).toBeVisible()
+
+  await page.getByRole('main').getByRole('link', { name: 'Top up' }).click()
+  await expect(page).toHaveURL(/\/wallet\/topup$/)
   await expect(page.getByRole('heading', { name: 'Top up', level: 1 })).toBeVisible()
   await expect(page.getByTestId('no-balance')).toBeVisible()
   // Either the form (keys set) or the notice (no keys): never a broken page.
@@ -40,10 +47,9 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
     page.getByTestId('topup-disabled').or(page.getByTestId('currency-usd')),
   ).toBeVisible()
 
-  await nav.getByRole('link', { name: 'Transactions' }).click()
-  await expect(page).toHaveURL(/\/transactions$/)
-  await expect(page.getByTestId('no-transactions')).toBeVisible()
-  await expect(page.getByTestId('no-balance')).toBeVisible()
+  // The old addresses (bookmarks, notifications already sent) lead to the new ones.
+  await page.goto('/transactions')
+  await expect(page).toHaveURL(/\/wallet$/)
 
   // Stripe appends its own parameters; ours is the only one the page reads.
   await page.goto(
@@ -51,7 +57,8 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
   )
   await expect(page.getByTestId('return-unknown')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Try again' })).toBeVisible()
-  await page.getByRole('link', { name: 'View transactions' }).click()
-  await expect(page).toHaveURL(/\/transactions$/)
+  await expect(page).toHaveURL(/\/wallet\/topup\/return\?topUp=/)
+  await page.getByRole('link', { name: 'Back to wallet' }).click()
+  await expect(page).toHaveURL(/\/wallet$/)
   await context.close()
 })

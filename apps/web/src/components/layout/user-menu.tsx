@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { ChevronDown, LoaderCircle, LogOut, ShieldCheck } from 'lucide-react'
+import { ChevronDown, LoaderCircle, LogOut, Settings, ShieldCheck, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Avatar } from '@/components/ui/avatar'
@@ -8,9 +8,8 @@ import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/comp
 import { logout } from '@/features/auth/queries'
 import { meQuery } from '@/features/profile/queries'
 import { useAuth } from '@/lib/auth-store'
-import { formatDate } from '@/lib/format'
 
-/** Header account menu: who is signed in (name, email, bio, member since) and the sign-out action. */
+/** Header account menu: who is signed in, the way into the settings, and the sign-out action. */
 export function UserMenu() {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -60,23 +59,21 @@ export function UserMenu() {
             <p className="mt-0.5 truncate text-[13px] text-muted-foreground">{email}</p>
           </div>
         </div>
-        {(me?.bio || me?.createdAt) && (
-          <div className="space-y-1.5 border-t border-border px-4 py-3 text-[13px]">
-            {me.bio && (
-              <p className="line-clamp-3 whitespace-pre-line text-muted-foreground">{me.bio}</p>
-            )}
-            {me.createdAt && (
-              <p className="text-xs text-muted-foreground/80">
-                {t('menu.memberSince', { date: formatDate(me.createdAt) })}
-              </p>
-            )}
-          </div>
-        )}
         <div className="border-t border-border p-1">
-          <DropdownItem onSelect={() => navigate({ to: '/security' })}>
+          <DropdownItem onSelect={() => navigate({ to: '/settings/profile' })}>
+            <UserRound aria-hidden />
+            {t('menu.profile')}
+          </DropdownItem>
+          <DropdownItem onSelect={() => navigate({ to: '/settings/account' })}>
+            <Settings aria-hidden />
+            {t('menu.settings')}
+          </DropdownItem>
+          <DropdownItem onSelect={() => navigate({ to: '/settings/security' })}>
             <ShieldCheck aria-hidden />
             {t('menu.security')}
           </DropdownItem>
+        </div>
+        <div className="border-t border-border p-1">
           <DropdownItem
             closeOnSelect={false}
             disabled={signingOut}

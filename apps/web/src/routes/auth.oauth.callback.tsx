@@ -52,7 +52,7 @@ function OAuthCallbackPage() {
         }
         toast.success(t('callback.connected', { provider: providerName(result.provider) }))
         await queryClient.invalidateQueries({ queryKey: connectedAccountsQuery.queryKey })
-        await navigate({ to: '/security', replace: true })
+        await navigate({ to: '/settings/security', replace: true })
       })
       .catch((err) => setError(errorMessage(err)))
   }, [failure, code, state, navigate, queryClient, t])

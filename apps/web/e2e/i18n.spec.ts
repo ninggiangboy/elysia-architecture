@@ -25,7 +25,7 @@ test('the app speaks the chosen language, mail included, and the account remembe
   await page.getByRole('button', { name: 'Gửi liên kết đăng nhập' }).click()
   await expect(page.getByText('Kiểm tra hộp thư của bạn')).toBeVisible()
   await page.goto(await linkFromMail(email, 'đăng nhập', before))
-  await expect(page.getByRole('heading', { name: 'Hồ sơ', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Chào mừng trở lại/, level: 1 })).toBeVisible()
 
   // A notification holds what its text is made from, so it reads in the language the app is in now: opened in
   // Vietnamese, then again after switching to English.
@@ -37,11 +37,11 @@ test('the app speaks the chosen language, mail included, and the account remembe
   // yet after a reload this one still follows the choice.
   await page.getByRole('button', { name: 'Ngôn ngữ' }).click()
   await page.getByRole('menuitemradio', { name: 'English' }).click()
-  await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Welcome back/, level: 1 })).toBeVisible()
   await page.getByRole('button', { name: /^Notifications/ }).click()
   await expect(page.getByTestId('notifications').getByText('Welcome aboard')).toBeVisible()
   await page.keyboard.press('Escape')
   await page.evaluate(() => localStorage.removeItem('locale'))
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Welcome back/, level: 1 })).toBeVisible()
 })

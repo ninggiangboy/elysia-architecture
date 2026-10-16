@@ -1,12 +1,13 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Wallet } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/components/ui/card'
 import { formatMoney } from '@/lib/format'
 import { walletQuery } from './queries'
 
 /** One balance per currency the wallet was ever topped up in. */
-export function BalanceCard() {
+export function BalanceCard({ action }: { action?: ReactNode }) {
   const { t } = useTranslation()
   const { data: balances } = useSuspenseQuery(walletQuery)
 
@@ -41,6 +42,9 @@ export function BalanceCard() {
             </li>
           ))}
         </ul>
+      )}
+      {action && (
+        <div className="flex justify-end border-t border-border px-5 py-3 sm:px-6">{action}</div>
       )}
     </Card>
   )

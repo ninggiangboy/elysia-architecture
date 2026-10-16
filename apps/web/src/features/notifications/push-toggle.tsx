@@ -8,7 +8,7 @@ import { errorMessage } from '@/lib/api'
 import { disablePush, enablePush, type PushState, pushState } from '@/lib/push'
 import { cn } from '@/lib/utils'
 
-const pushStateQuery = { queryKey: ['notifications', 'push-state'], queryFn: pushState }
+export const pushStateQuery = { queryKey: ['notifications', 'push-state'], queryFn: pushState }
 
 const COPY = {
   on: { title: 'notifications.push.onTitle', text: 'notifications.push.onText' },
@@ -16,7 +16,7 @@ const COPY = {
   denied: { title: 'notifications.push.deniedTitle', text: 'notifications.push.deniedText' },
 } as const
 
-/** Turns Web Push on or off for THIS browser. Renders nothing where it cannot work. */
+/** Turns Web Push on or off for THIS browser. Where it cannot work it says so, rather than leave the page empty. */
 export function PushToggle() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -27,7 +27,13 @@ export function PushToggle() {
     onError: (err) => toast.error(errorMessage(err)),
   })
 
-  if (!state || state === 'unsupported' || state === 'unavailable') return null
+  if (!state) return null
+  if (state === 'unsupported' || state === 'unavailable')
+    return (
+      <Card className="p-5 text-sm text-muted-foreground sm:px-6" data-testid="push-unsupported">
+        {t('notifications.push.unsupported')}
+      </Card>
+    )
 
   const on = state === 'on'
   const denied = state === 'denied'

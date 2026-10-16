@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import {
   Bell,
   CheckCheck,
@@ -24,6 +24,7 @@ import { readOptimistically } from './live-cache'
 import {
   markAllNotificationsRead,
   markNotificationRead,
+  type NotificationsPage,
   notificationsQuery,
   unreadCountQuery,
 } from './queries'
@@ -38,6 +39,10 @@ const KIND_ICONS: Record<string, { icon: typeof Bell; className: string }> = {
 }
 const READ_KEY = ['notifications', 'mark-read']
 
+/** Where a notification leads, if anywhere. Only paths inside this app, like the push handler accepts. */
+const targetOf = (data: Record<string, unknown>) =>
+  typeof data.link === 'string' && data.link.startsWith('/') && data.link !== '/' ? data.link : null
+
 /** Newer than this counts as "just arrived". */
 const FRESH_MS = 10_000
 const DEFAULT_ICON = { icon: Bell, className: 'bg-muted text-muted-foreground' }
@@ -47,6 +52,7 @@ export function NotificationsPanel() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const closePopover = usePopoverClose()
+  const router = useRouter()
   const { data, isPending, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteQuery(notificationsQuery)
   const { data: unread = 0 } = useQuery(unreadCountQuery)
@@ -80,6 +86,13 @@ export function NotificationsPanel() {
 
   const items = data?.pages.flatMap((p) => p.items) ?? []
 
+  // Opening a notification is reading it: take the person to what it is about and mark it read on the way.
+  const open = (id: string, read: boolean, target: string) => {
+    if (!read) markRead.mutate(id)
+    closePopover()
+    router.history.push(target)
+  }
+
   return (
     <>
       <div className="flex items-center justify-between gap-2 border-b border-border py-2 pr-2 pl-4">
@@ -111,7 +124,7 @@ export function NotificationsPanel() {
             title={t('notifications.settings')}
             asChild
           >
-            <Link to="/notifications/settings" onClick={closePopover}>
+            <Link to="/settings/notifications" onClick={closePopover}>
               <Settings aria-hidden />
             </Link>
           </Button>
@@ -151,74 +164,14 @@ export function NotificationsPanel() {
           </div>
         ) : (
           <ul className="divide-y divide-border" data-testid="notifications">
-            {items.map((n) => {
-              const { icon: Icon, className } = KIND_ICONS[n.kind] ?? DEFAULT_ICON
-              const text = notificationText(n)
-              return (
-                <li
-                  key={n.id}
-                  data-read={n.read}
-                  className={cn(
-                    'relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 px-4 py-3',
-                    !n.read && 'bg-accent/40',
-                    // A notification that just arrived over the live stream eases in; an old one never matches.
-                    Date.now() - Date.parse(n.createdAt) < FRESH_MS &&
-                      'motion-safe:animate-[item-in_0.25s_ease-out]',
-                  )}
-                >
-                  {!n.read && (
-                    <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
-                  )}
-                  <span
-                    className={cn(
-                      'grid size-8 shrink-0 place-items-center rounded-full',
-                      className,
-                      n.read && 'opacity-60',
-                    )}
-                  >
-                    <Icon className="size-4" aria-hidden />
-                  </span>
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <p className="flex flex-wrap items-center gap-x-2 text-sm">
-                      {!n.read && (
-                        <span className="sr-only">{t('notifications.unreadPrefix')}</span>
-                      )}
-                      <span
-                        className={cn(
-                          'font-medium',
-                          n.read ? 'text-muted-foreground' : 'text-foreground',
-                        )}
-                      >
-                        {text.title}
-                      </span>
-                      {n.count > 1 && <Badge>×{n.count}</Badge>}
-                    </p>
-                    {text.body && (
-                      <p className="text-[13px] leading-relaxed text-muted-foreground">
-                        {text.body}
-                      </p>
-                    )}
-                    <time
-                      dateTime={n.createdAt}
-                      title={formatDate(n.createdAt)}
-                      className="mt-0.5 text-xs text-muted-foreground"
-                    >
-                      {formatRelative(n.createdAt)}
-                    </time>
-                  </div>
-                  {!n.read && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="-my-1.5 -mr-2 h-8 px-2.5 text-xs sm:-my-1 sm:h-7 sm:px-2"
-                      onClick={() => markRead.mutate(n.id)}
-                    >
-                      {t('notifications.markRead')}
-                    </Button>
-                  )}
-                </li>
-              )
-            })}
+            {items.map((n) => (
+              <NotificationItem
+                key={n.id}
+                n={n}
+                onOpen={(target) => open(n.id, n.read, target)}
+                onMarkRead={() => markRead.mutate(n.id)}
+              />
+            ))}
           </ul>
         )}
 
@@ -236,5 +189,89 @@ export function NotificationsPanel() {
         )}
       </div>
     </>
+  )
+}
+
+type Item = NotificationsPage['items'][number]
+
+/** One row of the inbox: icon, text (a button when it leads somewhere), and the mark-as-read action. */
+function NotificationItem({
+  n,
+  onOpen,
+  onMarkRead,
+}: {
+  n: Item
+  onOpen: (target: string) => void
+  onMarkRead: () => void
+}) {
+  const { t } = useTranslation()
+  const { icon: Icon, className } = KIND_ICONS[n.kind] ?? DEFAULT_ICON
+  const text = notificationText(n)
+  const target = targetOf(n.data)
+  const content = (
+    <>
+      <p className="flex flex-wrap items-center gap-x-2 text-sm">
+        {!n.read && <span className="sr-only">{t('notifications.unreadPrefix')}</span>}
+        <span className={cn('font-medium', n.read ? 'text-muted-foreground' : 'text-foreground')}>
+          {text.title}
+        </span>
+        {n.count > 1 && <Badge>×{n.count}</Badge>}
+      </p>
+      {text.body && (
+        <p className="text-[13px] leading-relaxed text-muted-foreground">{text.body}</p>
+      )}
+      <time
+        dateTime={n.createdAt}
+        title={formatDate(n.createdAt)}
+        className="mt-0.5 text-xs text-muted-foreground"
+      >
+        {formatRelative(n.createdAt)}
+      </time>
+    </>
+  )
+  return (
+    <li
+      key={n.id}
+      data-read={n.read}
+      className={cn(
+        'relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 px-4 py-3',
+        !n.read && 'bg-accent/40',
+        // A notification that just arrived over the live stream eases in; an old one never matches.
+        Date.now() - Date.parse(n.createdAt) < FRESH_MS &&
+          'motion-safe:animate-[item-in_0.25s_ease-out]',
+      )}
+    >
+      {!n.read && <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary" />}
+      <span
+        className={cn(
+          'grid size-8 shrink-0 place-items-center rounded-full',
+          className,
+          n.read && 'opacity-60',
+        )}
+      >
+        <Icon className="size-4" aria-hidden />
+      </span>
+      {target ? (
+        <button
+          type="button"
+          onClick={() => onOpen(target)}
+          className="-m-1 flex min-w-0 flex-col gap-0.5 rounded-md p-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+        >
+          {content}
+        </button>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-0.5">{content}</div>
+      )}
+      {!n.read && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-my-1.5 -mr-2 h-8 px-2.5 text-xs sm:-my-1 sm:h-7 sm:px-2"
+          onClick={onMarkRead}
+        >
+          {t('notifications.markRead')}
+        </Button>
+      )}
+    </li>
   )
 }

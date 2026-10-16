@@ -38,7 +38,7 @@ test.describe('notifications', () => {
 
     // Web Push is configured (VAPID keys in .env) and Chromium supports it: the opt-in lives on the settings page.
     await other.getByRole('link', { name: 'Notification settings' }).click()
-    await expect(other).toHaveURL(/\/notifications\/settings$/)
+    await expect(other).toHaveURL(/\/settings\/notifications$/)
     await expect(other.getByTestId('push-toggle')).toHaveText(/Turn on/)
 
     // Still unread after a reload; marking it read is a separate action.
@@ -47,6 +47,33 @@ test.describe('notifications', () => {
     await expect(other.locator('[data-read="false"]')).toHaveCount(1)
     await other.getByRole('button', { name: 'Mark all as read' }).click()
     await expect(other.locator('[data-read="false"]')).toHaveCount(0)
+    await context.close()
+  })
+
+  test('opening a notification goes to what it is about and reads it', async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: 'http://localhost:5173',
+      extraHTTPHeaders: { 'x-forwarded-for': TEST_IP },
+    })
+    const email = uniqueEmail('notif-open')
+    const page = await context.newPage()
+    await page.goto('/login')
+    const before = await countMails(email, 'sign-in')
+    await page.getByLabel('Email').fill(email)
+    await page.getByRole('button', { name: 'Send sign-in link' }).click()
+    await page.goto(await linkFromMail(email, 'sign-in', before))
+    await expect(page.getByTestId('unseen-badge')).toHaveText('1')
+
+    await page.getByRole('button', { name: /^Notifications/ }).click()
+    await page
+      .getByTestId('notifications')
+      .getByRole('button', { name: /Welcome aboard/ })
+      .click()
+    // The welcome points at the profile, where its advice (a name and an avatar) is followed.
+    await expect(page).toHaveURL(/\/settings\/profile$/)
+    await expect(page.getByTestId('notifications')).toHaveCount(0)
+    await page.getByRole('button', { name: /^Notifications/ }).click()
+    await expect(page.locator('[data-read="false"]')).toHaveCount(0)
     await context.close()
   })
 

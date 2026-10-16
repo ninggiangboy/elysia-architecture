@@ -14,9 +14,9 @@ export const en = {
   },
   nav: {
     main: 'Main',
-    profile: 'Profile',
-    topup: 'Top up',
-    transactions: 'Transactions',
+    overview: 'Overview',
+    wallet: 'Wallet',
+    settings: 'Settings',
     realtime: 'Realtime',
   },
   theme: { label: 'Theme', light: 'Light', dark: 'Dark', system: 'System' },
@@ -29,6 +29,8 @@ export const en = {
     account: 'Account menu',
     accountLabel: 'Account',
     memberSince: 'Member since {{date}}',
+    profile: 'Profile',
+    settings: 'Settings',
     security: 'Security',
     signOut: 'Sign out',
   },
@@ -73,9 +75,35 @@ export const en = {
     changedTitle: 'Email changed',
     changed: 'Your account email is now <b>{{email}}</b>.',
   },
+  settings: {
+    title: 'Settings',
+    description: 'Your profile, account, security and notifications, all in one place.',
+    loading: 'Loading settings',
+    nav: {
+      profile: 'Profile',
+      account: 'Account',
+      security: 'Security',
+      notifications: 'Notifications',
+    },
+    preferences: {
+      title: 'Language and appearance',
+      description:
+        'The language is also used for the emails and notifications we send you. The theme is remembered on this browser.',
+    },
+  },
+  overview: {
+    loading: 'Loading overview',
+    welcome: 'Welcome back, {{name}}',
+    editProfile: 'Edit profile',
+    walletTitle: 'Wallet',
+    recentTitle: 'Recent activity',
+    checklistTitle: 'Finish setting up',
+    checklistDescription: 'A few things that make your account safer and easier to use.',
+    stepProfile: 'Add a bio and a profile picture',
+    stepPasskey: 'Add a passkey for faster, phishing-proof sign-in',
+    stepPush: 'Turn on browser notifications',
+  },
   profile: {
-    title: 'Profile',
-    description: 'Manage how you appear and how you sign in.',
     loading: 'Loading profile',
     loadFailed: 'Could not load your profile',
     personalTitle: 'Personal information',
@@ -144,8 +172,6 @@ export const en = {
     signOutOthers: 'Sign out all other devices',
   },
   security: {
-    title: 'Security',
-    description: 'Choose how you sign in. An email link always works; these add faster ways in.',
     loading: 'Loading security settings',
     passkeysTitle: 'Passkeys',
     passkeysDescription:
@@ -153,9 +179,6 @@ export const en = {
     accountsTitle: 'Connected accounts',
     accountsDescription:
       'Sign in with Google or GitHub. We only match an account by an email the provider has verified.',
-    dataTitle: 'Your data',
-    dataDescription: 'Take a copy with you, or have your account and everything in it erased.',
-    dataLink: 'Export or delete your data',
   },
   passkeys: {
     list: 'Passkeys',
@@ -266,6 +289,7 @@ export const en = {
       offText: 'Get a system notification on this browser, even when the app is closed.',
       deniedTitle: 'Browser notifications are blocked',
       deniedText: "Allow them in your browser's site settings to get alerts here.",
+      unsupported: 'This browser cannot show notifications from this app.',
       turnOff: 'Turn off',
       turnOn: 'Turn on',
     },
@@ -332,6 +356,12 @@ export const en = {
   },
   billing: {
     loading: 'Loading wallet',
+    wallet: {
+      title: 'Wallet',
+      description: 'Your balance and everything that moved money in it.',
+      topUp: 'Top up',
+      viewAll: 'View all',
+    },
     balance: {
       title: 'Your balance',
       description: 'One balance per currency. Money arrives once Stripe confirms the payment.',
@@ -374,11 +404,9 @@ export const en = {
       failedBody: 'The payment was not completed. You have not been charged.',
       unknown: 'We could not find this payment.',
       tryAgain: 'Try again',
-      viewTransactions: 'View transactions',
+      toWallet: 'Back to wallet',
     },
     transactions: {
-      title: 'Transactions',
-      description: 'Everything that moved money in your wallet.',
       historyTitle: 'History',
       historyDescription:
         'Newest first. Payments that were declined or are still waiting are listed too.',

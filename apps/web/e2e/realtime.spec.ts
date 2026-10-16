@@ -46,6 +46,7 @@ test.describe('realtime', () => {
     const phoneContext = await newContext(browser)
     const email = uniqueEmail('devices')
     const laptop = await signIn(laptopContext, email)
+    await laptop.goto('/settings/security')
     await expect(laptop.getByTestId('sessions').getByRole('listitem')).toHaveCount(1)
 
     const phone = await signIn(phoneContext, email)

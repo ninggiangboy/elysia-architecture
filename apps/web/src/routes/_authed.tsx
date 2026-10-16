@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
-import { Radio, Receipt, UserRound, Wallet } from 'lucide-react'
+import { LayoutDashboard, Radio, Settings, Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/layout/language-switcher'
 import { Logo } from '@/components/layout/logo'
@@ -33,11 +33,17 @@ export const Route = createFileRoute('/_authed')({
   component: AuthedLayout,
 })
 
+// `exact` keeps Overview from lighting up on every page; the other sections own everything below them.
 const NAV = [
-  { to: '/', label: 'nav.profile', icon: UserRound },
-  { to: '/topup', label: 'nav.topup', icon: Wallet },
-  { to: '/transactions', label: 'nav.transactions', icon: Receipt },
-  { to: '/realtime', label: 'nav.realtime', icon: Radio },
+  { to: '/', label: 'nav.overview', icon: LayoutDashboard, exact: true },
+  { to: '/wallet', label: 'nav.wallet', icon: Wallet, exact: false },
+  { to: '/realtime', label: 'nav.realtime', icon: Radio, exact: false },
+] as const
+
+// Settings is reached from the user menu on wide screens; phones have no room there, so it gets a tab.
+const TABS = [
+  ...NAV,
+  { to: '/settings', label: 'nav.settings', icon: Settings, exact: false },
 ] as const
 
 function AuthedLayout() {
@@ -56,11 +62,11 @@ function AuthedLayout() {
 
           {/* Inline from md; below that the same links live in the tab bar at the bottom of the screen. */}
           <nav aria-label={t('nav.main')} className="hidden gap-1 md:flex">
-            {NAV.map(({ to, label, icon: Icon }) => (
+            {NAV.map(({ to, label, icon: Icon, exact }) => (
               <Link
                 key={to}
                 to={to}
-                activeOptions={{ exact: true }}
+                activeOptions={{ exact }}
                 className="flex h-8 items-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground [&.active]:bg-muted [&.active]:text-foreground"
               >
                 <Icon className="size-4" aria-hidden />
@@ -87,11 +93,11 @@ function AuthedLayout() {
         aria-label={t('nav.main')}
         className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
       >
-        {NAV.map(({ to, label, icon: Icon }) => (
+        {TABS.map(({ to, label, icon: Icon, exact }) => (
           <Link
             key={to}
             to={to}
-            activeOptions={{ exact: true }}
+            activeOptions={{ exact }}
             className="flex h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium text-muted-foreground transition-colors [&.active]:text-primary"
           >
             <Icon className="size-5" aria-hidden />

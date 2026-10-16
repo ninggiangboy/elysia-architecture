@@ -15,10 +15,13 @@ async function signInWithMagicLink() {
   await expect(page.getByTestId('account-email')).toHaveText(email)
 }
 
-/** A reload restores the session from the refresh cookie — and that access token no longer counts as a recent confirmation. */
+/**
+ * A full page load restores the session from the refresh cookie — and that access token no longer counts as a recent
+ * confirmation. Lands on the account settings, where the email form is.
+ */
 async function becomeStale() {
-  await page.reload()
-  await expect(page.getByTestId('account-email')).toHaveText(email)
+  await page.goto('/settings/account')
+  await expect(page.getByLabel('New email')).toBeVisible()
 }
 
 test.describe
@@ -49,7 +52,7 @@ test.describe
       await signInWithMagicLink()
       await page.getByRole('button', { name: 'Account menu' }).click()
       await page.getByRole('menuitem', { name: 'Security' }).click()
-      await expect(page).toHaveURL(/\/security$/)
+      await expect(page).toHaveURL(/\/settings\/security$/)
       await expect(page.getByTestId('no-passkeys')).toBeVisible()
 
       // Signing in just now counts as a confirmation, so no extra prompt.

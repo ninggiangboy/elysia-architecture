@@ -12,9 +12,9 @@ export const vi = {
   },
   nav: {
     main: 'Chính',
-    profile: 'Hồ sơ',
-    topup: 'Nạp tiền',
-    transactions: 'Giao dịch',
+    overview: 'Tổng quan',
+    wallet: 'Ví',
+    settings: 'Cài đặt',
     realtime: 'Thời gian thực',
   },
   theme: { label: 'Giao diện', light: 'Sáng', dark: 'Tối', system: 'Theo hệ thống' },
@@ -27,6 +27,8 @@ export const vi = {
     account: 'Menu tài khoản',
     accountLabel: 'Tài khoản',
     memberSince: 'Tham gia từ {{date}}',
+    profile: 'Hồ sơ',
+    settings: 'Cài đặt',
     security: 'Bảo mật',
     signOut: 'Đăng xuất',
   },
@@ -71,9 +73,35 @@ export const vi = {
     changedTitle: 'Đã đổi email',
     changed: 'Email tài khoản của bạn hiện là <b>{{email}}</b>.',
   },
+  settings: {
+    title: 'Cài đặt',
+    description: 'Hồ sơ, tài khoản, bảo mật và thông báo của bạn, gom về một chỗ.',
+    loading: 'Đang tải cài đặt',
+    nav: {
+      profile: 'Hồ sơ',
+      account: 'Tài khoản',
+      security: 'Bảo mật',
+      notifications: 'Thông báo',
+    },
+    preferences: {
+      title: 'Ngôn ngữ và giao diện',
+      description:
+        'Ngôn ngữ cũng được dùng cho email và thông báo chúng tôi gửi cho bạn. Giao diện được ghi nhớ trên trình duyệt này.',
+    },
+  },
+  overview: {
+    loading: 'Đang tải tổng quan',
+    welcome: 'Chào mừng trở lại, {{name}}',
+    editProfile: 'Sửa hồ sơ',
+    walletTitle: 'Ví',
+    recentTitle: 'Hoạt động gần đây',
+    checklistTitle: 'Hoàn tất thiết lập',
+    checklistDescription: 'Vài việc giúp tài khoản an toàn và dễ dùng hơn.',
+    stepProfile: 'Thêm giới thiệu và ảnh đại diện',
+    stepPasskey: 'Thêm passkey để đăng nhập nhanh hơn, chống lừa đảo',
+    stepPush: 'Bật thông báo trình duyệt',
+  },
   profile: {
-    title: 'Hồ sơ',
-    description: 'Quản lý cách bạn hiển thị và cách bạn đăng nhập.',
     loading: 'Đang tải hồ sơ',
     loadFailed: 'Không thể tải hồ sơ của bạn',
     personalTitle: 'Thông tin cá nhân',
@@ -141,9 +169,6 @@ export const vi = {
     signOutOthers: 'Đăng xuất tất cả thiết bị khác',
   },
   security: {
-    title: 'Bảo mật',
-    description:
-      'Chọn cách bạn đăng nhập. Liên kết qua email luôn dùng được; các cách dưới đây giúp vào nhanh hơn.',
     loading: 'Đang tải cài đặt bảo mật',
     passkeysTitle: 'Passkey',
     passkeysDescription:
@@ -151,9 +176,6 @@ export const vi = {
     accountsTitle: 'Tài khoản đã kết nối',
     accountsDescription:
       'Đăng nhập bằng Google hoặc GitHub. Chúng tôi chỉ khớp tài khoản theo email mà nhà cung cấp đã xác minh.',
-    dataTitle: 'Dữ liệu của bạn',
-    dataDescription: 'Mang một bản sao đi, hoặc xóa tài khoản cùng mọi thứ trong đó.',
-    dataLink: 'Xuất hoặc xóa dữ liệu của bạn',
   },
   passkeys: {
     list: 'Passkey',
@@ -264,6 +286,7 @@ export const vi = {
       offText: 'Nhận thông báo hệ thống trên trình duyệt này, kể cả khi ứng dụng đã đóng.',
       deniedTitle: 'Thông báo trình duyệt đang bị chặn',
       deniedText: 'Hãy cho phép trong cài đặt trang web của trình duyệt để nhận cảnh báo tại đây.',
+      unsupported: 'Trình duyệt này không thể hiện thông báo từ ứng dụng.',
       turnOff: 'Tắt',
       turnOn: 'Bật',
     },
@@ -330,6 +353,12 @@ export const vi = {
   },
   billing: {
     loading: 'Đang tải ví',
+    wallet: {
+      title: 'Ví',
+      description: 'Số dư của bạn và mọi biến động tiền trong đó.',
+      topUp: 'Nạp tiền',
+      viewAll: 'Xem tất cả',
+    },
     balance: {
       title: 'Số dư của bạn',
       description: 'Mỗi loại tiền một số dư. Tiền vào ví khi Stripe xác nhận thanh toán.',
@@ -373,11 +402,9 @@ export const vi = {
       failedBody: 'Thanh toán chưa hoàn tất. Bạn chưa bị trừ tiền.',
       unknown: 'Không tìm thấy khoản thanh toán này.',
       tryAgain: 'Thử lại',
-      viewTransactions: 'Xem giao dịch',
+      toWallet: 'Về ví',
     },
     transactions: {
-      title: 'Giao dịch',
-      description: 'Mọi biến động tiền trong ví của bạn.',
       historyTitle: 'Lịch sử',
       historyDescription:
         'Mới nhất trước. Cả các khoản bị từ chối hoặc đang chờ cũng được liệt kê.',

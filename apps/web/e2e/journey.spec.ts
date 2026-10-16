@@ -32,7 +32,7 @@ test.describe
       await page.goto(await linkFromMail(email, 'sign-in', before))
       await expect(page).toHaveURL(/\/$/)
       await expect(page.getByTestId('account-email')).toHaveText(email)
-      await expect(page.getByTestId('display-name')).toHaveText(email.split('@')[0]!)
+      await expect(page.getByRole('heading', { name: /Welcome back/, level: 1 })).toBeVisible()
     })
 
     test('an already used or bogus link shows an error instead of signing in', async ({
@@ -50,6 +50,9 @@ test.describe
     })
 
     test('edit the profile; it survives a reload because the refresh cookie restores the session', async () => {
+      await page.getByRole('link', { name: 'Edit profile' }).click()
+      await expect(page).toHaveURL(/\/settings\/profile$/)
+      await expect(page.getByTestId('display-name')).toHaveText(email.split('@')[0]!)
       await page.getByLabel('Display name').fill('Playwright Tester')
       await page.getByLabel('Bio').fill('Hello from the browser')
       // The profile row is created asynchronously after sign-up. If the page loaded before that (version 0), the first save
@@ -67,7 +70,7 @@ test.describe
 
     test('a concurrent edit from another tab asks whether to load it or overwrite it', async () => {
       const other = await page.context().newPage()
-      await other.goto('/')
+      await other.goto('/settings/profile')
       const editElsewhere = async (name: string) => {
         await other.getByLabel('Display name').fill(name)
         await other.getByRole('button', { name: 'Save changes' }).click()
@@ -176,6 +179,8 @@ test.describe
     })
 
     test('change email: only takes effect after confirming from the new mailbox', async () => {
+      await page.getByRole('link', { name: 'Account', exact: true }).click()
+      await expect(page).toHaveURL(/\/settings\/account$/)
       const before = await countMails(newEmail, 'Confirm')
       await page.getByLabel('New email').fill(newEmail)
       await page.getByRole('button', { name: 'Send confirmation link' }).click()
@@ -190,7 +195,7 @@ test.describe
       await dialog.getByRole('button', { name: 'Confirm' }).click()
 
       await expect(page.getByText(`Confirmation link sent to ${newEmail}`)).toBeVisible()
-      await expect(page.getByTestId('account-email')).toHaveText(email) // not changed yet
+      await expect(page.getByRole('main').getByText(email, { exact: true })).toBeVisible() // not changed yet
 
       await page.goto(await linkFromMail(newEmail, 'Confirm', before))
       await expect(page.getByText('Email changed')).toBeVisible()
@@ -199,6 +204,7 @@ test.describe
     })
 
     test('lists the signed-in devices, marking this one', async () => {
+      await page.goto('/settings/security')
       const list = page.getByTestId('sessions')
       await expect(list.getByRole('listitem')).toHaveCount(1)
       await expect(list.getByText('This device')).toBeVisible()

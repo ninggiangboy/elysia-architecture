@@ -10,7 +10,7 @@ import { topUpQuery } from '@/features/billing/queries'
 import { formatMoney } from '@/lib/format'
 
 /** Where Stripe sends the buyer back to (and where a card payment that settled in place ends up). */
-export const Route = createFileRoute('/_authed/topup/return')({
+export const Route = createFileRoute('/_authed/wallet/topup/return')({
   // Stripe adds its own parameters (`payment_intent`, `redirect_status`…); only ours matters.
   validateSearch: (search: Record<string, unknown>): { topUp: string } => ({
     topUp: typeof search.topUp === 'string' ? search.topUp : '',
@@ -118,11 +118,11 @@ function TopUpReturn() {
         <CardFooter className="justify-end">
           {retry && (
             <Button asChild variant="outline" size="sm">
-              <Link to="/topup">{t('billing.return.tryAgain')}</Link>
+              <Link to="/wallet/topup">{t('billing.return.tryAgain')}</Link>
             </Button>
           )}
           <Button asChild size="sm">
-            <Link to="/transactions">{t('billing.return.viewTransactions')}</Link>
+            <Link to="/wallet">{t('billing.return.toWallet')}</Link>
           </Button>
         </CardFooter>
       </Card>
