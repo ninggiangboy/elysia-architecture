@@ -109,13 +109,16 @@ const templated = (
 ): NotificationDraft => ({ userId, kind, template, data: { link: '/', ...data } })
 
 export const welcomeNotification = (p: { userId: string }) =>
-  templated(p.userId, 'welcome', 'welcome')
+  templated(p.userId, 'welcome', 'welcome', { link: '/settings/profile' })
 
 export const emailChangedNotification = (p: { userId: string; newEmail: string }) =>
-  templated(p.userId, 'email_changed', 'emailChanged', { email: p.newEmail })
+  templated(p.userId, 'email_changed', 'emailChanged', {
+    link: '/settings/account',
+    email: p.newEmail,
+  })
 
 export const suspiciousSessionNotification = (p: { userId: string }) =>
-  templated(p.userId, 'security_alert', 'suspiciousSession')
+  templated(p.userId, 'security_alert', 'suspiciousSession', { link: '/settings/security' })
 
 export const newSignInNotification = (p: {
   userId: string
@@ -124,6 +127,7 @@ export const newSignInNotification = (p: {
   userAgent: string | null
 }) =>
   templated(p.userId, 'new_sign_in', 'newSignIn', {
+    link: '/settings/security',
     sessionId: p.sessionId,
     ip: p.ip,
     userAgent: p.userAgent,
@@ -133,7 +137,7 @@ const securityAlert = (
   userId: string,
   template: NotificationTemplate,
   data: Record<string, unknown> = {},
-) => templated(userId, 'security_alert', template, { link: '/security', ...data })
+) => templated(userId, 'security_alert', template, { link: '/settings/security', ...data })
 
 export const passkeyAddedNotification = (p: { userId: string; name: string }) =>
   securityAlert(p.userId, 'passkeyAdded', { name: p.name })
@@ -149,22 +153,22 @@ export const oauthUnlinkedNotification = (p: { userId: string; provider: string 
 
 export const dataExportReadyNotification = (p: { userId: string; expiresAt: string }) =>
   templated(p.userId, 'data_export', 'dataExportReady', {
-    link: '/privacy',
+    link: '/settings/account',
     expiresAt: p.expiresAt,
   })
 
 export const dataExportFailedNotification = (p: { userId: string }) =>
-  templated(p.userId, 'data_export', 'dataExportFailed', { link: '/privacy' })
+  templated(p.userId, 'data_export', 'dataExportFailed', { link: '/settings/account' })
 
 export const accountDeletionScheduledNotification = (p: { userId: string; scheduledFor: string }) =>
   securityAlert(p.userId, 'deletionScheduled', {
-    link: '/privacy',
+    link: '/settings/account',
     scheduledFor: p.scheduledFor,
     deletionScheduledFor: p.scheduledFor,
   })
 
 export const accountDeletionCancelledNotification = (p: { userId: string }) =>
-  securityAlert(p.userId, 'deletionCancelled', { link: '/privacy' })
+  securityAlert(p.userId, 'deletionCancelled', { link: '/settings/account' })
 
 export const topUpSucceededNotification = (p: {
   userId: string
@@ -172,7 +176,7 @@ export const topUpSucceededNotification = (p: {
   currency: string
 }) =>
   templated(p.userId, 'payment', 'topUpSucceeded', {
-    link: '/transactions',
+    link: '/wallet',
     amount: p.amount,
     currency: p.currency,
   })
