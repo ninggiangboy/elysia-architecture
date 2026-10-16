@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter './apps/*' dev",
+    "dev": "bun run --parallel --filter './apps/*' dev",
     "build": "bun run --filter './apps/*' build",
     "typecheck": "bun run --filter './apps/*' typecheck",
     "lint": "biome check .",
