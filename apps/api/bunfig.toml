@@ -1,0 +1,4 @@
+[test]
+# Enforced only when running with --coverage (see `test:coverage`).
+coverageThreshold = { line = 0.85, function = 0.85 }
+coverageSkipTestFiles = true

@@ -14,6 +14,7 @@
     "db:migrate": "bun --env-file=../../.env scripts/db.ts migrate",
     "db:studio": "MODULE=${MODULE:-identity} bunx --bun drizzle-kit studio",
     "test": "bun --env-file=../../.env test src",
+    "test:coverage": "bun --env-file=../../.env test src --coverage --coverage-reporter=text --coverage-reporter=lcov",
     "test:e2e": "bun --env-file=../../.env test tests/e2e --timeout 30000",
     "typecheck": "tsc --noEmit",
     "check:arch": "depcruise src --config .dependency-cruiser.cjs",

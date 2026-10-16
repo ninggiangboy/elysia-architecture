@@ -12,6 +12,9 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "bun run --filter './apps/api' test",
+    "test:coverage": "bun run --filter @app/api test:coverage",
+    "quality:unused": "knip",
+    "quality:dup": "jscpd",
     "infra:up": "docker compose up -d --wait postgres mailpit seaweedfs && docker compose --profile init run --rm seaweedfs-init",
     "infra:down": "docker compose --profile app down",
     "setup": "cp -n .env.example .env; bun install && bun run --filter @app/api keys:generate && bun run infra:up && bun run --filter @app/api db:migrate",
@@ -20,6 +23,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",
+    "jscpd": "^5.4.1",
+    "knip": "^6.41.0",
     "typescript": "^5.9.0"
   }
 }
