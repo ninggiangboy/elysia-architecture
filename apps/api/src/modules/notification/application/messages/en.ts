@@ -113,5 +113,9 @@ export const en = {
       title: 'Account deletion cancelled',
       body: 'Your account will not be deleted. If this was not you, review your signed-in devices.',
     },
+    topUpSucceeded: {
+      title: 'Your top-up was received',
+      body: '{{amount}} was added to your wallet.',
+    },
   },
 } as const

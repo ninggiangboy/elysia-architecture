@@ -109,5 +109,9 @@ export const vi = {
       title: 'Đã hủy xóa tài khoản',
       body: 'Tài khoản của bạn sẽ không bị xóa. Nếu không phải bạn, hãy kiểm tra các thiết bị đang đăng nhập.',
     },
+    topUpSucceeded: {
+      title: 'Đã nhận khoản nạp tiền của bạn',
+      body: 'Đã nạp {{amount}} vào ví của bạn.',
+    },
   },
 } satisfies Catalog

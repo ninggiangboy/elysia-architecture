@@ -1,3 +1,7 @@
+import { TOPUP_CURRENCIES } from '@app/shared-types'
+import type { PaymentGateway } from '#/modules/billing/application/ports'
+import { createBillingModule } from '#/modules/billing/billing.module'
+import { StripePaymentGateway } from '#/modules/billing/infrastructure/stripe-payment-gateway'
 import type { OAuthGateway, WebAuthnService } from '#/modules/identity/application/ports'
 import { createIdentityModule } from '#/modules/identity/identity.module'
 import type { WebPushSender } from '#/modules/notification/application/ports'
@@ -31,6 +35,8 @@ export interface ContainerOverrides {
   webauthn?: WebAuthnService
   /** Replaces the Google/GitHub adapter (tests: a fake provider). */
   oauth?: OAuthGateway
+  /** Replaces Stripe (tests: a fake provider). Needs the `STRIPE_*` variables in the config to take effect. */
+  paymentGateway?: PaymentGateway
 }
 
 export async function createContainer(
@@ -86,6 +92,17 @@ export async function createContainer(
         }
       : undefined
 
+  const { STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET } = config
+  const payments =
+    STRIPE_SECRET_KEY && STRIPE_PUBLISHABLE_KEY && STRIPE_WEBHOOK_SECRET
+      ? {
+          publishableKey: STRIPE_PUBLISHABLE_KEY,
+          gateway:
+            overrides.paymentGateway ??
+            new StripePaymentGateway(STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET),
+        }
+      : undefined
+
   const identity = await createIdentityModule({
     database,
     config,
@@ -122,6 +139,17 @@ export async function createContainer(
     webPush,
   })
 
+  const billing = createBillingModule({
+    database,
+    clock,
+    ids,
+    log: logger,
+    storage,
+    verifier: identity.verifier,
+    currencies: config.TOPUP_CURRENCIES.map((code) => ({ code, ...TOPUP_CURRENCIES[code] })),
+    payments,
+  })
+
   const privacy = createPrivacyModule({
     database,
     clock,
@@ -135,8 +163,8 @@ export async function createContainer(
     policy: {
       // Who takes part is decided here, by name. A module that becomes a service stays in these lists and keeps
       // answering with the same two events; a new module is added here and consumes the same two requests.
-      exportParticipants: ['identity', 'notification', 'profile'],
-      deletionParticipants: ['identity', 'notification', 'privacy', 'profile'],
+      exportParticipants: ['billing', 'identity', 'notification', 'profile'],
+      deletionParticipants: ['billing', 'identity', 'notification', 'privacy', 'profile'],
       deletionGraceMs: config.PRIVACY_DELETION_GRACE_PERIOD * 1000,
       exportTtlMs: config.PRIVACY_EXPORT_TTL * 1000,
       stallAfterMs: config.PRIVACY_STALL_AFTER * 1000,
@@ -158,13 +186,14 @@ export async function createContainer(
     ...profile.handlers,
     ...privacy.handlers,
     ...notification.handlers,
+    ...billing.handlers,
     ...realtime.handlers,
   ]
   for (const handler of handlers) bus.subscribe(handler)
 
   const relay = new OutboxRelay(
     database,
-    [identity.outbox, profile.outbox, notification.outbox, privacy.outbox],
+    [identity.outbox, profile.outbox, notification.outbox, privacy.outbox, billing.outbox],
     bus,
     logger,
     {
@@ -182,7 +211,7 @@ export async function createContainer(
     clock,
     ids,
     storage,
-    modules: { identity, profile, notification, privacy, realtime },
+    modules: { identity, profile, notification, privacy, billing, realtime },
     database,
     bus,
     relay,

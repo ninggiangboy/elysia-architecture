@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
-import { formatDay } from '#/shared/i18n/format'
+import { formatDay, formatMoney } from '#/shared/i18n/format'
 import type { NotificationKind } from '../domain/notification'
 import { translate } from './messages'
 
@@ -78,6 +78,9 @@ const TEMPLATES = {
   dataExportFailed: () => ({}),
   deletionScheduled: (d, locale) => ({ date: formatDay(str(d.scheduledFor), locale) }),
   deletionCancelled: () => ({}),
+  topUpSucceeded: (d, locale) => ({
+    amount: formatMoney(Number(d.amount), str(d.currency), locale),
+  }),
 } satisfies Record<
   string,
   (data: Record<string, unknown>, locale: Locale) => Record<string, string>
@@ -162,3 +165,14 @@ export const accountDeletionScheduledNotification = (p: { userId: string; schedu
 
 export const accountDeletionCancelledNotification = (p: { userId: string }) =>
   securityAlert(p.userId, 'deletionCancelled', { link: '/privacy' })
+
+export const topUpSucceededNotification = (p: {
+  userId: string
+  amount: number
+  currency: string
+}) =>
+  templated(p.userId, 'payment', 'topUpSucceeded', {
+    link: '/transactions',
+    amount: p.amount,
+    currency: p.currency,
+  })

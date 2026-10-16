@@ -6,6 +6,7 @@ export const NOTIFICATION_KINDS = [
   'new_sign_in',
   'security_alert',
   'data_export',
+  'payment',
 ] as const
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
 

@@ -6,7 +6,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --parallel --filter './apps/*' dev",
+    "dev": "bun scripts/dev.ts",
+    "stripe:listen": "bun scripts/stripe.ts listen",
+    "stripe:secret": "bun scripts/stripe.ts secret",
+    "test:stripe": "bun run --filter @app/api test:stripe",
     "build": "bun run --filter './apps/*' build",
     "typecheck": "bun run --filter './apps/*' typecheck",
     "lint": "biome check .",

@@ -81,3 +81,34 @@ describe('passkeys and OAuth', () => {
     expect(loadConfig({ ...base, STEP_UP_TTL: '2m' }).STEP_UP_TTL).toBe(120)
   })
 })
+
+describe('top-ups', () => {
+  const stripe = {
+    STRIPE_SECRET_KEY: 'sk_test_x',
+    STRIPE_PUBLISHABLE_KEY: 'pk_test_x',
+    STRIPE_WEBHOOK_SECRET: 'whsec_x',
+  }
+
+  test('Stripe is off unless its three values are set together', () => {
+    expect(loadConfig(base).STRIPE_SECRET_KEY).toBeUndefined()
+    expect(() => loadConfig({ ...base, STRIPE_SECRET_KEY: 'sk_test_x' })).toThrow(
+      'must be set together',
+    )
+    expect(() => loadConfig({ ...base, ...stripe, STRIPE_WEBHOOK_SECRET: '' })).toThrow(
+      'must be set together',
+    )
+    expect(loadConfig({ ...base, ...stripe }).STRIPE_WEBHOOK_SECRET).toBe('whsec_x')
+    expect(
+      loadConfig({ ...base, STRIPE_SECRET_KEY: '', STRIPE_PUBLISHABLE_KEY: '' }).STRIPE_SECRET_KEY,
+    ).toBeUndefined()
+  })
+
+  test('currencies default to all known ones and reject an unknown code', () => {
+    expect(loadConfig(base).TOPUP_CURRENCIES).toEqual(['usd', 'eur', 'vnd'])
+    expect(loadConfig({ ...base, TOPUP_CURRENCIES: 'vnd, usd' }).TOPUP_CURRENCIES).toEqual([
+      'vnd',
+      'usd',
+    ])
+    expect(() => loadConfig({ ...base, TOPUP_CURRENCIES: 'xyz' })).toThrow('TOPUP_CURRENCIES')
+  })
+})

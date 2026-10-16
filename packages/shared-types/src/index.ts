@@ -1,5 +1,6 @@
 /** Constants shared by web ↔ api (no logic). */
 
+export * from './billing'
 export * from './i18n'
 export * from './i18n-catalog'
 

@@ -74,6 +74,11 @@ export const openapiDocumentation = {
         'Export a copy of your data and delete your account. Both need a recent confirmation (`403 step_up_required`); deleting waits out a grace period in which it can be cancelled.',
     },
     {
+      name: 'billing',
+      description:
+        'Top up a wallet with Stripe (one balance per currency) and read the transaction history. The wallet is credited by the Stripe webhook.',
+    },
+    {
       name: 'notifications',
       description: "The current user's in-app notifications (also pushed live over SSE)",
     },

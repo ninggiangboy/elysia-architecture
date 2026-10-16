@@ -1,4 +1,5 @@
 import { availableParallelism } from 'node:os'
+import { TOPUP_CURRENCY_CODES } from '@app/shared-types'
 import { z } from 'zod'
 import { parseDurationSeconds } from './duration'
 
@@ -144,6 +145,18 @@ const schema = z
     /** Re-sends before giving up: an export then fails, an erasure waits for an operator (`privacy:resume`). */
     PRIVACY_MAX_NUDGES: z.coerce.number().int().nonnegative().default(5),
 
+    /** Stripe, for topping up the wallet. Leave all three unset to turn top-ups off (balances and history still work). */
+    STRIPE_SECRET_KEY: blank,
+    STRIPE_PUBLISHABLE_KEY: blank,
+    /** Signing secret of the webhook endpoint (`whsec_…`); `bun run stripe:secret` prints the one the Stripe CLI uses locally. */
+    STRIPE_WEBHOOK_SECRET: blank,
+    /** Currencies a wallet can be topped up in, comma separated (the ranges are in `@app/shared-types`). */
+    TOPUP_CURRENCIES: z
+      .string()
+      .default(TOPUP_CURRENCY_CODES.join(','))
+      .transform(csv)
+      .pipe(z.array(z.enum(TOPUP_CURRENCY_CODES)).min(1)),
+
     /** OTLP/HTTP endpoint of a collector (Jaeger: http://localhost:4318). Leave unset to turn tracing off. */
     OTEL_EXPORTER_OTLP_ENDPOINT: blank.pipe(z.url().optional()),
     OTEL_SERVICE_NAME: z.string().default('elysia-architecture-api'),
@@ -167,6 +180,14 @@ const schema = z
         code: 'custom',
         path: ['VAPID_PUBLIC_KEY'],
         message: 'VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT must be set together',
+      })
+    const stripe = [env.STRIPE_SECRET_KEY, env.STRIPE_PUBLISHABLE_KEY, env.STRIPE_WEBHOOK_SECRET]
+    if (stripe.some(Boolean) && !stripe.every(Boolean))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['STRIPE_SECRET_KEY'],
+        message:
+          'STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY and STRIPE_WEBHOOK_SECRET must be set together',
       })
     for (const [name, id, secret] of [
       ['GOOGLE', env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET],

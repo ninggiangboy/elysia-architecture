@@ -15,6 +15,7 @@
     "db:studio": "MODULE=${MODULE:-identity} bunx --bun drizzle-kit studio",
     "test": "bun --env-file=../../.env test src",
     "test:coverage": "bun --env-file=../../.env test src --coverage --coverage-reporter=text --coverage-reporter=lcov",
+    "test:stripe": "bun --env-file=../../.env scripts/stripe-smoke.ts",
     "test:e2e": "bun --env-file=../../.env test tests/e2e --timeout 30000",
     "typecheck": "tsc --noEmit",
     "check:arch": "depcruise src --config .dependency-cruiser.cjs",
@@ -41,6 +42,7 @@
     "pino": "^10.4.0",
     "postgres": "^3.4.7",
     "sharp": "^0.35.5",
+    "stripe": "^23.0.0",
     "web-push": "^3.6.7",
     "zod": "^4.1.0"
   },

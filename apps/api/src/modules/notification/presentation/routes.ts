@@ -47,7 +47,8 @@ const pushSubscriptionBody = t.Object({
 const notificationBody = t.Object({
   id: t.String({ format: 'uuid' }),
   kind: t.String({
-    description: 'Machine-readable category, e.g. `welcome`, `email_changed`, `security_alert`',
+    description:
+      'Machine-readable category, e.g. `welcome`, `email_changed`, `security_alert`, `payment`',
   }),
   template: t.Nullable(
     t.String({

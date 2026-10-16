@@ -91,6 +91,7 @@ describe('data export', () => {
     const started = await api('POST', '/api/privacy/exports', { token: me.accessToken })
     expect(started.status).toBe(202)
     expect(started.json.modules.map((m: { module: string }) => m.module)).toEqual([
+      'billing',
       'identity',
       'notification',
       'profile',
@@ -103,7 +104,7 @@ describe('data export', () => {
     const ready = await sse.next('privacy.export.ready', (m) => m.data.exportId === started.json.id)
     const progress = sse.received.filter((m) => m.type === 'privacy.export.progress')
     // Delivery order across relay instances is not guaranteed, which is why `done` is a count, not a step number.
-    expect(progress.map((m) => m.data.done).sort()).toEqual([1, 2, 3])
+    expect(progress.map((m) => m.data.done).sort()).toEqual([1, 2, 3, 4])
     expect(progress.every((m) => m.id !== '')).toBe(true) // replayable: they have an id
     sse.close()
 
@@ -113,7 +114,7 @@ describe('data export', () => {
       })
       return r.json.status === 'ready' ? r.json : undefined
     })
-    expect(view.progress).toEqual({ done: 3, total: 3 })
+    expect(view.progress).toEqual({ done: 4, total: 4 })
     expect(view.size).toBe(ready.data.size)
 
     // The mail carries a working link to the archive.
@@ -121,6 +122,7 @@ describe('data export', () => {
     const archive = unzipSync(new Uint8Array(await (await fetch(linkIn(mail.text))).arrayBuffer()))
     expect(Object.keys(archive).sort()).toEqual([
       'README.txt',
+      'data/billing.json',
       'data/identity.json',
       'data/notification.json',
       'data/profile.json',
@@ -183,7 +185,7 @@ describe('data export', () => {
     const resumed = await second.next('ready')
     expect(resumed.data.resumed).toBe(true)
     await second.next('privacy.export.ready', (m) => m.data.exportId === started.json.id)
-    expect(second.received.filter((m) => m.type === 'privacy.export.progress')).toHaveLength(3)
+    expect(second.received.filter((m) => m.type === 'privacy.export.progress')).toHaveLength(4)
     second.close()
   })
 })
@@ -240,6 +242,7 @@ describe('account deletion', () => {
 
     const progress = sse.received.filter((m) => m.type === 'privacy.deletion.progress')
     expect(progress.map((m) => m.data.module).sort()).toEqual([
+      'billing',
       'identity',
       'notification',
       'privacy',
@@ -367,7 +370,7 @@ describe('jobs on the real tables', () => {
       sql`select payload from privacy.outbox_messages where type = 'privacy.account_erasure_requested.v1' and aggregate_id = ${userId} order by id`,
     )
     const modulesAsked = asked.map((r) => r.payload.modules)
-    expect(modulesAsked[0]).toEqual(['identity', 'notification', 'privacy', 'profile'])
+    expect(modulesAsked[0]).toEqual(['billing', 'identity', 'notification', 'privacy', 'profile'])
     // Re-sent only to the module that had not answered.
     expect(modulesAsked.length).toBeGreaterThanOrEqual(2)
     expect(modulesAsked.slice(1).every((m) => m.join() === 'ghost')).toBe(true)

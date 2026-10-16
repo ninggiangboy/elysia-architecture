@@ -14,7 +14,7 @@ rate-limited mail and GDPR export/erasure across modules are all there to exerci
 races, N instances).
 
 ```
-apps/api              backend  (identity · profile · notification · privacy · realtime)
+apps/api              backend  (identity · profile · notification · privacy · billing · realtime)
 apps/web              React SPA
 packages/shared-types constants shared by web ↔ api
 docs/architecture.md  the full write-up: principles, flows, trade-offs, module-splitting checklist
@@ -78,11 +78,17 @@ period the user can cancel in, then a saga by choreography — each module erase
 re-asked (only it), then the job stalls for an operator instead of lying about being done. Progress streams to the browser as
 *replayable* realtime events, and the whole thing works unchanged when a module becomes a service (it only needs the two events).
 
-### 10. End-to-end types, zero codegen
+### 10. Money that is credited exactly once
+Topping up a wallet with Stripe: the browser pays with Stripe's Payment Element, and only the signed webhook moves money. The top-up settles
+with a conditional update in the same transaction as the ledger entry and the balance, so a redelivered or reordered webhook can neither
+pay twice nor take money back. Wallets hold one balance per currency (integer minor units), and erasing an account anonymises the
+financial records instead of deleting them.
+
+### 11. End-to-end types, zero codegen
 The web client is [Eden Treaty](https://elysiajs.com/eden/overview): types are inferred straight from the backend `App` type
 (the web app aliases `#/*` to `../api/src/*`). Change a route's schema and the frontend stops compiling.
 
-### 11. Observable and shippable
+### 12. Observable and shippable
 `x-request-id`/`x-correlation-id` ride AsyncLocalStorage into every pino log line **and** the outbox message headers, so an async
 handler's logs trace back to the request that caused them. Set `OTEL_EXPORTER_OTLP_ENDPOINT` and the same chain shows up as one
 OpenTelemetry trace in Jaeger — HTTP request → outbox relay → every handler, and onward through events a handler emits. Env-only config, `/health/live` + `/health/ready`, graceful shutdown
@@ -113,6 +119,7 @@ Sign in: enter any email at `/login` → open Mailpit → click the link in the 
 Things worth trying:
 - **Realtime:** open `/realtime`, then sign in on a second browser and sign it out from the profile page — it drops immediately.
 - **Web Push:** enable the toggle in the notification settings (bell → gear), close the tab, trigger an event (e.g. sign in elsewhere).
+- **Top-ups (Stripe test mode):** put your test keys in `.env` (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`), run `bun run stripe:secret` and set the printed `whsec_…` as `STRIPE_WEBHOOK_SECRET`, then `bun run dev` — it also starts the Stripe CLI that forwards webhooks to the API (the `stripe` binary, or Docker). Pay at `/topup` with `4242 4242 4242 4242` (any future date and CVC); `4000 0000 0000 0002` is declined. `bun run test:stripe` does both against the running stack.
 - **Multi-instance:** `bun run keys:generate && docker compose --profile app up -d --build`, then http://localhost:8080 (2 replicas behind nginx, both running the relay).
 
 ## Built-in use cases
@@ -127,6 +134,7 @@ Things worth trying:
 - **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
 - **Export your data** — one zip with what every module holds about you (profile, avatar, notifications, sign-in methods…), mailed as a link, with live progress. Asking for it needs a recent confirmation.
 - **Delete your account** — scheduled, with a grace period to cancel; then every module erases and confirms, and you get a last mail. Try both at `/privacy`.
+- **Top up your wallet** — pay with a card (or another method Stripe offers) at `/topup`, in USD, EUR or VND; the balance and the history at `/transactions` update live when Stripe confirms. Needs Stripe test keys (see below); without them the page says top-ups are off.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.
 - **Transactional mail** — magic-link, welcome and email-confirmation mails sent through the outbox, with provider-aware rate limiting and retries.
 - **Token verification for other services** — a public JWKS endpoint (`/.well-known/jwks.json`).
@@ -156,6 +164,8 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 | `bun run --filter @app/api db:migrate` | Run migrations per module (each has its own `drizzle_<module>` history table) |
 | `bun run --filter @app/api outbox:list` / `outbox:requeue` | List / requeue events that ended up in the dead-letter queue |
 | `bun run --filter @app/api keys:generate` | Generate JWT (ES256) and VAPID keys into `.env` (never overwrites an existing pair) |
+| `bun run stripe:listen` / `stripe:secret` | Forward Stripe's webhooks to the API (also part of `bun run dev` when a Stripe key is set) / print the webhook signing secret |
+| `bun run test:stripe` | Pay with Stripe's test cards against the running stack and check the wallet |
 | `bun run infra:down` | Stop the containers (add `-v` to `docker compose down` to delete data) |
 
 ## Deliberate trade-offs

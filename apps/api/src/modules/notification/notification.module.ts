@@ -1,3 +1,4 @@
+import { BillingEvents, type TopUpSucceededPayload } from '#/modules/billing/contracts'
 import {
   type EmailChangedPayload,
   type EmailChangeRequestedPayload,
@@ -54,6 +55,7 @@ import {
   passkeyAddedNotification,
   passkeyRemovedNotification,
   suspiciousSessionNotification,
+  topUpSucceededNotification,
   welcomeNotification,
 } from './application/in-app-notifications'
 import { NotificationDataExporter } from './application/notification-data-exporter'
@@ -256,6 +258,11 @@ export function createNotificationModule({
         'notification.in-app-deletion-cancelled',
         PrivacyEvents.AccountDeletionCancelled,
         accountDeletionCancelledNotification,
+      ),
+      inApp<TopUpSucceededPayload>(
+        'notification.in-app-topup-succeeded',
+        BillingEvents.TopUpSucceeded,
+        topUpSucceededNotification,
       ),
       new MailEventHandler<DataExportReadyPayload>(
         'notification.send-export-ready',

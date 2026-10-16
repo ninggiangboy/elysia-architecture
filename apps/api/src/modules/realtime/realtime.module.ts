@@ -1,3 +1,8 @@
+import {
+  BillingEvents,
+  type TopUpFailedPayload,
+  type TopUpSucceededPayload,
+} from '#/modules/billing/contracts'
 import { IdentityEvents, type SessionRevokedPayload } from '#/modules/identity/contracts'
 import {
   type NotificationCreatedPayload,
@@ -187,6 +192,41 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
         (p) => ({
           userId: p.userId,
           event: { type: 'privacy.deletion.changed', data: { status: 'cancelled' } },
+        }),
+        hub,
+        clock,
+      ),
+      // "Your money moved": the wallet and the history of the user's other open tabs refetch.
+      new RealtimePushHandler<TopUpSucceededPayload>(
+        'realtime.push-topup-succeeded',
+        BillingEvents.TopUpSucceeded,
+        (p) => ({
+          userId: p.userId,
+          event: {
+            type: 'billing.topup',
+            data: {
+              topUpId: p.topUpId,
+              status: 'succeeded',
+              currency: p.currency,
+              amount: p.amount,
+              balance: p.balance,
+            },
+            // A tab that was closed when the money arrived must still learn it on reconnect.
+            replay: true,
+          },
+        }),
+        hub,
+        clock,
+      ),
+      new RealtimePushHandler<TopUpFailedPayload>(
+        'realtime.push-topup-failed',
+        BillingEvents.TopUpFailed,
+        (p) => ({
+          userId: p.userId,
+          event: {
+            type: 'billing.topup',
+            data: { topUpId: p.topUpId, status: 'failed', currency: p.currency, amount: p.amount },
+          },
         }),
         hub,
         clock,

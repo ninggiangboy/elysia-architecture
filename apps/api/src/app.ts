@@ -76,6 +76,7 @@ export function buildApp(container: Container) {
     .use(container.modules.profile.routes)
     .use(container.modules.notification.routes)
     .use(container.modules.privacy.routes)
+    .use(container.modules.billing.routes)
     .use(container.modules.realtime.routes)
 }
 
