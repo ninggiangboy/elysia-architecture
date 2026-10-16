@@ -109,7 +109,9 @@ async function connectOnce(
     const tracked: RealtimeListener = {
       ...listener,
       onMessage(message) {
-        if (message.id) lastEventId.current = message.id
+        // `ready` hands out the cursor; replayable events then move it forward.
+        const cursor = message.type === 'ready' ? message.data?.cursor : message.id
+        if (typeof cursor === 'string') lastEventId.current = cursor
         listener.onMessage(message)
       },
     }
@@ -121,8 +123,9 @@ async function connectOnce(
 
 /**
  * Server-Sent Events over `fetch` (EventSource cannot send the Authorization header).
- * Reconnects with backoff, resuming from the last event id seen. Every (re)connect delivers a `ready` message whose
- * `data.resumed` says whether the missed events follow (`true`) or the caller must refetch its state (`false`).
+ * Reconnects with backoff, resuming from the last cursor/event id seen. Every (re)connect delivers a `ready` message; its
+ * `data.resumed` says whether the replayable events missed while disconnected follow it (`true`) or may be lost (`false`).
+ * Events that are not replayable ("something changed") are never replayed: refetch their state on every `ready`.
  */
 export function connectSse(listener: RealtimeListener): RealtimeHandle {
   const stop = new AbortController()

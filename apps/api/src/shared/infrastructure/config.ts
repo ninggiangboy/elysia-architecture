@@ -111,8 +111,11 @@ const schema = z
     VAPID_SUBJECT: blank,
     /** After a Web Push to a user, notifications in the same window of this length are stored but not pushed; 0 = push all. */
     PUSH_QUIET_WINDOW_SECONDS: z.coerce.number().int().nonnegative().default(30),
-    /** How long a disconnected SSE client can still replay what it missed via `Last-Event-ID`. */
-    REALTIME_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(300),
+    /**
+     * How long a disconnected SSE client can still replay the events that opted in (`session.revoked`) via `Last-Event-ID`.
+     * Keep it at least ACCESS_TOKEN_TTL: after that a device that missed its sign-out can no longer refresh its session anyway.
+     */
+    REALTIME_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
 
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
     /** Messages claimed per relay batch. */

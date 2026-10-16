@@ -148,7 +148,7 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 ## Deliberate trade-offs
 
 Nothing here is free, and the docs say so: access tokens outlive logout by up to 15 minutes (no Redis denylist), the magic-link
-throttle can let a few requests slip through under a race, realtime replays only a few minutes of missed events (then clients refetch), and one shared pool/transaction means you must
+throttle can let a few requests slip through under a race, realtime is best-effort (only events that opt in, such as sign-out, are replayed after a reconnect; the rest are refetched), and one shared pool/transaction means you must
 review cross-module transactions before splitting. See [Deliberate trade-offs](docs/architecture.md#deliberate-trade-offs).
 
 ---

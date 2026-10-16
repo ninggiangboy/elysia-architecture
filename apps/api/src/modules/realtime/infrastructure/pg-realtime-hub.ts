@@ -1,4 +1,4 @@
-import { and, asc, eq, lt, sql } from 'drizzle-orm'
+import { and, asc, eq, gt, lt, min, sql } from 'drizzle-orm'
 import type { Clock, Log } from '#/shared/application/ports'
 import type { Database } from '#/shared/infrastructure/db/database'
 import type {
@@ -31,6 +31,12 @@ interface Subscriber {
   closeReason?: string
 }
 
+/** What a reconnecting client missed, and the login sessions whose connections that hangs up. */
+interface Replay {
+  messages: RealtimeMessage[]
+  closesSession: Set<string>
+}
+
 /** `Last-Event-ID` is client input: accept only a plain non-negative integer. */
 export function parseEventId(raw: string | undefined): number | undefined {
   if (!raw || !/^\d{1,15}$/.test(raw)) return undefined
@@ -38,9 +44,9 @@ export function parseEventId(raw: string | undefined): number | undefined {
 }
 
 /**
- * Fan-out across API instances without Redis: `publish` = insert into `realtime.events` + `NOTIFY realtime` in one
- * transaction, every instance that has at least one connection holds a dedicated `LISTEN realtime` connection and hands
- * the message to its local sockets.
+ * Fan-out across API instances without Redis: `publish` = `NOTIFY realtime` (for `replay` events: plus an insert into
+ * `realtime.events` in the same transaction), every instance that has at least one connection holds a dedicated `LISTEN realtime` connection
+ * and hands the message to its local sockets.
  *
  * Replay: the insert gives each message a per-user increasing `seq` (the SSE `id`). A client that reconnects sends it
  * back as `Last-Event-ID` and `register` replays what it missed from the buffer, which `prune` keeps short.
@@ -65,25 +71,47 @@ export class PgRealtimeHub implements RealtimeGateway {
     event: RealtimeEvent,
   ): Promise<void> {
     const at = this.clock.now()
+    if (!event.replay) {
+      const message: RealtimeMessage = { type: event.type, data: event.data, at: at.toISOString() }
+      await this.database.client.notify(CHANNEL, this.encode(target, message, event.type))
+      return
+    }
     await this.database.db.transaction(async (tx) => {
       // Per-user lock: seq order = commit order for one user, so a reconnecting client never skips an event.
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${target.userId}, 0))`)
       const [row] = await tx
         .insert(events)
-        .values({ userId: target.userId, type: event.type, data: event.data, createdAt: at })
+        .values({
+          userId: target.userId,
+          type: event.type,
+          data: event.data,
+          closeSessionId: target.closeSessionId,
+          createdAt: at,
+        })
         .returning({ seq: events.seq })
-      const wire: Wire = {
-        userId: target.userId,
-        closeSessionId: target.closeSessionId,
-        message: { id: String(row?.seq), type: event.type, data: event.data, at: at.toISOString() },
+      const message: RealtimeMessage = {
+        id: String(row?.seq),
+        type: event.type,
+        data: event.data,
+        at: at.toISOString(),
       }
-      const payload = JSON.stringify(wire)
-      if (Buffer.byteLength(payload) > MAX_PAYLOAD_BYTES) {
-        throw new Error(`realtime payload too large for ${event.type}`)
-      }
+      const payload = this.encode(target, message, event.type)
       // Delivered when the transaction commits, i.e. after the row is visible to replays.
       await tx.execute(sql`select pg_notify(${CHANNEL}, ${payload})`)
     })
+  }
+
+  private encode(
+    target: { userId: string; closeSessionId?: string },
+    message: RealtimeMessage,
+    type: string,
+  ): string {
+    const wire: Wire = { userId: target.userId, closeSessionId: target.closeSessionId, message }
+    const payload = JSON.stringify(wire)
+    if (Buffer.byteLength(payload) > MAX_PAYLOAD_BYTES) {
+      throw new Error(`realtime payload too large for ${type}`)
+    }
+    return payload
   }
 
   async register(
@@ -92,7 +120,7 @@ export class PgRealtimeHub implements RealtimeGateway {
   ): Promise<RealtimeRegistration> {
     if (this.stopped) {
       connection.close('server_shutdown')
-      return { resumed: false, start() {}, unregister() {} }
+      return { resumed: false, cursor: '0', start() {}, unregister() {} }
     }
     // Lazy: processes that never serve a connection (e.g. a relay-only replica) never open a LISTEN connection.
     this.listening ??= this.database.client
@@ -114,51 +142,68 @@ export class PgRealtimeHub implements RealtimeGateway {
       if (current?.size === 0) this.byUser.delete(connection.userId)
     }
 
-    let replay: { messages: RealtimeMessage[]; after: number } | undefined
+    // `cursor` is where this stream starts in the buffer: the client sends it back as Last-Event-ID, even if it never sees a replay event.
+    let cursor = 0
+    let replay: Replay | undefined
     try {
-      replay = await this.replayAfter(connection.userId, parseEventId(lastEventId))
+      const head = await this.readHead()
+      cursor = head.head
+      replay = await this.replayAfter(connection.userId, parseEventId(lastEventId), head)
     } catch (err) {
-      // The buffer is an optimisation: without it the client simply refetches.
+      // The buffer is an optimisation: without it the client simply resyncs.
       this.log.warn({ err, connectionId: connection.id }, 'realtime replay failed')
     }
 
     return {
       resumed: replay !== undefined,
+      cursor: String(cursor),
       unregister,
       start: () => {
-        let sent = replay?.after ?? 0
+        const replayed = new Set<string | undefined>()
         for (const message of replay?.messages ?? []) {
           this.deliver(subscriber, message)
-          sent = Number(message.id)
+          replayed.add(message.id)
         }
+        if (replay?.closesSession.has(connection.sessionId))
+          subscriber.closeReason = 'session_revoked'
         subscriber.live = true
+        // An event committed while the buffer was being read is both replayed and queued: send it once.
         for (const message of subscriber.queue.splice(0)) {
-          if (Number(message.id) > sent) this.deliver(subscriber, message)
+          if (!message.id || !replayed.has(message.id)) this.deliver(subscriber, message)
         }
         if (subscriber.closeReason) this.close(subscriber, subscriber.closeReason)
       },
     }
   }
 
-  /** Events the user missed after `afterSeq`, or `undefined` when the buffer cannot vouch for a gap-free replay. */
-  private async replayAfter(userId: string, afterSeq: number | undefined) {
-    if (afterSeq === undefined) return undefined
-    // The anchor must still exist: if it was pruned, the events right after it may have been too.
-    const [anchor] = await this.database.db
-      .select({ seq: events.seq })
-      .from(events)
-      .where(and(eq(events.userId, userId), eq(events.seq, afterSeq)))
-      .limit(1)
-    if (!anchor) return undefined
+  /** Newest allocated `seq` (0 if none yet) and the oldest one still stored. */
+  private async readHead(): Promise<{ head: number; oldest: number }> {
+    const [seq] = await this.database.db.execute<{ last_value: string; is_called: boolean }>(
+      sql`select last_value, is_called from realtime.events_seq_seq`,
+    )
+    const head = seq?.is_called ? Number(seq.last_value) : 0
+    const [row] = await this.database.db.select({ oldest: min(events.seq) }).from(events)
+    return { head, oldest: row?.oldest == null ? head + 1 : Number(row.oldest) }
+  }
+
+  /**
+   * The user's events after `cursor`, or `undefined` when the buffer cannot vouch for a gap-free replay: no cursor,
+   * one from the future, or one older than the oldest stored event (what came right after it may have been pruned).
+   */
+  private async replayAfter(
+    userId: string,
+    cursor: number | undefined,
+    { head, oldest }: { head: number; oldest: number },
+  ): Promise<Replay | undefined> {
+    if (cursor === undefined || cursor > head || cursor < oldest - 1) return undefined
     const rows = await this.database.db
       .select()
       .from(events)
-      .where(and(eq(events.userId, userId), sql`${events.seq} > ${afterSeq}`))
+      .where(and(eq(events.userId, userId), gt(events.seq, cursor)))
       .orderBy(asc(events.seq))
       .limit(MAX_REPLAY + 1)
     if (rows.length > MAX_REPLAY) return undefined
     return {
-      after: afterSeq,
       messages: rows.map(
         (r): RealtimeMessage => ({
           id: String(r.seq),
@@ -167,6 +212,7 @@ export class PgRealtimeHub implements RealtimeGateway {
           at: r.createdAt.toISOString(),
         }),
       ),
+      closesSession: new Set(rows.flatMap((r) => (r.closeSessionId ? [r.closeSessionId] : []))),
     }
   }
 

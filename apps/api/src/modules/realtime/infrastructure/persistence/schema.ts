@@ -14,6 +14,8 @@ export const events = realtimeSchema.table(
     userId: uuid('user_id').notNull(),
     type: text('type').notNull(),
     data: jsonb('data').$type<Record<string, unknown>>().notNull(),
+    /** Replaying this event also hangs up the connections of that login session (e.g. `session.revoked`). */
+    closeSessionId: text('close_session_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   },
   (t) => [

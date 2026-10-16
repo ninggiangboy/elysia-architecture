@@ -57,7 +57,7 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
           userId: auth.userId,
           sessionId: auth.sessionId,
           send: (m: RealtimeMessage) =>
-            write(`id: ${m.id}\nevent: ${m.type}\ndata: ${JSON.stringify(m)}\n\n`),
+            write(`${m.id ? `id: ${m.id}\n` : ''}event: ${m.type}\ndata: ${JSON.stringify(m)}\n\n`),
           close: dispose,
         }
 
@@ -79,7 +79,7 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
             request.signal.addEventListener('abort', dispose)
             heartbeat = setInterval(() => write(': ping\n\n'), SSE_HEARTBEAT_MS)
             write(
-              `retry: 3000\nevent: ready\ndata: ${JSON.stringify({ sessionId: auth.sessionId, resumed: registration.resumed })}\n\n`,
+              `retry: 3000\nevent: ready\ndata: ${JSON.stringify({ sessionId: auth.sessionId, resumed: registration.resumed, cursor: registration.cursor })}\n\n`,
             )
             // After `ready`, so the client knows whether what follows is a replay of what it missed.
             registration.start()
@@ -103,8 +103,9 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
             'Live events for the signed-in user (`ready`, `session.revoked`, `notification.created`, `notification.read`, `realtime.test`). ' +
             '`EventSource` cannot send an `Authorization` header, so consume it with `fetch` and read the body stream. ' +
             'Each `data:` is a JSON `{ id, type, data, at }`, and the SSE `id:` is that same id. ' +
-            'To resume after a disconnect send the last id you saw as `Last-Event-ID`: `ready` then carries `resumed: true` and the events you missed follow it. ' +
-            'With `resumed: false` (no id, id too old, or too many missed) nothing is replayed: refetch your state.',
+            'Only events that opt in (`session.revoked`) carry an `id` and are replayable; the others are "something changed, refetch" and are not stored. ' +
+            '`ready` carries a `cursor`: keep the newest of it and the event ids, and send it as `Last-Event-ID` when reconnecting. ' +
+            'If it is still in the buffer, `ready.resumed` is `true` and the replayable events you missed follow it; otherwise `false` (cursor too old, or too many missed): resync those from the API.',
         },
       },
     )
@@ -115,13 +116,19 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
           userId: auth.userId,
           sessionId: auth.sessionId,
           message: body.message,
+          replay: body.replay,
         })
         set.status = 202
         return { status: 'sent' as const }
       },
       {
         auth: true,
-        body: t.Object({ message: t.String({ minLength: 1, maxLength: 200 }) }),
+        body: t.Object({
+          message: t.String({ minLength: 1, maxLength: 200 }),
+          replay: t.Optional(
+            t.Boolean({ description: 'Store the event so a reconnecting client replays it' }),
+          ),
+        }),
         detail: {
           summary: 'Send a test event',
           description:

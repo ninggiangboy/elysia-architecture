@@ -93,90 +93,141 @@ describe('server-sent events', () => {
 })
 
 describe('replay with Last-Event-ID', () => {
-  const say = (api: typeof apiA, token: string, message: string) =>
-    api('POST', '/api/realtime/test', { token, body: { message } })
+  const say = (api: typeof apiA, token: string, message: string, replay?: boolean) =>
+    api('POST', '/api/realtime/test', { token, body: { message, replay } })
+  const messagesOf = (stream: { received: { type: string; data: Record<string, unknown> }[] }) =>
+    stream.received.filter((m) => m.type === 'realtime.test').map((m) => m.data.message)
 
-  test('a reconnecting client receives exactly the events it missed, after ready', async () => {
+  test('a reconnecting client receives the replayable events it missed, after ready — from its ready cursor', async () => {
     const me = await login(apiA, uniqueEmail('replay'))
     const first = await openSse(a.app, me.accessToken)
-    await first.next('ready')
-    await say(apiA, me.accessToken, 'one')
-    const seen = await first.next('realtime.test')
+    const cursor = (await first.next('ready')).data.cursor as string
+    expect(cursor).toMatch(/^\d+$/)
     first.close()
 
-    // Sent while the client is offline — from the other instance.
-    await say(apiB, me.accessToken, 'two')
-    await say(apiB, me.accessToken, 'three')
+    // Sent while the client is offline — from the other instance. The plain event is not stored.
+    await say(apiB, me.accessToken, 'plain')
+    await say(apiB, me.accessToken, 'two', true)
+    await say(apiB, me.accessToken, 'three', true)
 
-    const second = await openSse(a.app, me.accessToken, { lastEventId: seen.id })
+    const second = await openSse(a.app, me.accessToken, { lastEventId: cursor })
     try {
       const ready = await second.next('ready')
       expect(ready.data.resumed).toBe(true)
       await second.next('realtime.test', (m) => m.data.message === 'three')
-      const messages = second.received.filter((m) => m.type === 'realtime.test')
-      expect(messages.map((m) => m.data.message)).toEqual(['two', 'three'])
+      expect(messagesOf(second)).toEqual(['two', 'three'])
       expect(second.received[0]?.type).toBe('ready')
 
       // Live delivery continues after the replay, with no duplicates.
-      await say(apiA, me.accessToken, 'four')
+      await say(apiA, me.accessToken, 'four', true)
       await second.next('realtime.test', (m) => m.data.message === 'four')
-      expect(
-        second.received.filter((m) => m.type === 'realtime.test').map((m) => m.data.message),
-      ).toEqual(['two', 'three', 'four'])
+      expect(messagesOf(second)).toEqual(['two', 'three', 'four'])
     } finally {
       second.close()
     }
   })
 
-  test('nothing is replayed without Last-Event-ID, and ready says to refetch', async () => {
+  test('events that did not opt in carry no id and are never stored', async () => {
+    const me = await login(apiA, uniqueEmail('plain'))
+    const stream = await openSse(a.app, me.accessToken)
+    const cursor = (await stream.next('ready')).data.cursor as string
+    await say(apiA, me.accessToken, 'plain')
+    const plain = await stream.next('realtime.test')
+    stream.close()
+    expect(plain.id).toBeUndefined()
+
+    const again = await openSse(a.app, me.accessToken, { lastEventId: cursor })
+    try {
+      expect((await again.next('ready')).data.resumed).toBe(true)
+      await say(apiA, me.accessToken, 'live')
+      await again.next('realtime.test')
+      expect(messagesOf(again)).toEqual(['live'])
+    } finally {
+      again.close()
+    }
+  })
+
+  test('nothing is replayed without Last-Event-ID, and ready says it did not resume', async () => {
     const me = await login(apiA, uniqueEmail('no-replay'))
-    await say(apiA, me.accessToken, 'missed')
+    await say(apiA, me.accessToken, 'missed', true)
     const stream = await openSse(a.app, me.accessToken)
     try {
       expect((await stream.next('ready')).data.resumed).toBe(false)
-      await say(apiA, me.accessToken, 'live')
+      await say(apiA, me.accessToken, 'live', true)
       await stream.next('realtime.test')
-      expect(stream.received.filter((m) => m.type === 'realtime.test')).toHaveLength(1)
+      expect(messagesOf(stream)).toEqual(['live'])
     } finally {
       stream.close()
     }
   })
 
-  test('an unknown, malformed or foreign id is not replayed', async () => {
+  test('another user’s events are never replayed, and malformed ids are ignored', async () => {
     const me = await login(apiA, uniqueEmail('replay-bad'))
     const other = await login(apiA, uniqueEmail('replay-other'))
-    const theirs = await openSse(a.app, other.accessToken)
-    await theirs.next('ready')
-    await say(apiA, other.accessToken, 'secret')
-    const foreignId = (await theirs.next('realtime.test')).id
-    theirs.close()
-    await say(apiA, me.accessToken, 'mine')
+    const first = await openSse(a.app, me.accessToken)
+    const cursor = (await first.next('ready')).data.cursor as string
+    first.close()
+    await say(apiA, other.accessToken, 'secret', true)
 
-    for (const lastEventId of [foreignId, '999999999999999', 'abc', '1; drop table', '-1']) {
+    const mine = await openSse(a.app, me.accessToken, { lastEventId: cursor })
+    try {
+      expect((await mine.next('ready')).data.resumed).toBe(true)
+      await say(apiA, me.accessToken, 'mine', true)
+      await mine.next('realtime.test')
+      expect(messagesOf(mine)).toEqual(['mine'])
+    } finally {
+      mine.close()
+    }
+
+    for (const lastEventId of ['999999999999999', 'abc', '1; drop table', '-1']) {
       const stream = await openSse(a.app, me.accessToken, { lastEventId })
       try {
-        const ready = await stream.next('ready')
-        expect(ready.data.resumed).toBe(false)
+        expect((await stream.next('ready')).data.resumed).toBe(false)
       } finally {
         stream.close()
       }
     }
   })
 
-  test('pruned events are gone, so the client is told to refetch', async () => {
+  test('a cursor older than the buffer is not resumed, so the client resyncs', async () => {
     const me = await login(apiA, uniqueEmail('pruned'))
     const first = await openSse(a.app, me.accessToken)
-    await first.next('ready')
-    await say(apiA, me.accessToken, 'old')
-    const seen = await first.next('realtime.test')
+    const cursor = (await first.next('ready')).data.cursor as string
     first.close()
+    await say(apiA, me.accessToken, 'old', true)
 
-    const removed = await a.container.modules.realtime.prune(new Date(Date.now() + 60_000))
-    expect(removed).toBeGreaterThan(0)
+    await a.container.modules.realtime.prune(new Date(Date.now() + 60_000))
 
-    const second = await openSse(a.app, me.accessToken, { lastEventId: seen.id })
+    const second = await openSse(a.app, me.accessToken, { lastEventId: cursor })
     try {
       expect((await second.next('ready')).data.resumed).toBe(false)
+    } finally {
+      second.close()
+    }
+  })
+
+  test('a device signed out while it was offline learns it as soon as it reconnects', async () => {
+    const email = uniqueEmail('offline-revoked')
+    const laptop = await login(apiA, email, 'Laptop/1.0')
+    const phone = await login(apiA, email, 'Phone/1.0')
+    const phoneId = sessionIdOf(phone.accessToken)
+
+    const first = await openSse(a.app, phone.accessToken)
+    const cursor = (await first.next('ready')).data.cursor as string
+    first.close() // the phone drops off the network
+
+    const out = await apiB('DELETE', `/api/account/sessions/${phoneId}`, {
+      token: laptop.accessToken,
+    })
+    expect(out.status).toBe(204)
+    await Bun.sleep(500) // outbox relay → realtime
+
+    // Its access token is still valid, so the reconnect is accepted — and the missed sign-out is replayed.
+    const second = await openSse(a.app, phone.accessToken, { lastEventId: cursor })
+    try {
+      expect((await second.next('ready')).data.resumed).toBe(true)
+      expect((await second.next('session.revoked')).data.sessionId).toBe(phoneId)
+      await eventuallyClosed(second)
     } finally {
       second.close()
     }

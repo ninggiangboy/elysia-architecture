@@ -1,6 +1,7 @@
 /** What a client receives — the JSON in each SSE `data:` line. */
 export interface RealtimeMessage {
-  id: string
+  /** Only on `replay` events (it is the SSE `id:` and what `Last-Event-ID` points to). */
+  id?: string
   type: string
   data: Record<string, unknown>
   at: string
@@ -9,6 +10,12 @@ export interface RealtimeMessage {
 export interface RealtimeEvent {
   type: string
   data: Record<string, unknown>
+  /**
+   * Opt in to replay, default `false`. Set it only for an event whose loss the client cannot repair by refetching its state
+   * (a chat message, a step of a long job…): it is then stored briefly and re-sent to a client that reconnects with `Last-Event-ID`.
+   * "Something changed, refetch" events should leave it off — they cost no storage.
+   */
+  replay?: boolean
 }
 
 /** One open SSE stream. */
@@ -24,10 +31,13 @@ export interface RealtimeConnection {
 /** A registered connection. Nothing is sent to it until `start()`, so the caller can write its own opening frame first. */
 export interface RealtimeRegistration {
   /**
-   * `true` when the client's `Last-Event-ID` was still in the replay buffer, so `start()` sends every event it missed
-   * and it need not refetch its state. `false` (no id, unknown id, too old, or too many missed): refetch.
+   * `true` when the client's `Last-Event-ID` was still in the replay buffer, so `start()` sends every `replay` event it
+   * missed. `false` (no id, unknown id, too old, or too many missed): some may be lost, so resync those from the API.
+   * Events without `replay` are never part of this; clients always refetch the state they cover when a stream opens.
    */
   readonly resumed: boolean
+  /** Position in the replay buffer the stream starts from; the client keeps it (updated by each event `id`) as its next `Last-Event-ID`. */
+  readonly cursor: string
   /** Sends the replayed events, then switches to live delivery with no gap and no duplicate. */
   start(): void
   unregister(): void
@@ -35,8 +45,8 @@ export interface RealtimeRegistration {
 
 export interface RealtimeGateway {
   /**
-   * Stores the event briefly (for replay) and delivers it to every open connection of the user — on whichever API
-   * instance holds it. Offline users get it from the replay buffer if they reconnect in time.
+   * Delivers the event to every open connection of the user — on whichever API instance holds it. Offline users miss it,
+   * unless `event.replay` stored it briefly for replay.
    * `closeSessionId`: after delivery, connections opened by that session are closed by the server.
    */
   publish(target: { userId: string; closeSessionId?: string }, event: RealtimeEvent): Promise<void>

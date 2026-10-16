@@ -1,0 +1,1 @@
+ALTER TABLE "realtime"."events" ADD COLUMN "close_session_id" text;
