@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardFooter } from '@/components/ui/card'
 import { errorMessage } from '@/lib/api'
 import { formatDate, formatRelative } from '@/lib/format'
-import { revokeOtherSessions, revokeSession, sessionsQuery } from './queries'
+import { revokeOtherSessions, revokeSession, type Session, sessionsQuery } from './queries'
 
+const REVOKE_KEY = ['sessions', 'revoke']
 type Matchers = ReadonlyArray<readonly [RegExp, string]>
 
 // Order matters: Edge and Chrome UAs also contain "Chrome/" and "Safari/".
@@ -51,19 +52,45 @@ function DeviceIcon({ userAgent }: { userAgent: string | null }) {
 export function SessionsList() {
   const queryClient = useQueryClient()
   const { data: sessions } = useSuspenseQuery(sessionsQuery)
-  const refetch = () => queryClient.invalidateQueries({ queryKey: sessionsQuery.queryKey })
+  const key = sessionsQuery.queryKey
+  // Resync once the last of a quick series of sign-outs is done; an earlier refetch would bring back a device
+  // whose sign-out is still on its way.
+  const refetch = () => {
+    if (queryClient.isMutating({ mutationKey: REVOKE_KEY }) <= 1)
+      void queryClient.invalidateQueries({ queryKey: key })
+  }
+  // Optimistic: the device disappears at once; a failed request brings it back.
+  const drop = async (keep: (s: Session) => boolean) => {
+    await queryClient.cancelQueries({ queryKey: key })
+    const previous = queryClient.getQueryData(key)
+    queryClient.setQueryData(key, (list) => list?.filter(keep))
+    return { previous }
+  }
+  const undo = (undoable?: { previous?: Session[] }) => {
+    if (undoable?.previous) queryClient.setQueryData(key, undoable.previous)
+  }
 
   const revoke = useMutation({
+    mutationKey: REVOKE_KEY,
     mutationFn: revokeSession,
+    onMutate: (id) => drop((s) => s.id !== id),
     onSuccess: () => toast.success('Device signed out'),
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err, _id, undoable) => {
+      undo(undoable)
+      toast.error(errorMessage(err))
+    },
     onSettled: refetch,
   })
   const revokeOthers = useMutation({
+    mutationKey: REVOKE_KEY,
     mutationFn: revokeOtherSessions,
+    onMutate: () => drop((s) => s.current),
     onSuccess: ({ revoked }) =>
       toast.success(`Signed out ${revoked} other ${revoked === 1 ? 'device' : 'devices'}`),
-    onError: (err) => toast.error(errorMessage(err)),
+    onError: (err, _v, undoable) => {
+      undo(undoable)
+      toast.error(errorMessage(err))
+    },
     onSettled: refetch,
   })
 
@@ -93,13 +120,7 @@ export function SessionsList() {
               </p>
             </div>
             {!s.current && (
-              <Button
-                variant="outline"
-                size="sm"
-                loading={revoke.isPending && revoke.variables === s.id}
-                disabled={revoke.isPending}
-                onClick={() => revoke.mutate(s.id)}
-              >
+              <Button variant="outline" size="sm" onClick={() => revoke.mutate(s.id)}>
                 Sign out
               </Button>
             )}
@@ -117,7 +138,6 @@ export function SessionsList() {
             variant="destructive"
             size="sm"
             className="ml-auto"
-            loading={revokeOthers.isPending}
             onClick={() => revokeOthers.mutate()}
           >
             Sign out all other devices

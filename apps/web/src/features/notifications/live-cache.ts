@@ -54,14 +54,50 @@ export function applyCreated(queryClient: QueryClient, data: Record<string, unkn
   return refreshCounts(queryClient)
 }
 
-/** `notification.read`: `id` is the notification, or `null` for "all of them". */
-export function applyRead(queryClient: QueryClient, data: Record<string, unknown> | undefined) {
-  const id = typeof data?.id === 'string' ? data.id : null
-  const readAt = typeof data?.readAt === 'string' ? data.readAt : new Date().toISOString()
+/** Flips the cached list items to read: one by `id`, or every one for `null`. Idempotent. */
+const markReadInList = (queryClient: QueryClient, id: string | null, readAt: string) =>
   patchList(queryClient, (items) =>
     items.map((n) => (!n.read && (id === null || n.id === id) ? { ...n, read: true, readAt } : n)),
   )
+
+/** `notification.read`: `id` is the notification, or `null` for "all of them". */
+export function applyRead(queryClient: QueryClient, data: Record<string, unknown> | undefined) {
+  const id = typeof data?.id === 'string' ? data.id : null
+  markReadInList(
+    queryClient,
+    id,
+    typeof data?.readAt === 'string' ? data.readAt : new Date().toISOString(),
+  )
   return refreshCounts(queryClient)
+}
+
+type Snapshot = ReturnType<QueryClient['getQueriesData']>
+
+/**
+ * Optimistic read: the UI changes before the server answers. Returns what is needed to undo it if the request fails.
+ * `id` = one notification, `null` = all. The counts follow the list; the server's numbers replace them when the
+ * mutation settles (the caller invalidates).
+ */
+export async function readOptimistically(queryClient: QueryClient, id: string | null) {
+  await queryClient.cancelQueries({ queryKey: ['notifications'] })
+  const snapshot: Snapshot = queryClient.getQueriesData({ queryKey: ['notifications'] })
+  const wasUnread =
+    id === null ||
+    queryClient
+      .getQueriesData<List>({ queryKey: LIST_KEY })
+      .some(([, list]) => list?.pages.some((p) => p.items.some((n) => n.id === id && !n.read)))
+  markReadInList(queryClient, id, new Date().toISOString())
+  if (id === null) {
+    queryClient.setQueryData(unreadCountQuery.queryKey, 0)
+    queryClient.setQueryData(unseenCountQuery.queryKey, 0)
+  } else if (wasUnread) {
+    queryClient.setQueryData<number>(unreadCountQuery.queryKey, (n) => Math.max(0, (n ?? 1) - 1))
+  }
+  return {
+    rollback: () => {
+      for (const [key, value] of snapshot) queryClient.setQueryData(key, value)
+    },
+  }
 }
 
 /** `notification.seen`: only the badge is affected. */

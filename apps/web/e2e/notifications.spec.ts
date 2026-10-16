@@ -91,4 +91,49 @@ test.describe('notifications', () => {
     await here.close()
     await there.close()
   })
+
+  test('marking read is optimistic: it shows before the server answers and is undone if the request fails', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      baseURL: 'http://localhost:5173',
+      extraHTTPHeaders: { 'x-forwarded-for': TEST_IP },
+    })
+    const email = uniqueEmail('optimistic')
+    const page = await context.newPage()
+    await page.goto('/login')
+    const before = await countMails(email, 'sign-in')
+    await page.getByLabel('Email').fill(email)
+    await page.getByRole('button', { name: 'Send sign-in link' }).click()
+    await page.goto(await linkFromMail(email, 'sign-in', before))
+    await expect(page.getByTestId('unseen-badge')).toHaveText('1')
+    await page.getByRole('button', { name: /^Notifications/ }).click()
+    const unread = page.locator('[data-read="false"]')
+    await expect(unread).toHaveCount(1)
+
+    // The server fails: the item flips to read at once, then comes back as unread with an error toast.
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await page.route('**/api/notifications/read-all', async (route) => {
+      await gate
+      await route.fulfill({ status: 500, json: { error: { code: 'boom', message: 'Boom' } } })
+    })
+    await page.getByRole('button', { name: 'Mark all as read' }).click()
+    await expect(unread).toHaveCount(0)
+    release()
+    await expect(unread).toHaveCount(1)
+    await expect(page.getByText('Boom')).toBeVisible()
+
+    // And when the server is fine, it sticks.
+    await page.unroute('**/api/notifications/read-all')
+    await page.getByRole('button', { name: 'Mark read' }).click()
+    await expect(unread).toHaveCount(0)
+    await page.reload()
+    await page.getByRole('button', { name: /^Notifications/ }).click()
+    await expect(page.getByTestId('notifications').getByRole('listitem')).toHaveCount(1)
+    await expect(unread).toHaveCount(0)
+    await context.close()
+  })
 })

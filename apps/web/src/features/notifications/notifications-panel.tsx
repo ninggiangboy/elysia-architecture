@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { errorMessage } from '@/lib/api'
 import { formatDate, formatRelative } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { readOptimistically } from './live-cache'
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -22,6 +23,8 @@ const KIND_ICONS: Record<string, { icon: typeof Bell; className: string }> = {
   new_sign_in: { icon: LogIn, className: 'bg-success/12 text-success' },
   security_alert: { icon: ShieldAlert, className: 'bg-destructive/10 text-destructive' },
 }
+const READ_KEY = ['notifications', 'mark-read']
+
 /** Newer than this counts as "just arrived". */
 const FRESH_MS = 10_000
 const DEFAULT_ICON = { icon: Bell, className: 'bg-muted text-muted-foreground' }
@@ -33,16 +36,31 @@ export function NotificationsPanel() {
   const { data, isPending, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfiniteQuery(notificationsQuery)
   const { data: unread = 0 } = useQuery(unreadCountQuery)
-  const refetch = () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
+  // Resync with the server once the last of a quick series of reads is done; earlier ones would undo the later ones.
+  const refetch = () => {
+    if (queryClient.isMutating({ mutationKey: READ_KEY }) <= 1)
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+  }
 
+  // Optimistic: the list and counts change at once; a failed request puts them back.
   const markRead = useMutation({
+    mutationKey: READ_KEY,
     mutationFn: markNotificationRead,
-    onError: (err) => toast.error(errorMessage(err)),
+    onMutate: (id) => readOptimistically(queryClient, id),
+    onError: (err, _id, undo) => {
+      undo?.rollback()
+      toast.error(errorMessage(err))
+    },
     onSettled: refetch,
   })
   const markAll = useMutation({
+    mutationKey: READ_KEY,
     mutationFn: markAllNotificationsRead,
-    onError: (err) => toast.error(errorMessage(err)),
+    onMutate: () => readOptimistically(queryClient, null),
+    onError: (err, _v, undo) => {
+      undo?.rollback()
+      toast.error(errorMessage(err))
+    },
     onSettled: refetch,
   })
 
@@ -64,10 +82,9 @@ export function NotificationsPanel() {
               aria-label="Mark all as read"
               title="Mark all as read"
               disabled={unread === 0}
-              loading={markAll.isPending}
               onClick={() => markAll.mutate()}
             >
-              {!markAll.isPending && <CheckCheck aria-hidden />}
+              <CheckCheck aria-hidden />
             </Button>
           )}
           <Button
@@ -173,7 +190,6 @@ export function NotificationsPanel() {
                       variant="ghost"
                       size="sm"
                       className="-my-1 -mr-2 h-7 px-2 text-xs"
-                      loading={markRead.isPending && markRead.variables === n.id}
                       onClick={() => markRead.mutate(n.id)}
                     >
                       Mark read
