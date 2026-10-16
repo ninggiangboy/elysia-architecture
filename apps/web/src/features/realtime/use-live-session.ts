@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { sessionsQuery } from '@/features/account/queries'
+import { applyCreated, applyRead, applySeen } from '@/features/notifications/live-cache'
 import { forgetPush, syncPush } from '@/lib/push'
 import { connectSse, type RealtimeMessage } from '@/lib/realtime'
 import { clearSession } from '@/lib/session'
@@ -14,7 +15,7 @@ const TOAST_QUIET_MS = 30_000
  * App-wide live channel (SSE) for a signed-in user:
  *  - this device was signed out remotely → sign out here immediately instead of waiting for the access token to expire;
  *  - another device signed out → refresh the device list;
- *  - a notification arrived or was read elsewhere → refresh the badge and the list;
+ *  - a notification arrived or was read elsewhere → patch it into the cached list and refresh the badge (no list refetch);
  *  - every (re)connect refetches both, because those events are not replayed; only `session.revoked` is, so a device that
  *    was offline when it was signed out finds out as soon as it reconnects.
  */
@@ -55,14 +56,14 @@ export function useLiveSession() {
           lastToastAt = now
           toast(String(data?.title ?? 'New notification'))
         }
-        void refreshNotifications()
+        void applyCreated(queryClient, data)
       },
-      'notification.read'() {
-        void refreshNotifications()
+      'notification.read'(data) {
+        void applyRead(queryClient, data)
       },
       // The list was opened on another device: this one's badge is stale.
       'notification.seen'() {
-        void refreshNotifications()
+        void applySeen(queryClient)
       },
       'session.revoked'(data) {
         if (data?.sessionId === ownSessionId) signOutHere()

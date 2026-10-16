@@ -135,6 +135,13 @@ body {
   }
 }
 
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
 @keyframes menu-in {
   from {
     opacity: 0;

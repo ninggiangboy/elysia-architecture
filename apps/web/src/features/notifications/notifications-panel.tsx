@@ -22,6 +22,8 @@ const KIND_ICONS: Record<string, { icon: typeof Bell; className: string }> = {
   new_sign_in: { icon: LogIn, className: 'bg-success/12 text-success' },
   security_alert: { icon: ShieldAlert, className: 'bg-destructive/10 text-destructive' },
 }
+/** Newer than this counts as "just arrived". */
+const FRESH_MS = 10_000
 const DEFAULT_ICON = { icon: Bell, className: 'bg-muted text-muted-foreground' }
 
 /** The body of the bell popover: the inbox with mark-as-read, and the way into the notification settings. */
@@ -125,6 +127,9 @@ export function NotificationsPanel() {
                   className={cn(
                     'relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 px-4 py-3',
                     !n.read && 'bg-accent/40',
+                    // A notification that just arrived over the live stream eases in; an old one never matches.
+                    Date.now() - Date.parse(n.createdAt) < FRESH_MS &&
+                      'motion-safe:animate-[item-in_0.25s_ease-out]',
                   )}
                 >
                   {!n.read && (

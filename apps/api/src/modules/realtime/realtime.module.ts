@@ -84,6 +84,7 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
               body: p.body,
               data: p.data,
               createdAt: p.createdAt,
+              count: p.count ?? 1,
             },
           },
         }),

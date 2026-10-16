@@ -213,6 +213,7 @@ describe('notifications', () => {
       expect(live.data).toMatchObject({
         title: expect.any(String),
         body: expect.stringContaining(newEmail),
+        count: 1,
       })
 
       const list = await api('GET', '/api/notifications', { token: me.accessToken })

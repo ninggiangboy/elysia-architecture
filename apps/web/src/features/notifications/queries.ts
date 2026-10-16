@@ -14,11 +14,15 @@ export const unseenCountQuery = queryOptions({
 
 export const markNotificationsSeen = async () => unwrap(await http.api.notifications.seen.post())
 
+const fetchNotifications = async (before?: string) =>
+  unwrap(await http.api.notifications.get({ query: { before } }))
+
+export type NotificationsPage = Awaited<ReturnType<typeof fetchNotifications>>
+
 export const notificationsQuery = infiniteQueryOptions({
   queryKey: ['notifications', 'list'],
   initialPageParam: undefined as string | undefined,
-  queryFn: async ({ pageParam }) =>
-    unwrap(await http.api.notifications.get({ query: { before: pageParam } })),
+  queryFn: ({ pageParam }) => fetchNotifications(pageParam),
   getNextPageParam: (page) => page.nextCursor ?? undefined,
 })
 

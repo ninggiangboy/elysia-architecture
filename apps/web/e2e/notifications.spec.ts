@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 import { countMails, linkFromMail, TEST_IP } from './support'
 
 const uniqueEmail = (tag: string) => `pw-${tag}-${Date.now()}@example.test`
@@ -48,5 +48,47 @@ test.describe('notifications', () => {
     await other.getByRole('button', { name: 'Mark all as read' }).click()
     await expect(other.locator('[data-read="false"]')).toHaveCount(0)
     await context.close()
+  })
+
+  test('a new notification appears in an open popover without reopening it, and reads sync live', async ({
+    browser,
+  }) => {
+    const options = {
+      baseURL: 'http://localhost:5173',
+      extraHTTPHeaders: { 'x-forwarded-for': TEST_IP },
+    }
+    const signIn = async (page: Page, email: string) => {
+      await page.goto('/login')
+      const before = await countMails(email, 'sign-in')
+      await page.getByLabel('Email').fill(email)
+      await page.getByRole('button', { name: 'Send sign-in link' }).click()
+      await page.goto(await linkFromMail(email, 'sign-in', before))
+      await expect(page.getByTestId('account-email')).toHaveText(email)
+    }
+    const email = uniqueEmail('live-list')
+    const here = await browser.newContext(options)
+    const page = await here.newPage()
+    await signIn(page, email)
+    await page.getByRole('button', { name: /^Notifications/ }).click()
+    const items = page.getByTestId('notifications').getByRole('listitem')
+    await expect(items).toHaveCount(1)
+
+    // Another device signs in: its "new sign-in" notification shows up in the list that is already open.
+    const there = await browser.newContext(options)
+    await signIn(await there.newPage(), email)
+    await expect(items).toHaveCount(2)
+    await expect(items.first()).toContainText(/sign-in/i)
+    // The popover is open, so it counts as seen.
+    await expect(page.getByTestId('unseen-badge')).toHaveCount(0)
+
+    // Reading on the other device flips the item here without a reload.
+    await there
+      .pages()[0]
+      ?.getByRole('button', { name: /^Notifications/ })
+      .click()
+    await there.pages()[0]?.getByRole('button', { name: 'Mark all as read' }).click()
+    await expect(page.locator('[data-read="false"]')).toHaveCount(0)
+    await here.close()
+    await there.close()
   })
 })
