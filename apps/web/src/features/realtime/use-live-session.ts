@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { sessionsQuery } from '@/features/account/queries'
 import { forgetPush, syncPush } from '@/lib/push'
-import { connectSse } from '@/lib/realtime'
+import { connectSse, type RealtimeMessage } from '@/lib/realtime'
 import { clearSession } from '@/lib/session'
 
 /**
@@ -30,27 +30,34 @@ export function useLiveSession() {
     const refreshNotifications = () =>
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
 
-    const connection = connectSse({
-      onMessage(m) {
-        if (m.type === 'ready') {
-          ownSessionId = m.data?.sessionId
-          void refreshDevices()
-          void refreshNotifications()
-        } else if (m.type === 'notification.created') {
-          toast(String(m.data?.title ?? 'New notification'))
-          void refreshNotifications()
-        } else if (m.type === 'notification.read') {
-          void refreshNotifications()
-        } else if (m.type === 'session.revoked') {
-          if (m.data?.sessionId !== ownSessionId) return void refreshDevices()
-          toast.warning('This device was signed out from another device')
-          void forgetPush()
-          clearSession()
-          queryClient.clear()
-          void navigate({ to: '/login' })
-        }
+    const signOutHere = () => {
+      toast.warning('This device was signed out from another device')
+      void forgetPush()
+      clearSession()
+      queryClient.clear()
+      void navigate({ to: '/login' })
+    }
+
+    const handlers: Record<string, (data: RealtimeMessage['data']) => void> = {
+      ready(data) {
+        ownSessionId = data?.sessionId
+        void refreshDevices()
+        void refreshNotifications()
       },
-    })
+      'notification.created'(data) {
+        toast(String(data?.title ?? 'New notification'))
+        void refreshNotifications()
+      },
+      'notification.read'() {
+        void refreshNotifications()
+      },
+      'session.revoked'(data) {
+        if (data?.sessionId === ownSessionId) signOutHere()
+        else void refreshDevices()
+      },
+    }
+
+    const connection = connectSse({ onMessage: (m) => handlers[m.type]?.(m.data) })
     return () => connection.close()
   }, [])
 }

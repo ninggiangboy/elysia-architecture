@@ -40,6 +40,72 @@ const sleep = (ms: number, signal: AbortSignal) =>
 const endsConnection = (m: RealtimeMessage, ownSessionId: unknown) =>
   m.type === 'session.revoked' && ownSessionId !== undefined && m.data?.sessionId === ownSessionId
 
+/** One SSE frame → message; `undefined` for heartbeat comments. */
+function parseFrame(frame: string): { event: string; message: RealtimeMessage } | undefined {
+  const event = /^event: (.*)$/m.exec(frame)?.[1]
+  const data = /^data: (.*)$/m.exec(frame)?.[1]
+  if (!event || !data) return undefined
+  const message: RealtimeMessage =
+    event === 'ready' ? { type: 'ready', data: JSON.parse(data) } : JSON.parse(data)
+  return { event, message }
+}
+
+/**
+ * Reads one connection to the end, calling `onFrame` per message.
+ * Resolves `true` when the server ended this session's own connection (do not reconnect).
+ */
+async function readStream(
+  body: ReadableStream<Uint8Array>,
+  listener: RealtimeListener,
+  onReady: () => void,
+): Promise<boolean> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let ownSessionId: unknown
+  let finished = false
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) return finished
+    buffer += decoder.decode(value, { stream: true })
+    for (let sep = buffer.indexOf('\n\n'); sep !== -1; sep = buffer.indexOf('\n\n')) {
+      const parsed = parseFrame(buffer.slice(0, sep))
+      buffer = buffer.slice(sep + 2)
+      if (!parsed) continue
+      if (parsed.event === 'ready') {
+        onReady()
+        ownSessionId = parsed.message.data?.sessionId
+        listener.onStatus?.('open')
+      }
+      listener.onMessage(parsed.message)
+      if (endsConnection(parsed.message, ownSessionId)) finished = true
+    }
+  }
+}
+
+/** `again` = retry immediately (token was just refreshed), `retry` = back off first, `stop` = give up. */
+type Outcome = 'again' | 'retry' | 'stop'
+
+async function connectOnce(
+  listener: RealtimeListener,
+  signal: AbortSignal,
+  onReady: () => void,
+): Promise<Outcome> {
+  const token = authStore.get().accessToken
+  if (!token) return 'stop'
+  try {
+    const res = await fetch(`${apiOrigin()}/api/realtime/events`, {
+      headers: { authorization: `Bearer ${token}`, accept: 'text/event-stream' },
+      signal,
+    })
+    if (res.status === 401) return (await refreshSession()) ? 'again' : 'stop'
+    if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
+    return (await readStream(res.body, listener, onReady)) ? 'stop' : 'retry'
+  } catch {
+    return signal.aborted ? 'stop' : 'retry'
+  }
+}
+
 /**
  * Server-Sent Events over `fetch` (EventSource cannot send the Authorization header).
  * Reconnects with backoff; every (re)connect reports `open` again so callers can refetch what they missed.
@@ -51,50 +117,11 @@ export function connectSse(listener: RealtimeListener): RealtimeHandle {
     let attempt = 0
     while (!stop.signal.aborted) {
       listener.onStatus?.(attempt === 0 ? 'connecting' : 'reconnecting')
-      const token = authStore.get().accessToken
-      if (!token) break
-      let finished = false
-      try {
-        const res = await fetch(`${apiOrigin()}/api/realtime/events`, {
-          headers: { authorization: `Bearer ${token}`, accept: 'text/event-stream' },
-          signal: stop.signal,
-        })
-        if (res.status === 401) {
-          if (await refreshSession()) continue
-          break
-        }
-        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
-
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        let ownSessionId: unknown
-        for (;;) {
-          const { value, done } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          for (let sep = buffer.indexOf('\n\n'); sep !== -1; sep = buffer.indexOf('\n\n')) {
-            const frame = buffer.slice(0, sep)
-            buffer = buffer.slice(sep + 2)
-            const event = /^event: (.*)$/m.exec(frame)?.[1]
-            const data = /^data: (.*)$/m.exec(frame)?.[1]
-            if (!event || !data) continue // heartbeat comment
-            const message: RealtimeMessage =
-              event === 'ready' ? { type: 'ready', data: JSON.parse(data) } : JSON.parse(data)
-            if (event === 'ready') {
-              attempt = 0
-              ownSessionId = message.data?.sessionId
-              listener.onStatus?.('open')
-            }
-            listener.onMessage(message)
-            if (endsConnection(message, ownSessionId)) finished = true
-          }
-        }
-      } catch {
-        if (stop.signal.aborted) break
-      }
-      if (finished) break
-      await sleep(backoff(attempt++), stop.signal)
+      const outcome = await connectOnce(listener, stop.signal, () => {
+        attempt = 0
+      })
+      if (outcome === 'stop') break
+      if (outcome === 'retry') await sleep(backoff(attempt++), stop.signal)
     }
     listener.onStatus?.('closed')
   })()
