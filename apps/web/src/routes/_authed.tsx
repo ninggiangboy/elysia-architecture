@@ -3,6 +3,7 @@ import { Radio, UserRound } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { UserMenu } from '@/components/layout/user-menu'
+import { StepUpHost } from '@/features/auth/step-up-dialog'
 import { NotificationBell } from '@/features/notifications/notification-bell'
 import { unseenCountQuery } from '@/features/notifications/queries'
 import { meQuery } from '@/features/profile/queries'
@@ -74,6 +75,7 @@ function AuthedLayout() {
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6 sm:py-10">
         <Outlet />
       </main>
+      <StepUpHost />
     </div>
   )
 }

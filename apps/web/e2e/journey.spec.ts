@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test'
-import { countMails, linkFromMail, PNG, TEST_IP } from './support'
+import { codeFromMail, countMails, linkFromMail, PNG, TEST_IP } from './support'
 
 const email = `pw-${Date.now()}@example.test`
 const newEmail = `pw-new-${Date.now()}@example.test`
@@ -179,6 +179,16 @@ test.describe
       const before = await countMails(newEmail, 'Confirm')
       await page.getByLabel('New email').fill(newEmail)
       await page.getByRole('button', { name: 'Send confirmation link' }).click()
+
+      // The earlier reload restored the session from the cookie, which no longer counts as a recent sign-in:
+      // changing the email asks to confirm it is really the owner (here with a code sent to the current email).
+      const dialog = page.getByRole('dialog', { name: 'Confirm it is you' })
+      await expect(dialog).toBeVisible()
+      const codes = await countMails(email, 'confirmation code')
+      await dialog.getByRole('button', { name: 'Email me a code' }).click()
+      await dialog.getByLabel('Confirmation code').fill(await codeFromMail(email, codes))
+      await dialog.getByRole('button', { name: 'Confirm' }).click()
+
       await expect(page.getByText(`Confirmation link sent to ${newEmail}`)).toBeVisible()
       await expect(page.getByTestId('account-email')).toHaveText(email) // not changed yet
 

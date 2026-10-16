@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { ChevronDown, LoaderCircle, LogOut } from 'lucide-react'
+import { ChevronDown, LoaderCircle, LogOut, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
 import { Avatar } from '@/components/ui/avatar'
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown'
@@ -68,6 +68,10 @@ export function UserMenu() {
           </div>
         )}
         <div className="border-t border-border p-1">
+          <DropdownItem onSelect={() => navigate({ to: '/security' })}>
+            <ShieldCheck aria-hidden />
+            Security
+          </DropdownItem>
           <DropdownItem
             closeOnSelect={false}
             disabled={signingOut}

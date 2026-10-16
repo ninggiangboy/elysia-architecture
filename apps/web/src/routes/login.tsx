@@ -1,6 +1,6 @@
-import { useMutation } from '@tanstack/react-query'
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { ArrowLeft, MailCheck } from 'lucide-react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { ArrowLeft, Fingerprint, MailCheck } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { toast } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
@@ -8,14 +8,23 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { requestMagicLink } from '@/features/auth/queries'
+import { ProviderIcon, providerName } from '@/features/auth/provider-icons'
+import {
+  loginWithPasskey,
+  oauthProvidersQuery,
+  requestMagicLink,
+  startOAuthLogin,
+} from '@/features/auth/queries'
 import { errorMessage } from '@/lib/api'
 import { ensureSession } from '@/lib/session'
+import { browserSupportsWebAuthn, passkeyCancelled, passkeyErrorMessage } from '@/lib/webauthn'
 
 export const Route = createFileRoute('/login')({
   beforeLoad: async () => {
     if (await ensureSession()) throw redirect({ to: '/' })
   },
+  // prefetchQuery never throws: without the providers the page simply shows no provider buttons.
+  loader: ({ context: { queryClient } }) => queryClient.prefetchQuery(oauthProvidersQuery),
   component: LoginPage,
 })
 
@@ -27,6 +36,24 @@ function LoginPage() {
     onSuccess: (_, sent) => setSentTo(sent),
     onError: (err) => toast.error(errorMessage(err)),
   })
+
+  const navigate = useNavigate()
+  const { data: providers = [] } = useQuery(oauthProvidersQuery)
+  const passkey = useMutation({
+    mutationFn: loginWithPasskey,
+    onSuccess: () => navigate({ to: '/', replace: true }),
+    onError: (err) => {
+      if (!passkeyCancelled(err)) toast.error(passkeyErrorMessage(err))
+    },
+  })
+  const oauth = useMutation({
+    mutationFn: startOAuthLogin,
+    // Leaves the app: the provider sends the browser back to /auth/oauth/callback.
+    onSuccess: (url) => window.location.assign(url),
+    onError: (err) => toast.error(errorMessage(err)),
+  })
+  const busy = send.isPending || passkey.isPending || oauth.isPending
+  const showAlternatives = browserSupportsWebAuthn() || providers.length > 0
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -87,10 +114,45 @@ function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
-              <Button type="submit" size="lg" loading={send.isPending}>
+              <Button type="submit" size="lg" loading={send.isPending} disabled={busy}>
                 Send sign-in link
               </Button>
             </form>
+            {showAlternatives && (
+              <div className="mt-5 flex flex-col gap-3">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden>
+                  <span className="h-px flex-1 bg-border" />
+                  or
+                  <span className="h-px flex-1 bg-border" />
+                </div>
+                {browserSupportsWebAuthn() && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    loading={passkey.isPending}
+                    disabled={busy}
+                    onClick={() => passkey.mutate()}
+                  >
+                    <Fingerprint aria-hidden /> Sign in with a passkey
+                  </Button>
+                )}
+                {providers.map((provider) => (
+                  <Button
+                    key={provider}
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    loading={oauth.isPending && oauth.variables === provider}
+                    disabled={busy}
+                    onClick={() => oauth.mutate(provider)}
+                  >
+                    <ProviderIcon provider={provider} className="size-4" />
+                    Continue with {providerName(provider)}
+                  </Button>
+                ))}
+              </div>
+            )}
           </CardContent>
         )}
       </Card>

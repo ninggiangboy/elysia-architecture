@@ -34,3 +34,15 @@ export async function linkFromMail(address: string, subject: string, skip = 0): 
   }
   throw new Error(`mail "${subject}" to ${address} not received`)
 }
+
+/** The 6-digit code in the subject of the NEW "confirmation code" mail (after the `skip` that already existed). */
+export async function codeFromMail(address: string, skip = 0): Promise<string> {
+  const deadline = Date.now() + 15_000
+  while (Date.now() < deadline) {
+    const matches = (await search(address)).filter((m) => m.Subject.includes('confirmation code'))
+    const code = matches.length > skip ? matches[0]?.Subject.match(/\d{6}/)?.[0] : undefined
+    if (code) return code
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  throw new Error(`confirmation code for ${address} not received`)
+}

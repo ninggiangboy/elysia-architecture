@@ -5,37 +5,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardFooter } from '@/components/ui/card'
 import { errorMessage } from '@/lib/api'
+import { describeDevice } from '@/lib/device'
 import { formatDate, formatRelative } from '@/lib/format'
 import { revokeOtherSessions, revokeSession, type Session, sessionsQuery } from './queries'
 
 const REVOKE_KEY = ['sessions', 'revoke']
-type Matchers = ReadonlyArray<readonly [RegExp, string]>
-
-// Order matters: Edge and Chrome UAs also contain "Chrome/" and "Safari/".
-const BROWSERS: Matchers = [
-  [/Edg\//, 'Edge'],
-  [/Firefox\//, 'Firefox'],
-  [/Chrome\//, 'Chrome'],
-  [/Safari\//, 'Safari'],
-]
-const SYSTEMS: Matchers = [
-  [/Windows/, 'Windows'],
-  [/iPhone|iPad/, 'iOS'],
-  [/Android/, 'Android'],
-  [/Mac OS X/, 'macOS'],
-  [/Linux/, 'Linux'],
-]
-const detect = (matchers: Matchers, ua: string) => matchers.find(([re]) => re.test(ua))?.[1] ?? null
-
-/** "Chrome on macOS" from a User-Agent; good enough for recognising a device, not for anything security-relevant. */
-function describeDevice(userAgent: string | null) {
-  if (!userAgent) return 'Unknown device'
-  const browser = detect(BROWSERS, userAgent)
-  const os = detect(SYSTEMS, userAgent)
-  if (browser && os) return `${browser} on ${os}`
-  return browser ?? os ?? userAgent.slice(0, 40)
-}
-
 function DeviceIcon({ userAgent }: { userAgent: string | null }) {
   const Icon = /iPad|Tablet/.test(userAgent ?? '')
     ? Tablet

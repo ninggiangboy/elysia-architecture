@@ -10,6 +10,12 @@ export function applySession(data: SessionResponse) {
   authStore.set({ status: 'authenticated', accessToken: data.accessToken, user: data.user })
 }
 
+/** Swaps in a fresher access token for the same user and session (after confirming it is them). */
+export function applyAccessToken(accessToken: string) {
+  const { user } = authStore.get()
+  authStore.set({ status: 'authenticated', accessToken, user })
+}
+
 export function clearSession() {
   authStore.set({ status: 'anonymous', accessToken: null, user: null })
 }
