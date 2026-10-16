@@ -21,6 +21,10 @@ export interface TopUpProps {
   paymentIntentId: string
   /** Why the last attempt was declined, as the provider words it; `null` unless `failed`. */
   failureReason: string | null
+  /** The client's `Idempotency-Key` for starting this top-up; `null` when it sent none. */
+  idempotencyKey: string | null
+  /** When the reconciliation job last asked the provider about this payment; `null` = never. */
+  reconciledAt: Date | null
   createdAt: Date
   updatedAt: Date
 }
@@ -39,14 +43,21 @@ export class TopUp {
     currency: string
     amount: number
     paymentIntentId: string
+    idempotencyKey?: string | null
     now: Date
   }): TopUp {
     if (!Number.isSafeInteger(input.amount) || input.amount <= 0)
       throw new InvalidTopUpError('amount must be a positive integer')
     return new TopUp({
-      ...input,
+      id: input.id,
+      userId: input.userId,
+      currency: input.currency,
+      amount: input.amount,
+      paymentIntentId: input.paymentIntentId,
       status: 'pending',
       failureReason: null,
+      idempotencyKey: input.idempotencyKey ?? null,
+      reconciledAt: null,
       createdAt: input.now,
       updatedAt: input.now,
     })

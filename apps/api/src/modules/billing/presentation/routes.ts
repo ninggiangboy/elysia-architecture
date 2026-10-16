@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia'
-import { NotFoundError, ValidationError } from '#/shared/application/errors'
+import { ConflictError, NotFoundError, ValidationError } from '#/shared/application/errors'
 import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
 import { errorResponse, validationError } from '#/shared/http/openapi'
 import type { CurrencyPolicy } from '../application/currency-policy'
@@ -93,19 +93,31 @@ export const billingRoutes = ({
     )
     .post(
       '/topups',
-      ({ auth, body }) =>
+      ({ auth, body, headers }) =>
         uc.createTopUp.execute({
           userId: auth.userId,
           currency: body.currency,
           amount: body.amount,
+          idempotencyKey: headers['idempotency-key'],
         }),
       {
         auth: true,
         body: t.Object(money),
+        headers: t.Object({
+          'idempotency-key': t.Optional(
+            t.String({
+              minLength: 8,
+              maxLength: 64,
+              pattern: '^[A-Za-z0-9_-]+$',
+              description:
+                'A unique value per top-up the user starts (a UUID is fine). Sending the request again with the same key and body returns the first top-up instead of opening a second payment.',
+            }),
+          ),
+        }),
         detail: {
           summary: 'Start a top-up',
           description:
-            'Creates a payment with Stripe. The browser completes it with the returned `clientSecret` (Payment Element); the wallet is credited when Stripe confirms, not when this returns.',
+            'Creates a payment with Stripe. The browser completes it with the returned `clientSecret` (Payment Element); the wallet is credited when Stripe confirms, not when this returns. Safe to retry with the same `Idempotency-Key`.',
         },
         response: {
           200: t.Object({
@@ -114,6 +126,7 @@ export const billingRoutes = ({
           }),
           400: validationError('unsupported_currency', 'amount_out_of_range'),
           404: errorResponse(404, ...NOT_AVAILABLE),
+          409: errorResponse(409, 'idempotency_key_reused'),
         },
       },
     )
@@ -198,7 +211,15 @@ export const billingRoutes = ({
             throw new ValidationError('invalid_signature', 'Invalid webhook signature')
           throw err
         }
-        if (event) await uc.handlePaymentEvent.execute(event)
+        if (event) {
+          const result = await uc.handlePaymentEvent.execute(event)
+          // Not an error to fix on our side, just early: a non-2xx makes Stripe deliver it again after a pause.
+          if (result === 'deferred')
+            throw new ConflictError(
+              'payment_not_settled_yet',
+              'The payment it refers to is not settled yet',
+            )
+        }
         return { received: true as const }
       },
       {
@@ -209,12 +230,13 @@ export const billingRoutes = ({
         detail: {
           summary: 'Stripe webhook',
           description:
-            'Called by Stripe, not by the web app. Verified with the `Stripe-Signature` header; settles top-ups.',
+            'Called by Stripe, not by the web app. Verified with the `Stripe-Signature` header; settles top-ups and books refunds and disputes. Answers 409 when an event arrived before the payment it refers to was settled, so Stripe sends it again.',
         },
         response: {
           200: t.Object({ received: t.Literal(true) }),
           400: errorResponse(400, 'invalid_signature'),
           404: errorResponse(404, ...NOT_AVAILABLE),
+          409: errorResponse(409, 'payment_not_settled_yet'),
         },
       },
     )

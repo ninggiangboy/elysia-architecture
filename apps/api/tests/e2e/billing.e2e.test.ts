@@ -19,6 +19,8 @@ const STRIPE_ENV = {
   STRIPE_SECRET_KEY: 'sk_test_fake',
   STRIPE_PUBLISHABLE_KEY: 'pk_test_fake',
   STRIPE_WEBHOOK_SECRET: 'whsec_fake',
+  // So a lost webhook can be reconciled within a test.
+  BILLING_SETTLE_GRACE: '1s',
 }
 
 let t: TestApp
@@ -49,8 +51,17 @@ const webhook = async (event: unknown, signature: string | null = FAKE_WEBHOOK_S
   return { status: res.status, json: (await res.json()) as { error?: { code: string } } }
 }
 
-const startTopUp = async (token: string, currency = 'usd', amount = 2000) => {
-  const res = await api('POST', '/api/billing/topups', { token, body: { currency, amount } })
+const startTopUp = async (
+  token: string,
+  currency = 'usd',
+  amount = 2000,
+  idempotencyKey?: string,
+) => {
+  const res = await api('POST', '/api/billing/topups', {
+    token,
+    body: { currency, amount },
+    headers: idempotencyKey ? { 'idempotency-key': idempotencyKey } : undefined,
+  })
   if (res.status !== 200) throw new Error(`top-up refused: ${JSON.stringify(res.json)}`)
   const topUp = await api('GET', `/api/billing/topups/${res.json.topUpId}`, { token })
   const intent = [...gateway.intents.values()].find((i) => i.topUpId === res.json.topUpId)
@@ -205,6 +216,158 @@ describe('webhook', () => {
 
   test('acknowledges events it does not act on', async () => {
     expect((await webhook({ ignore: true })).status).toBe(200)
+  })
+})
+
+describe('starting a top-up twice', () => {
+  test('with the same Idempotency-Key is one top-up and one payment', async () => {
+    const token = (await login(api, uniqueEmail('idem'))).accessToken
+    const key = `attempt-${crypto.randomUUID()}`
+    const post = (amount: number) =>
+      api('POST', '/api/billing/topups', {
+        token,
+        body: { currency: 'usd', amount },
+        headers: { 'idempotency-key': key },
+      })
+
+    // A double click: both requests are in flight together.
+    const [a, b] = await Promise.all([post(2000), post(2000)])
+    expect([a.status, b.status]).toEqual([200, 200])
+    expect(b.json).toEqual(a.json)
+    expect((await post(2000)).json).toEqual(a.json) // and a retry later
+
+    const history = await api('GET', '/api/billing/transactions', { token })
+    expect(history.json.items).toHaveLength(1)
+    expect(
+      [...gateway.intents.values()].filter((i) => i.idempotencyKey.endsWith(key)),
+    ).toHaveLength(1)
+
+    const other = await post(3000)
+    expect(other.status).toBe(409)
+    expect(other.json.error.code).toBe('idempotency_key_reused')
+  })
+
+  test('without a key is two top-ups, and a malformed key is refused', async () => {
+    const token = (await login(api, uniqueEmail('nokey'))).accessToken
+    await startTopUp(token)
+    await startTopUp(token)
+    expect((await api('GET', '/api/billing/transactions', { token })).json.items).toHaveLength(2)
+
+    const res = await api('POST', '/api/billing/topups', {
+      token,
+      body: { currency: 'usd', amount: 2000 },
+      headers: { 'idempotency-key': 'short' },
+    })
+    expect(res.status).toBe(400)
+  })
+})
+
+describe('webhook delivery', () => {
+  test('the same event delivered at the same moment credits once', async () => {
+    const token = (await login(api, uniqueEmail('race'))).accessToken
+    const { topUpId, paymentIntentId } = await startTopUp(token, 'usd', 2000)
+    const eventId = `evt_race_${crypto.randomUUID()}`
+    const event = gateway.eventFor(paymentIntentId, 'succeeded', eventId)
+
+    const results = await Promise.all(Array.from({ length: 8 }, () => webhook(event)))
+
+    expect(results.map((r) => r.status)).toEqual(Array(8).fill(200))
+    expect((await api('GET', '/api/billing/wallet', { token })).json.balances).toEqual([
+      { currency: 'usd', amount: 2000 },
+    ])
+    const rows = await t.container.database.db.execute<{ entries: number; deliveries: number }>(
+      sql`select (select count(*)::int from billing.ledger_entries where top_up_id = ${topUpId}) as entries,
+                 (select deliveries from billing.payment_events where id = ${eventId}) as deliveries`,
+    )
+    expect(rows[0]).toEqual({ entries: 1, deliveries: 8 })
+  })
+
+  test('"succeeded" and "failed" racing leave a credited top-up, never a lost one', async () => {
+    const token = (await login(api, uniqueEmail('race2'))).accessToken
+    const { topUpId, paymentIntentId } = await startTopUp(token, 'usd', 1500)
+
+    await Promise.all([
+      webhook(gateway.eventFor(paymentIntentId, 'failed')),
+      webhook(gateway.eventFor(paymentIntentId, 'succeeded')),
+      webhook(gateway.eventFor(paymentIntentId, 'failed')),
+    ])
+
+    expect((await api('GET', `/api/billing/topups/${topUpId}`, { token })).json.status).toBe(
+      'succeeded',
+    )
+    expect((await api('GET', '/api/billing/wallet', { token })).json.balances).toEqual([
+      { currency: 'usd', amount: 1500 },
+    ])
+  })
+
+  test('a wrong amount credits nothing and leaves an anomaly for people', async () => {
+    const token = (await login(api, uniqueEmail('mismatch'))).accessToken
+    const { topUpId, paymentIntentId } = await startTopUp(token, 'usd', 2000)
+
+    const event = { ...gateway.eventFor(paymentIntentId, 'succeeded'), amount: 5 }
+    expect((await webhook(event)).status).toBe(200)
+    expect((await webhook(event)).status).toBe(200)
+
+    expect((await api('GET', '/api/billing/wallet', { token })).json.balances).toEqual([])
+    const rows = await t.container.database.db.execute<{ kind: string; n: number }>(
+      sql`select kind, count(*)::int as n from billing.payment_anomalies
+          where top_up_id = ${topUpId} group by kind`,
+    )
+    expect([...rows]).toEqual([{ kind: 'amount_mismatch', n: 1 }])
+  })
+
+  test('a refund and a won dispute move the wallet, each once', async () => {
+    const token = (await login(api, uniqueEmail('refund'))).accessToken
+    const { paymentIntentId } = await startTopUp(token, 'usd', 5000)
+    const balance = async () =>
+      (await api('GET', '/api/billing/wallet', { token })).json.balances[0]?.amount
+
+    // A refund that overtakes the payment's own event is not lost: Stripe is told to come back.
+    const refund = gateway.adjustmentFor(
+      paymentIntentId,
+      'refund',
+      `re_${crypto.randomUUID()}`,
+      1200,
+    )
+    const early = await webhook(refund)
+    expect(early.status).toBe(409)
+    expect(early.json.error?.code).toBe('payment_not_settled_yet')
+
+    await webhook(gateway.eventFor(paymentIntentId, 'succeeded'))
+    expect((await webhook(refund)).status).toBe(200)
+    expect((await webhook(refund)).status).toBe(200)
+    expect(await balance()).toBe(3800)
+
+    const dispute = `dp_${crypto.randomUUID()}`
+    await webhook(gateway.adjustmentFor(paymentIntentId, 'chargeback', dispute, 3800))
+    expect(await balance()).toBe(0)
+    await webhook(gateway.adjustmentFor(paymentIntentId, 'chargeback_reversal', dispute, 3800))
+    expect(await balance()).toBe(3800)
+  })
+})
+
+describe('a lost webhook', () => {
+  test('is made up for by asking Stripe, once, whichever comes first', async () => {
+    const token = (await login(api, uniqueEmail('lost'))).accessToken
+    const { topUpId, paymentIntentId } = await startTopUp(token, 'usd', 2500)
+    gateway.ended.set(paymentIntentId, 'succeeded') // paid at Stripe; our webhook never came
+
+    await Bun.sleep(1100) // past the grace period
+    // Top-ups left open by other tests are in the same queue (oldest first, a batch at a time): go on until ours is done.
+    await eventually(async () => {
+      await t.container.modules.billing.reconcile()
+      const res = await api('GET', `/api/billing/topups/${topUpId}`, { token })
+      return res.json.status === 'succeeded'
+    })
+    expect((await api('GET', '/api/billing/wallet', { token })).json.balances).toEqual([
+      { currency: 'usd', amount: 2500 },
+    ])
+
+    // Stripe's webhook then turns up after all.
+    expect((await webhook(gateway.eventFor(paymentIntentId, 'succeeded'))).status).toBe(200)
+    expect((await api('GET', '/api/billing/wallet', { token })).json.balances).toEqual([
+      { currency: 'usd', amount: 2500 },
+    ])
   })
 })
 

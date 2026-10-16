@@ -148,6 +148,12 @@ export async function createContainer(
     verifier: identity.verifier,
     currencies: config.TOPUP_CURRENCIES.map((code) => ({ code, ...TOPUP_CURRENCIES[code] })),
     payments,
+    reconcileIntervalMs: config.BILLING_RECONCILE_INTERVAL_SECONDS * 1000,
+    reconcile: {
+      settleGraceMs: config.BILLING_SETTLE_GRACE * 1000,
+      giveUpAfterMs: config.BILLING_RECONCILE_MAX_AGE * 1000,
+      batchSize: 50,
+    },
   })
 
   const privacy = createPrivacyModule({
@@ -215,12 +221,14 @@ export async function createContainer(
     database,
     bus,
     relay,
-    /** Starts what a worker-role process runs: the outbox relay, and the timer behind the privacy jobs. */
+    /** Starts what a worker-role process runs: the outbox relay, and the timers behind the privacy and billing jobs. */
     startWorker() {
       relay.start()
       privacy.startJobs()
+      billing.startJobs()
     },
     async close() {
+      await billing.stopJobs()
       await privacy.stopJobs()
       await relay.stop()
       await realtime.stop()

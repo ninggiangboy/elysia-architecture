@@ -39,6 +39,7 @@ export class BillingDataExporter implements DataExporter {
           currency: e.currency,
           amount: e.amount,
           topUpId: e.topUpId,
+          reference: e.reference,
           createdAt: e.createdAt.toISOString(),
         })),
       },

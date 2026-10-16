@@ -148,6 +148,12 @@ const schema = z
     /** Stripe, for topping up the wallet. Leave all three unset to turn top-ups off (balances and history still work). */
     STRIPE_SECRET_KEY: blank,
     STRIPE_PUBLISHABLE_KEY: blank,
+    /** How often payments whose webhook has not come are checked against Stripe. */
+    BILLING_RECONCILE_INTERVAL_SECONDS: z.coerce.number().int().positive().default(300),
+    /** An open payment is left to its webhook this long; after that Stripe is asked, and again every this long. */
+    BILLING_SETTLE_GRACE: duration('15m'),
+    /** Payments older than this that never completed are no longer checked. */
+    BILLING_RECONCILE_MAX_AGE: duration('3d'),
     /** Signing secret of the webhook endpoint (`whsec_…`); `bun run stripe:secret` prints the one the Stripe CLI uses locally. */
     STRIPE_WEBHOOK_SECRET: blank,
     /** Currencies a wallet can be topped up in, comma separated (the ranges are in `@app/shared-types`). */

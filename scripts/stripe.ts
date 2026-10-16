@@ -3,7 +3,17 @@
 //   bun scripts/stripe.ts secret   print the webhook signing secret the CLI uses (the value of STRIPE_WEBHOOK_SECRET)
 // Uses the `stripe` binary when it is installed, the stripe/stripe-cli image (docker compose profile `stripe`) otherwise.
 
-const EVENTS = 'payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled'
+// Keep in step with STRIPE_WEBHOOK_EVENTS in the Stripe gateway (and with the endpoint's events in the Dashboard).
+const EVENTS = [
+  'payment_intent.succeeded',
+  'payment_intent.payment_failed',
+  'payment_intent.canceled',
+  'refund.created',
+  'refund.updated',
+  'charge.dispute.created',
+  'charge.dispute.updated',
+  'charge.dispute.closed',
+].join(',')
 
 const key = process.env.STRIPE_SECRET_KEY
 const port = process.env.PORT ?? '3000'

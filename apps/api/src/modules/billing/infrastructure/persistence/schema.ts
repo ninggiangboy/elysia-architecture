@@ -1,6 +1,9 @@
+import { sql } from 'drizzle-orm'
 import {
   bigint,
+  check,
   index,
+  integer,
   pgSchema,
   primaryKey,
   text,
@@ -30,12 +33,27 @@ export const topUps = billingSchema.table(
     status: text('status').notNull(),
     paymentIntentId: text('payment_intent_id').notNull(),
     failureReason: text('failure_reason'),
+    /** The client's `Idempotency-Key` for starting this top-up; `null` when it sent none. */
+    idempotencyKey: text('idempotency_key'),
+    /** When the reconciliation job last asked the provider about this payment; `null` = never. */
+    reconciledAt: timestamp('reconciled_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
   },
   (t) => [
     uniqueIndex('top_ups_payment_intent_idx').on(t.paymentIntentId),
+    // Starting the same top-up twice (a double click, a retry) finds the first one instead of making a second.
+    uniqueIndex('top_ups_idempotency_idx')
+      .on(t.userId, t.idempotencyKey)
+      .where(sql`${t.idempotencyKey} is not null`),
     index('top_ups_user_idx').on(t.userId, t.id.desc()),
+    // What the reconciliation job scans: payments that can still be completed.
+    index('top_ups_unsettled_idx').on(t.createdAt).where(sql`${t.status} in ('pending', 'failed')`),
+    check('top_ups_amount_positive', sql`${t.amount} > 0`),
+    check(
+      'top_ups_status_known',
+      sql`${t.status} in ('pending', 'succeeded', 'failed', 'canceled')`,
+    ),
   ],
 )
 
@@ -49,11 +67,22 @@ export const ledgerEntries = billingSchema.table(
     amount: bigint('amount', { mode: 'number' }).notNull(),
     type: text('type').notNull(),
     topUpId: uuid('top_up_id').notNull(),
+    /** The provider's id of the refund or dispute behind an adjustment; `null` for the top-up itself. */
+    reference: text('reference'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   },
   (t) => [
     index('ledger_entries_user_idx').on(t.userId, t.id),
-    uniqueIndex('ledger_entries_top_up_idx').on(t.topUpId, t.type),
+    // A top-up is credited once; a refund or a dispute is booked once however often its webhook is delivered.
+    uniqueIndex('ledger_entries_top_up_idx').on(t.topUpId, t.type).where(sql`${t.type} = 'topup'`),
+    uniqueIndex('ledger_entries_reference_idx')
+      .on(t.type, t.reference)
+      .where(sql`${t.reference} is not null`),
+    check('ledger_entries_amount_nonzero', sql`${t.amount} <> 0`),
+    check(
+      'ledger_entries_type_known',
+      sql`${t.type} in ('topup', 'refund', 'chargeback', 'chargeback_reversal')`,
+    ),
   ],
 )
 
@@ -66,4 +95,40 @@ export const walletBalances = billingSchema.table(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.currency] })],
+)
+
+/** What the provider's webhooks said, one row per event: for finding out why a payment was or was not credited. */
+export const paymentEvents = billingSchema.table(
+  'payment_events',
+  {
+    /** The provider's event id (`evt_…`). */
+    id: text('id').primaryKey(),
+    paymentIntentId: text('payment_intent_id').notNull(),
+    /** What was done with it: `applied`, `ignored` or `deferred`. */
+    result: text('result').notNull(),
+    /** How many times the provider delivered it. */
+    deliveries: integer('deliveries').notNull().default(1),
+    firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [index('payment_events_intent_idx').on(t.paymentIntentId)],
+)
+
+/**
+ * Payments that need a person: money that moved without reaching a wallet (or a wallet that went below zero). Nothing
+ * is fixed automatically; a row is the alert. One per (payment, kind), however often the webhook repeats.
+ */
+export const paymentAnomalies = billingSchema.table(
+  'payment_anomalies',
+  {
+    id: uuid('id').primaryKey(),
+    kind: text('kind').notNull(),
+    paymentIntentId: text('payment_intent_id').notNull(),
+    topUpId: uuid('top_up_id'),
+    eventId: text('event_id').notNull(),
+    detail: text('detail').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('payment_anomalies_kind_idx').on(t.paymentIntentId, t.kind)],
 )

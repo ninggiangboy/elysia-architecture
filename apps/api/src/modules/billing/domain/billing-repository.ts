@@ -1,13 +1,22 @@
 import type { TopUp, TopUpStatus } from './top-up'
 
+/**
+ * `topup` is money in. The others adjust a settled top-up after the fact and carry the provider's id of the refund or
+ * dispute in `reference`: `refund` (money handed back to the buyer), `chargeback` (the bank took it back) and
+ * `chargeback_reversal` (the dispute was won, so the bank returned it).
+ */
+export type LedgerEntryType = 'topup' | 'refund' | 'chargeback' | 'chargeback_reversal'
+
 export interface LedgerEntryRecord {
   id: string
   userId: string | null
   currency: string
-  /** Positive = money in. */
+  /** Positive = money in, negative = money out. */
   amount: number
-  type: 'topup'
+  type: LedgerEntryType
   topUpId: string
+  /** The provider's refund or dispute id; `null` for `topup`. */
+  reference: string | null
   createdAt: Date
 }
 
@@ -17,8 +26,15 @@ export interface Balance {
 }
 
 export interface TopUpRepository {
-  insert(topUp: TopUp): Promise<void>
+  /**
+   * Stores the top-up. `false` when it was not stored because the client's idempotency key was already used for a
+   * top-up of the same user — the caller then finds that one with `findByIdempotencyKey`.
+   */
+  insert(topUp: TopUp): Promise<boolean>
   findById(id: string): Promise<TopUp | null>
+  /** The user's top-up that was started with this idempotency key. */
+  findByIdempotencyKey(userId: string, key: string): Promise<TopUp | null>
+  /** Locks the row for the rest of the transaction, so two deliveries of one event are handled one after the other. */
   findByPaymentIntent(paymentIntentId: string): Promise<TopUp | null>
   /**
    * Moves the top-up to `to` only if it is currently in one of `from`. Returns it as it now is, or `null` when it was
@@ -31,14 +47,63 @@ export interface TopUpRepository {
     now: Date,
     failureReason?: string | null,
   ): Promise<TopUp | null>
+  /**
+   * Hands out payments that are still open (`pending`, or `failed` and retryable) and were created in the window, and
+   * stamps them so nobody else — another instance, the next pass — takes them again before `checkedBefore`.
+   */
+  claimForReconciliation(query: {
+    createdBefore: Date
+    createdAfter: Date
+    checkedBefore: Date
+    limit: number
+    now: Date
+  }): Promise<TopUp[]>
   /** Newest first. `before` is the id of the last item of the previous page. */
   list(query: { userId: string; before?: string; limit: number }): Promise<TopUp[]>
 }
 
 export interface LedgerRepository {
-  /** Appends the entry and adds its amount to the owner's balance; returns the balance after. Call inside a unit of work. */
-  credit(entry: LedgerEntryRecord & { userId: string }): Promise<number>
+  /**
+   * Appends the entry and adds its (signed) amount to the owner's balance; returns the balance after, or `null` when
+   * the entry was already booked (same top-up, or same refund or dispute) and nothing changed. Call inside a unit of work.
+   */
+  post(entry: LedgerEntryRecord & { userId: string }): Promise<number | null>
+  /** Whether an entry of this type was already booked for this refund or dispute. */
+  hasReference(type: LedgerEntryType, reference: string): Promise<boolean>
   balances(userId: string): Promise<Balance[]>
   /** Everything the user has in the ledger, oldest first, for a data export. */
   entries(userId: string): Promise<LedgerEntryRecord[]>
+}
+
+export type AnomalyKind =
+  /** The provider charged an amount (or currency) other than the one the top-up asked for: nothing was credited. */
+  | 'amount_mismatch'
+  /** The payment succeeded after the account was erased: the money has no wallet to go to. */
+  | 'paid_after_erasure'
+  /** The provider says a payment of ours happened, but there is no such top-up. */
+  | 'unknown_payment'
+  /** A refund or a dispute took a balance below zero. */
+  | 'negative_balance'
+  /** A refund or a dispute does not fit the top-up it names (another currency). */
+  | 'adjustment_mismatch'
+
+/** What the webhook handling leaves behind for people: an audit row per event, and an alert per payment gone wrong. */
+export interface PaymentAuditRepository {
+  /** One row per provider event; a repeated delivery only counts up. */
+  recordEvent(event: {
+    id: string
+    paymentIntentId: string
+    result: string
+    now: Date
+  }): Promise<void>
+  /** At most one per payment and kind, however often the event is delivered. */
+  recordAnomaly(anomaly: {
+    id: string
+    kind: AnomalyKind
+    paymentIntentId: string
+    topUpId: string | null
+    eventId: string
+    detail: string
+    now: Date
+  }): Promise<void>
 }

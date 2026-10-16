@@ -22,9 +22,11 @@ import type { PaymentGateway } from './application/ports'
 import { CreateTopUp } from './application/use-cases/create-top-up'
 import { HandlePaymentEvent } from './application/use-cases/handle-payment-event'
 import { GetTopUp, GetWallet, ListTransactions } from './application/use-cases/read-billing'
+import { type ReconcilePolicy, ReconcileTopUps } from './application/use-cases/reconcile-top-ups'
 import { BillingEvents } from './contracts/events'
 import {
   DrizzleLedgerRepository,
+  DrizzlePaymentAuditRepository,
   DrizzleTopUpRepository,
 } from './infrastructure/persistence/drizzle-billing-repositories'
 import { DrizzleBillingDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
@@ -42,6 +44,9 @@ export interface BillingModuleDeps {
   currencies: readonly CurrencyRule[]
   /** Omit to run without payments: balances and history still read, but nobody can top up. */
   payments?: { gateway: PaymentGateway; publishableKey: string }
+  /** How often the reconciliation job asks the provider about payments whose webhook has not come. */
+  reconcileIntervalMs: number
+  reconcile: ReconcilePolicy
 }
 
 export interface BillingModule {
@@ -49,6 +54,10 @@ export interface BillingModule {
   routes: ReturnType<typeof billingRoutes>
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
+  /** One reconciliation pass (the timer calls this; tests and operators can too). */
+  reconcile: () => Promise<number>
+  startJobs: () => void
+  stopJobs: () => Promise<void>
 }
 
 export function createBillingModule(deps: BillingModuleDeps): BillingModule {
@@ -59,6 +68,32 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
   const ledger = new DrizzleLedgerRepository(database)
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
   const inboxGuard = new DrizzleInboxGuard(database, inbox)
+  const audit = new DrizzlePaymentAuditRepository(database)
+  const handlePaymentEvent = new HandlePaymentEvent(
+    topUps,
+    ledger,
+    audit,
+    outboxWriter,
+    database,
+    ids,
+    clock,
+    log,
+  )
+  const reconciler = payments
+    ? new ReconcileTopUps(topUps, payments.gateway, handlePaymentEvent, deps.reconcile, clock, log)
+    : undefined
+
+  let timer: ReturnType<typeof setInterval> | undefined
+  let running: Promise<unknown> | undefined
+  const tick = () => {
+    // A slow pass is not overlapped by the next one; two instances may still tick together, the row claims keep them apart.
+    running ??= reconciler
+      ?.runOnce()
+      .catch((err) => log.error({ err }, 'top-up reconciliation failed'))
+      .finally(() => {
+        running = undefined
+      })
+  }
 
   return {
     name: 'billing',
@@ -71,15 +106,7 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
         getTopUp: new GetTopUp(topUps),
         getWallet: new GetWallet(ledger),
         listTransactions: new ListTransactions(topUps),
-        handlePaymentEvent: new HandlePaymentEvent(
-          topUps,
-          ledger,
-          outboxWriter,
-          database,
-          ids,
-          clock,
-          log,
-        ),
+        handlePaymentEvent,
       },
     }),
     handlers: [
@@ -110,5 +137,16 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
       ),
     ],
     outbox: { name: 'billing', table: outbox },
+    reconcile: async () => reconciler?.runOnce() ?? 0,
+    startJobs() {
+      if (timer || !reconciler) return
+      timer = setInterval(tick, deps.reconcileIntervalMs)
+      timer.unref()
+    },
+    async stopJobs() {
+      if (timer) clearInterval(timer)
+      timer = undefined
+      await running
+    },
   }
 }
