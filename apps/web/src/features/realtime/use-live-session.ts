@@ -21,6 +21,7 @@ const TOAST_QUIET_MS = 30_000
  *  - steps of a long job (`privacy.*`: the data export, the account erasure) refetch the job's state; those events ARE
  *    replayed, so a tab that was away still sees how the job went. `done` in them is a count, never a step number:
  *    delivery order is not guaranteed;
+ *  - `billing.topup`: a top-up settled, so the balance and the history refetch (replayed, like the privacy steps);
  *  - every (re)connect refetches both, because those events are not replayed; only `session.revoked` and the `privacy.*`
  *    steps are, so a device that was offline when it was signed out finds out as soon as it reconnects.
  */
@@ -41,6 +42,7 @@ export function useLiveSession() {
     const refreshNotifications = () =>
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
     const refreshPrivacy = () => queryClient.invalidateQueries({ queryKey: ['privacy'] })
+    const refreshBilling = () => queryClient.invalidateQueries({ queryKey: ['billing'] })
 
     const signOutHere = () => {
       toast.warning(i18n.t('notifications.live.signedOut'))
@@ -56,6 +58,7 @@ export function useLiveSession() {
         void refreshDevices()
         void refreshNotifications()
         void refreshPrivacy()
+        void refreshBilling()
       },
       'privacy.export.progress': () => void refreshPrivacy(),
       'privacy.export.failed': () => void refreshPrivacy(),
@@ -75,6 +78,8 @@ export function useLiveSession() {
           void navigate({ to: '/login' })
         }
       },
+      // The webhook settled a top-up (maybe from another tab or device): the balance and the history are stale.
+      'billing.topup': () => void refreshBilling(),
       'notification.created'(data) {
         const now = Date.now()
         if (data?.kind === 'security_alert' || now - lastToastAt >= TOAST_QUIET_MS) {

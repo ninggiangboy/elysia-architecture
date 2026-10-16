@@ -1,6 +1,6 @@
 import { i18n } from '@/i18n'
 import { describeDevice } from '@/lib/device'
-import { formatUtcDay } from '@/lib/format'
+import { formatMoney, formatUtcDay } from '@/lib/format'
 
 interface Notification {
   template: string | null
@@ -28,6 +28,7 @@ const PARAMS: Record<string, (data: Record<string, unknown>) => Record<string, s
   oauthLinked: (d) => ({ provider: PROVIDER_NAMES[str(d.provider)] ?? str(d.provider) }),
   oauthUnlinked: (d) => ({ provider: PROVIDER_NAMES[str(d.provider)] ?? str(d.provider) }),
   dataExportReady: (d) => ({ date: formatUtcDay(str(d.expiresAt)) }),
+  topUpSucceeded: (d) => ({ amount: formatMoney(Number(d.amount), str(d.currency)) }),
   deletionScheduled: (d) => ({ date: formatUtcDay(str(d.scheduledFor)) }),
 }
 

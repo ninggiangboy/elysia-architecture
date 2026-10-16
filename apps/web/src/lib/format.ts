@@ -1,4 +1,5 @@
 import { currentLocale, i18n } from '@/i18n'
+import { formatMoneyIn } from './money'
 
 const STEPS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [
   ['second', 60],
@@ -41,3 +42,7 @@ export function formatBytes(bytes: number) {
   }
   return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`
 }
+
+/** "$20.00" / "20.000 ₫": an amount in the currency's smallest unit (what the API speaks), in the app's language. */
+export const formatMoney = (amount: number, currency: string) =>
+  formatMoneyIn(currentLocale(), amount, currency)

@@ -16,9 +16,12 @@ import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedPrivacyRouteImport } from './routes/_authed/privacy'
 import { Route as AuthedRealtimeRouteImport } from './routes/_authed/realtime'
 import { Route as AuthedSecurityRouteImport } from './routes/_authed/security'
+import { Route as AuthedTransactionsRouteImport } from './routes/_authed/transactions'
 import { Route as AccountConfirmEmailRouteImport } from './routes/account.confirm-email'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AuthedNotificationsSettingsRouteImport } from './routes/_authed/notifications.settings'
+import { Route as AuthedTopupIndexRouteImport } from './routes/_authed/topup/index'
+import { Route as AuthedTopupReturnRouteImport } from './routes/_authed/topup/return'
 import { Route as AuthOauthCallbackRouteImport } from './routes/auth.oauth.callback'
 
 const AuthedRoute = AuthedRouteImport.update({
@@ -55,6 +58,11 @@ const AuthedSecurityRoute = AuthedSecurityRouteImport.update({
   path: '/security',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedTransactionsRoute = AuthedTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AccountConfirmEmailRoute = AccountConfirmEmailRouteImport.update({
   id: '/account/confirm-email',
   path: '/account/confirm-email',
@@ -71,6 +79,16 @@ const AuthedNotificationsSettingsRoute =
     path: '/notifications/settings',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedTopupIndexRoute = AuthedTopupIndexRouteImport.update({
+  id: '/topup/',
+  path: '/topup/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedTopupReturnRoute = AuthedTopupReturnRouteImport.update({
+  id: '/topup/return',
+  path: '/topup/return',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthOauthCallbackRoute = AuthOauthCallbackRouteImport.update({
   id: '/auth/oauth/callback',
   path: '/auth/oauth/callback',
@@ -84,10 +102,13 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof AuthedPrivacyRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/security': typeof AuthedSecurityRoute
+  '/transactions': typeof AuthedTransactionsRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/notifications/settings': typeof AuthedNotificationsSettingsRoute
+  '/topup/return': typeof AuthedTopupReturnRoute
   '/auth/oauth/callback': typeof AuthOauthCallbackRoute
+  '/topup/': typeof AuthedTopupIndexRoute
 }
 export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
@@ -95,11 +116,14 @@ export interface FileRoutesByTo {
   '/privacy': typeof AuthedPrivacyRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/security': typeof AuthedSecurityRoute
+  '/transactions': typeof AuthedTransactionsRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthedIndexRoute
   '/notifications/settings': typeof AuthedNotificationsSettingsRoute
+  '/topup/return': typeof AuthedTopupReturnRoute
   '/auth/oauth/callback': typeof AuthOauthCallbackRoute
+  '/topup': typeof AuthedTopupIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -109,11 +133,14 @@ export interface FileRoutesById {
   '/_authed/privacy': typeof AuthedPrivacyRoute
   '/_authed/realtime': typeof AuthedRealtimeRoute
   '/_authed/security': typeof AuthedSecurityRoute
+  '/_authed/transactions': typeof AuthedTransactionsRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/notifications/settings': typeof AuthedNotificationsSettingsRoute
+  '/_authed/topup/return': typeof AuthedTopupReturnRoute
   '/auth/oauth/callback': typeof AuthOauthCallbackRoute
+  '/_authed/topup/': typeof AuthedTopupIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -124,10 +151,13 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/realtime'
     | '/security'
+    | '/transactions'
     | '/account/confirm-email'
     | '/auth/callback'
     | '/notifications/settings'
+    | '/topup/return'
     | '/auth/oauth/callback'
+    | '/topup/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/docs'
@@ -135,11 +165,14 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/realtime'
     | '/security'
+    | '/transactions'
     | '/account/confirm-email'
     | '/auth/callback'
     | '/'
     | '/notifications/settings'
+    | '/topup/return'
     | '/auth/oauth/callback'
+    | '/topup'
   id:
     | '__root__'
     | '/_authed'
@@ -148,11 +181,14 @@ export interface FileRouteTypes {
     | '/_authed/privacy'
     | '/_authed/realtime'
     | '/_authed/security'
+    | '/_authed/transactions'
     | '/account/confirm-email'
     | '/auth/callback'
     | '/_authed/'
     | '/_authed/notifications/settings'
+    | '/_authed/topup/return'
     | '/auth/oauth/callback'
+    | '/_authed/topup/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -215,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSecurityRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/transactions': {
+      id: '/_authed/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof AuthedTransactionsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/account/confirm-email': {
       id: '/account/confirm-email'
       path: '/account/confirm-email'
@@ -236,6 +279,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedNotificationsSettingsRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/topup/': {
+      id: '/_authed/topup/'
+      path: '/topup'
+      fullPath: '/topup/'
+      preLoaderRoute: typeof AuthedTopupIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/topup/return': {
+      id: '/_authed/topup/return'
+      path: '/topup/return'
+      fullPath: '/topup/return'
+      preLoaderRoute: typeof AuthedTopupReturnRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/auth/oauth/callback': {
       id: '/auth/oauth/callback'
       path: '/auth/oauth/callback'
@@ -250,16 +307,22 @@ interface AuthedRouteChildren {
   AuthedPrivacyRoute: typeof AuthedPrivacyRoute
   AuthedRealtimeRoute: typeof AuthedRealtimeRoute
   AuthedSecurityRoute: typeof AuthedSecurityRoute
+  AuthedTransactionsRoute: typeof AuthedTransactionsRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedNotificationsSettingsRoute: typeof AuthedNotificationsSettingsRoute
+  AuthedTopupReturnRoute: typeof AuthedTopupReturnRoute
+  AuthedTopupIndexRoute: typeof AuthedTopupIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedPrivacyRoute: AuthedPrivacyRoute,
   AuthedRealtimeRoute: AuthedRealtimeRoute,
   AuthedSecurityRoute: AuthedSecurityRoute,
+  AuthedTransactionsRoute: AuthedTransactionsRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedNotificationsSettingsRoute: AuthedNotificationsSettingsRoute,
+  AuthedTopupReturnRoute: AuthedTopupReturnRoute,
+  AuthedTopupIndexRoute: AuthedTopupIndexRoute,
 }
 
 const AuthedRouteWithChildren =

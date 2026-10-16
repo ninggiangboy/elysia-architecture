@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
-import { Radio, UserRound } from 'lucide-react'
+import { Radio, Receipt, UserRound, Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/layout/language-switcher'
 import { Logo } from '@/components/layout/logo'
@@ -35,6 +35,8 @@ export const Route = createFileRoute('/_authed')({
 
 const NAV = [
   { to: '/', label: 'nav.profile', icon: UserRound },
+  { to: '/topup', label: 'nav.topup', icon: Wallet },
+  { to: '/transactions', label: 'nav.transactions', icon: Receipt },
   { to: '/realtime', label: 'nav.realtime', icon: Radio },
 ] as const
 
@@ -83,7 +85,7 @@ function AuthedLayout() {
 
       <nav
         aria-label={t('nav.main')}
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 border-t border-border bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
       >
         {NAV.map(({ to, label, icon: Icon }) => (
           <Link

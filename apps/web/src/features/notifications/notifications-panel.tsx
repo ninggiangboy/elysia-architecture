@@ -1,6 +1,16 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Bell, CheckCheck, Inbox, LogIn, Mail, Settings, ShieldAlert, Sparkles } from 'lucide-react'
+import {
+  Bell,
+  CheckCheck,
+  Inbox,
+  LogIn,
+  Mail,
+  Settings,
+  ShieldAlert,
+  Sparkles,
+  Wallet,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +34,7 @@ const KIND_ICONS: Record<string, { icon: typeof Bell; className: string }> = {
   email_changed: { icon: Mail, className: 'bg-sky-500/12 text-sky-600 dark:text-sky-400' },
   new_sign_in: { icon: LogIn, className: 'bg-success/12 text-success' },
   security_alert: { icon: ShieldAlert, className: 'bg-destructive/10 text-destructive' },
+  payment: { icon: Wallet, className: 'bg-success/12 text-success' },
 }
 const READ_KEY = ['notifications', 'mark-read']
 

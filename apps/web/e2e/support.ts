@@ -3,6 +3,10 @@ export const MAILPIT = 'http://localhost:8025'
 /** A fake IP per run so the magic-link per-IP rate limit does not carry over between test runs. */
 export const TEST_IP = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`
 
+/** An IP of its own, for a spec that signs in and must not eat into the per-IP magic-link limit the others share. */
+export const uniqueIp = () =>
+  `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`
+
 export const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
