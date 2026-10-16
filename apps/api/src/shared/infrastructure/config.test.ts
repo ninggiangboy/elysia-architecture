@@ -22,7 +22,7 @@ describe('APP_WORKERS', () => {
   test('accepts a number or auto', () => {
     expect(loadConfig({ ...base, APP_WORKERS: '4' }).APP_WORKERS).toBe(4)
     expect(loadConfig({ ...base, APP_WORKERS: 'auto' }).APP_WORKERS).toBe(
-      Math.max(1, Math.floor((availableParallelism() * 3) / 4)),
+      Math.max(2, Math.floor((availableParallelism() * 3) / 4)),
     )
   })
 
