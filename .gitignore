@@ -7,3 +7,4 @@ apps/web/test-results
 apps/web/playwright-report
 coverage
 .claude/settings.local.json
+apps/web/.tanstack
