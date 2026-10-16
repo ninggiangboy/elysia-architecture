@@ -247,6 +247,64 @@ describe('full user journey', () => {
     expect(await t.container.storage.stat(secondKey)).not.toBeNull()
   })
 
+  test('cover image through presigned URL, validation and old-cover cleanup', async () => {
+    const rejectedType = await api('POST', '/api/me/cover/upload-url', {
+      token: accessToken,
+      body: { contentType: 'image/gif', contentLength: 10 },
+    })
+    expect(rejectedType.json.error.code).toBe('unsupported_cover_type')
+    const tooBig = await api('POST', '/api/me/cover/upload-url', {
+      token: accessToken,
+      body: { contentType: 'image/png', contentLength: 6 * 1024 * 1024 },
+    })
+    expect(tooBig.json.error.code).toBe('cover_too_large')
+
+    const upload = async () => {
+      const ticket = await api('POST', '/api/me/cover/upload-url', {
+        token: accessToken,
+        body: { contentType: 'image/png', contentLength: PNG_1X1.length },
+      })
+      expect(ticket.status).toBe(200)
+      expect(ticket.json.key.startsWith(`${userId}/cover/`)).toBe(true)
+      const put = await fetch(ticket.json.uploadUrl, {
+        method: 'PUT',
+        headers: ticket.json.headers,
+        body: PNG_1X1,
+      })
+      expect(put.status).toBe(200)
+      return ticket.json.key as string
+    }
+
+    const missing = await api('PUT', '/api/me/cover', {
+      token: accessToken,
+      body: { key: `${userId}/cover/missing.png` },
+    })
+    expect(missing.json.error.code).toBe('cover_not_uploaded')
+    const foreign = await api('PUT', '/api/me/cover', {
+      token: accessToken,
+      body: { key: 'someone-else/cover/x.png' },
+    })
+    expect(foreign.json.error.code).toBe('invalid_cover_key')
+
+    const firstKey = await upload()
+    const set = await api('PUT', '/api/me/cover', { token: accessToken, body: { key: firstKey } })
+    expect(set.status).toBe(200)
+    const image = await fetch(set.json.coverUrl)
+    expect(image.status).toBe(200)
+    expect(new Uint8Array(await image.arrayBuffer())).toEqual(PNG_1X1)
+
+    const secondKey = await upload()
+    expect(
+      (await api('PUT', '/api/me/cover', { token: accessToken, body: { key: secondKey } })).status,
+    ).toBe(200)
+    await eventually(
+      async () => !(await t.container.storage.stat(firstKey)),
+      10_000,
+      'old cover removal',
+    )
+    expect(await t.container.storage.stat(secondKey)).not.toBeNull()
+  })
+
   test('refresh rotates the token; reuse of a rotated token revokes the whole session', async () => {
     const first = await api('POST', '/api/auth/refresh', { cookie })
     expect(first.status).toBe(200)

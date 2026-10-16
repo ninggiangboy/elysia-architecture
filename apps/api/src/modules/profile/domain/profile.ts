@@ -9,6 +9,7 @@ export class Profile extends AggregateRoot {
     private _displayName: DisplayName,
     private _bio: Bio | null,
     private _avatarKey: string | null,
+    private _coverKey: string | null,
     readonly createdAt: Date,
     private _updatedAt: Date,
   ) {
@@ -27,6 +28,9 @@ export class Profile extends AggregateRoot {
   get avatarKey(): string | null {
     return this._avatarKey
   }
+  get coverKey(): string | null {
+    return this._coverKey
+  }
   get updatedAt(): Date {
     return this._updatedAt
   }
@@ -36,6 +40,7 @@ export class Profile extends AggregateRoot {
       params.userId,
       0,
       DisplayName.fromEmail(params.email),
+      null,
       null,
       null,
       params.now,
@@ -49,6 +54,7 @@ export class Profile extends AggregateRoot {
     displayName: string
     bio: string | null
     avatarKey: string | null
+    coverKey: string | null
     createdAt: Date
     updatedAt: Date
   }): Profile {
@@ -58,6 +64,7 @@ export class Profile extends AggregateRoot {
       DisplayName.create(params.displayName),
       params.bio ? Bio.create(params.bio) : null,
       params.avatarKey,
+      params.coverKey,
       params.createdAt,
       params.updatedAt,
     )
@@ -77,6 +84,17 @@ export class Profile extends AggregateRoot {
     this._updatedAt = now
     this.record(
       ProfileEvents.AvatarChanged,
+      { userId: this.id, oldKey, newKey, changedAt: now.toISOString() },
+      now,
+    )
+  }
+
+  changeCover(newKey: string, now: Date): void {
+    const oldKey = this._coverKey
+    this._coverKey = newKey
+    this._updatedAt = now
+    this.record(
+      ProfileEvents.CoverChanged,
       { userId: this.id, oldKey, newKey, changedAt: now.toISOString() },
       now,
     )

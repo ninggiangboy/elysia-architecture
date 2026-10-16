@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { AVATAR_MAX_BYTES } from '@app/shared-types'
+import { AVATAR_MAX_BYTES, COVER_MAX_BYTES } from '@app/shared-types'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import { VersionConflictError } from '#/shared/application/errors'
 import {
@@ -14,7 +14,9 @@ import type { Profile } from '../domain/profile'
 import type { ProfileRepository } from '../domain/profile-repository'
 import { ProfileLoader } from './profile-loader'
 import { RequestAvatarUpload } from './use-cases/request-avatar-upload'
+import { RequestCoverUpload } from './use-cases/request-cover-upload'
 import { SetAvatar } from './use-cases/set-avatar'
+import { SetCover } from './use-cases/set-cover'
 import { UpdateProfile } from './use-cases/update-profile'
 
 class MemProfiles implements ProfileRepository {
@@ -144,6 +146,93 @@ describe('profile use cases', () => {
       expect(view.avatarUrl).toContain('u1/b.png')
       expect(outbox.types()).toEqual([ProfileEvents.AvatarChanged, ProfileEvents.AvatarChanged])
       expect(outbox.events[1]?.payload).toMatchObject({ oldKey: 'u1/a.png', newKey: 'u1/b.png' })
+    })
+
+    test('SetAvatar refuses a cover image key', async () => {
+      storage.objects.set('u1/cover/a.png', { size: 10, contentType: 'image/png' })
+      await expect(
+        setAvatar().execute({ userId: 'u1', key: 'u1/cover/a.png' }),
+      ).rejects.toMatchObject({ code: 'invalid_avatar_key' })
+    })
+  })
+
+  describe('cover', () => {
+    const request = () => new RequestCoverUpload(storage, new SequentialIds())
+    const setCover = () =>
+      new SetCover(loader, profiles, storage, outbox, new PassthroughUnitOfWork(), clock)
+
+    test("upload ticket is scoped to the user's cover folder and validates type and size", () => {
+      const ticket = request().execute({
+        userId: 'u1',
+        contentType: 'image/webp',
+        contentLength: AVATAR_MAX_BYTES + 1, // over the avatar limit, within the cover one
+      })
+      expect(ticket.key).toMatch(/^u1\/cover\/.+\.webp$/)
+      expect(() =>
+        request().execute({ userId: 'u1', contentType: 'image/gif', contentLength: 10 }),
+      ).toThrow('JPEG, PNG or WebP')
+      expect(() =>
+        request().execute({
+          userId: 'u1',
+          contentType: 'image/png',
+          contentLength: COVER_MAX_BYTES + 1,
+        }),
+      ).toThrow('at most')
+      expect(() =>
+        request().execute({ userId: 'u1', contentType: 'image/png', contentLength: 0 }),
+      ).toThrow()
+    })
+
+    test('SetCover rejects keys outside the cover folder and files that were never uploaded', async () => {
+      for (const key of ['u2/cover/x.png', 'u1/x.png', 'u1/cover/../../u2/x.png'])
+        await expect(setCover().execute({ userId: 'u1', key })).rejects.toMatchObject({
+          code: 'invalid_cover_key',
+        })
+      await expect(
+        setCover().execute({ userId: 'u1', key: 'u1/cover/x.png' }),
+      ).rejects.toMatchObject({ code: 'cover_not_uploaded' })
+    })
+
+    test('SetCover deletes uploads that violate size/type', async () => {
+      storage.objects.set('u1/cover/big.png', {
+        size: COVER_MAX_BYTES + 1,
+        contentType: 'image/png',
+      })
+      await expect(
+        setCover().execute({ userId: 'u1', key: 'u1/cover/big.png' }),
+      ).rejects.toMatchObject({ code: 'invalid_cover' })
+      expect(storage.deleted).toEqual(['u1/cover/big.png'])
+      storage.objects.set('u1/cover/evil.html', { size: 10, contentType: 'text/html' })
+      await expect(
+        setCover().execute({ userId: 'u1', key: 'u1/cover/evil.html' }),
+      ).rejects.toMatchObject({ code: 'invalid_cover' })
+    })
+
+    test('SetCover swaps the cover, keeps the avatar, and emits an event carrying the old key', async () => {
+      storage.objects.set('u1/a.png', { size: 10, contentType: 'image/png' })
+      storage.objects.set('u1/cover/a.png', { size: 10, contentType: 'image/png' })
+      storage.objects.set('u1/cover/b.png', { size: 10, contentType: 'image/png' })
+      await new SetAvatar(
+        loader,
+        profiles,
+        storage,
+        outbox,
+        new PassthroughUnitOfWork(),
+        clock,
+      ).execute({ userId: 'u1', key: 'u1/a.png' })
+      await setCover().execute({ userId: 'u1', key: 'u1/cover/a.png' })
+      const view = await setCover().execute({ userId: 'u1', key: 'u1/cover/b.png' })
+      expect(view.coverUrl).toContain('u1/cover/b.png')
+      expect(view.avatarUrl).toContain('u1/a.png')
+      expect(outbox.types()).toEqual([
+        ProfileEvents.AvatarChanged,
+        ProfileEvents.CoverChanged,
+        ProfileEvents.CoverChanged,
+      ])
+      expect(outbox.events[2]?.payload).toMatchObject({
+        oldKey: 'u1/cover/a.png',
+        newKey: 'u1/cover/b.png',
+      })
     })
   })
 })

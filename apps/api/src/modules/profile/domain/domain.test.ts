@@ -42,4 +42,17 @@ describe('Profile', () => {
     expect(event?.type).toBe(ProfileEvents.AvatarChanged)
     expect(event?.payload).toMatchObject({ oldKey: 'u1/a.png', newKey: 'u1/b.png' })
   })
+
+  test('changeCover records old and new key and leaves the avatar alone', () => {
+    const p = fresh()
+    p.changeAvatar('u1/a.png', now)
+    p.changeCover('u1/cover/a.png', now)
+    p.pullEvents()
+    p.changeCover('u1/cover/b.png', now)
+    const [event] = p.pullEvents()
+    expect(event?.type).toBe(ProfileEvents.CoverChanged)
+    expect(event?.payload).toMatchObject({ oldKey: 'u1/cover/a.png', newKey: 'u1/cover/b.png' })
+    expect(p.avatarKey).toBe('u1/a.png')
+    expect(p.coverKey).toBe('u1/cover/b.png')
+  })
 })

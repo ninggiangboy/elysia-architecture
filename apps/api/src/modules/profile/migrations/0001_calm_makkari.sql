@@ -1,0 +1,1 @@
+ALTER TABLE "profile"."profiles" ADD COLUMN "cover_key" text;

@@ -20,3 +20,13 @@ export const requestAvatarUpload = async (file: File) =>
   )
 
 export const setAvatar = async (key: string) => unwrap(await http.api.me.avatar.put({ key }))
+
+export const requestCoverUpload = async (file: File) =>
+  unwrap(
+    await http.api.me.cover['upload-url'].post({
+      contentType: file.type,
+      contentLength: file.size,
+    }),
+  )
+
+export const setCover = async (key: string) => unwrap(await http.api.me.cover.put({ key }))

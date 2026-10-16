@@ -4,7 +4,9 @@ import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
 import { errorResponse, validationError } from '#/shared/http/openapi'
 import type { GetMe } from '../application/use-cases/get-me'
 import type { RequestAvatarUpload } from '../application/use-cases/request-avatar-upload'
+import type { RequestCoverUpload } from '../application/use-cases/request-cover-upload'
 import type { SetAvatar } from '../application/use-cases/set-avatar'
+import type { SetCover } from '../application/use-cases/set-cover'
 import type { UpdateProfile } from '../application/use-cases/update-profile'
 
 export interface ProfileRouteDeps {
@@ -14,6 +16,8 @@ export interface ProfileRouteDeps {
     updateProfile: UpdateProfile
     requestAvatarUpload: RequestAvatarUpload
     setAvatar: SetAvatar
+    requestCoverUpload: RequestCoverUpload
+    setCover: SetCover
   }
 }
 
@@ -24,6 +28,7 @@ const meBody = t.Object(
     displayName: t.String(),
     bio: t.Nullable(t.String()),
     avatarUrl: t.Nullable(t.String({ description: 'Presigned GET URL, expires after 1 hour' })),
+    coverUrl: t.Nullable(t.String({ description: 'Presigned GET URL, expires after 1 hour' })),
     version: t.Integer({
       description: 'Send back in `If-Match` when updating. 0 = no profile record yet',
     }),
@@ -131,6 +136,61 @@ export const profileRoutes = ({ verifier, useCases: uc }: ProfileRouteDeps) =>
             'unsupported_avatar_type',
             'avatar_too_large',
           ),
+          404: errorResponse(404, 'user_not_found'),
+        },
+      },
+    )
+    .post(
+      '/cover/upload-url',
+      ({ auth, body }) => uc.requestCoverUpload.execute({ userId: auth.userId, ...body }),
+      {
+        auth: true,
+        body: t.Object({
+          contentType: t.String({ description: 'image/jpeg, image/png or image/webp' }),
+          contentLength: t.Integer({ description: 'File size (bytes), max 5 MB' }),
+        }),
+        detail: {
+          summary: 'Xin URL upload ảnh bìa',
+          description:
+            'Returns a presigned URL; the client `PUT`s the file straight to storage, then calls `PUT /me/cover` with the `key`.',
+        },
+        response: {
+          200: t.Object(
+            {
+              uploadUrl: t.String(),
+              key: t.String({ description: 'Send back in `PUT /me/cover`' }),
+              method: t.Literal('PUT'),
+              headers: t.Record(t.String(), t.String(), {
+                description: 'Headers required for the upload',
+              }),
+              expiresIn: t.Number({ description: 'URL lifetime (seconds)' }),
+            },
+            { description: 'Upload information' },
+          ),
+          400: validationError('unsupported_cover_type', 'cover_too_large'),
+        },
+      },
+    )
+    .put(
+      '/cover',
+      ({ auth, body }) => uc.setCover.execute({ userId: auth.userId, key: body.key }),
+      {
+        auth: true,
+        body: t.Object({
+          key: t.String({
+            minLength: 1,
+            maxLength: 200,
+            description: '`key` received from cover/upload-url',
+          }),
+        }),
+        detail: {
+          summary: 'Set cover image',
+          description:
+            'Confirms the file was uploaded and sets it as the cover image; the old cover is deleted asynchronously.',
+        },
+        response: {
+          200: meBody,
+          400: validationError('invalid_cover_key', 'cover_not_uploaded', 'invalid_cover'),
           404: errorResponse(404, 'user_not_found'),
         },
       },

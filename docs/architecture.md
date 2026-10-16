@@ -38,7 +38,7 @@
 | Module | Owns | Publishes | Consumes | Talks to |
 | --- | --- | --- | --- | --- |
 | `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked` | — | — |
-| `profile` | profiles (display name, avatar, optimistic-lock `version`) | `avatar_changed` | `user_registered` (create profile), `avatar_changed` (delete old file) | `IdentityApi.getAccount` (sync, for `GET /me`) |
+| `profile` | profiles (display name, avatar, cover image, optimistic-lock `version`) | `avatar_changed`, `cover_changed` | `user_registered` (create profile), `avatar_changed` (delete old file, make thumbnails), `cover_changed` (delete old file) | `IdentityApi.getAccount` (sync, for `GET /me`) |
 | `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read` | identity events (mail, in-app), `session_revoked` (drop push subscriptions), `created` (Web Push) | — |
 | `realtime` | `realtime.events` (replay buffer, opt-in events only) | — | `session_revoked`, `notification.created/read` → SSE | — |
 
@@ -139,6 +139,8 @@ A family **is** one signed-in device (its id is the `sid` claim), and each refre
 
 **Avatar**: `POST upload-url` issues a presigned PUT (5 minutes) → the browser PUTs straight to SeaweedFS → `PUT /me/avatar {key}` checks the key belongs to the user and `stat`s size/type
 (a presigned PUT cannot enforce them, so a bad file is deleted) → emits `profile.avatar_changed.v1` → a handler deletes the old file.
+
+**Cover image**: the same flow under `/me/cover` (up to 5 MB). Cover keys live in `<userId>/cover/`, which keeps them apart from avatars — `PUT /me/avatar` refuses a cover key, so each cleanup handler (`profile.cover_changed.v1` → delete the old file) can only ever delete its own kind of file.
 
 ## Sending mail and rate limiting
 

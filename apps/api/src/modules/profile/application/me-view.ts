@@ -8,12 +8,13 @@ export interface MeView {
   displayName: string
   bio: string | null
   avatarUrl: string | null
+  coverUrl: string | null
   /** Used for `If-Match` on update. 0 = no profile record yet. */
   version: number
   createdAt: string
 }
 
-const AVATAR_URL_TTL_SECONDS = 3600
+const IMAGE_URL_TTL_SECONDS = 3600
 
 export function toMeView(account: AccountDto, profile: Profile, storage: ObjectStorage): MeView {
   return {
@@ -22,8 +23,9 @@ export function toMeView(account: AccountDto, profile: Profile, storage: ObjectS
     displayName: profile.displayName,
     bio: profile.bio,
     avatarUrl: profile.avatarKey
-      ? storage.presignGet(profile.avatarKey, AVATAR_URL_TTL_SECONDS)
+      ? storage.presignGet(profile.avatarKey, IMAGE_URL_TTL_SECONDS)
       : null,
+    coverUrl: profile.coverKey ? storage.presignGet(profile.coverKey, IMAGE_URL_TTL_SECONDS) : null,
     version: profile.version,
     createdAt: account.createdAt,
   }

@@ -9,6 +9,7 @@ export const profiles = profileSchema.table('profiles', {
   displayName: text('display_name').notNull(),
   bio: text('bio'),
   avatarKey: text('avatar_key'),
+  coverKey: text('cover_key'),
   version: integer('version').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),

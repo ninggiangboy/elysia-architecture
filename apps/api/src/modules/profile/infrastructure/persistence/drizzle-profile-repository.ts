@@ -21,6 +21,7 @@ export class DrizzleProfileRepository implements ProfileRepository {
       displayName: row.displayName,
       bio: row.bio,
       avatarKey: row.avatarKey,
+      coverKey: row.coverKey,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     })
@@ -65,6 +66,7 @@ function toRow(profile: Profile, version: number) {
     displayName: profile.displayName,
     bio: profile.bio,
     avatarKey: profile.avatarKey,
+    coverKey: profile.coverKey,
     version,
     createdAt: profile.createdAt,
     updatedAt: profile.updatedAt,

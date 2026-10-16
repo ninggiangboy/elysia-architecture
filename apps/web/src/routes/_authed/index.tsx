@@ -9,6 +9,7 @@ import { ChangeEmailForm } from '@/features/account/change-email-form'
 import { sessionsQuery } from '@/features/account/queries'
 import { SessionsList } from '@/features/account/sessions-list'
 import { AvatarUploader } from '@/features/profile/avatar-uploader'
+import { CoverUploader } from '@/features/profile/cover-uploader'
 import { EditProfileForm } from '@/features/profile/edit-profile-form'
 import { meQuery } from '@/features/profile/queries'
 
@@ -31,10 +32,7 @@ function ProfilePage() {
       <PageHeader title="Profile" description="Manage how you appear and how you sign in." />
 
       <Card>
-        <div
-          aria-hidden
-          className="h-24 bg-[radial-gradient(120%_140%_at_0%_0%,color-mix(in_oklab,var(--primary)_55%,transparent),transparent_60%),radial-gradient(90%_140%_at_100%_100%,color-mix(in_oklab,#d946ef_35%,transparent),transparent_60%)] bg-accent sm:h-28"
-        />
+        <CoverUploader coverUrl={me.coverUrl} />
         <CardContent className="flex flex-col gap-4 pt-0 sm:flex-row sm:items-end sm:gap-5">
           <AvatarUploader name={me.displayName} avatarUrl={me.avatarUrl} />
           <div className="min-w-0 sm:pb-1">

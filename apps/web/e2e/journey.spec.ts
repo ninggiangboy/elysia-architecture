@@ -118,6 +118,22 @@ test.describe
       await expect(page.getByRole('img', { name: /Profile picture/ })).toBeVisible()
     })
 
+    test('upload a cover image straight to object storage via a presigned URL', async () => {
+      await page
+        .getByTestId('cover-input')
+        .setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG })
+      await expect(page.getByText('Cover image updated')).toBeVisible()
+      const img = page.getByRole('img', { name: 'Cover' })
+      await expect(img).toBeVisible()
+      expect(await img.getAttribute('src')).toContain(':8333/')
+      await expect
+        .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth))
+        .toBe(1)
+
+      await page.reload()
+      await expect(page.getByRole('img', { name: 'Cover' })).toBeVisible()
+    })
+
     test('rejects an oversized file on the client without calling the API', async () => {
       await page.getByTestId('avatar-input').setInputFiles({
         name: 'huge.png',

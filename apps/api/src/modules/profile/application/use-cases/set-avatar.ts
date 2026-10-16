@@ -2,6 +2,7 @@ import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES } from '@app/shared-types'
 import { ValidationError } from '#/shared/application/errors'
 import type { Clock, ObjectStorage, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
 import type { ProfileRepository } from '../../domain/profile-repository'
+import { isCoverKey } from '../cover-keys'
 import { type MeView, toMeView } from '../me-view'
 import type { ProfileLoader } from '../profile-loader'
 
@@ -17,7 +18,11 @@ export class SetAvatar {
 
   async execute(cmd: { userId: string; key: string }): Promise<MeView> {
     // The key must be inside the user's own "folder" — prevents assigning someone else's image.
-    if (!cmd.key.startsWith(`${cmd.userId}/`) || cmd.key.includes('..')) {
+    if (
+      !cmd.key.startsWith(`${cmd.userId}/`) ||
+      isCoverKey(cmd.userId, cmd.key) ||
+      cmd.key.includes('..')
+    ) {
       throw new ValidationError('invalid_avatar_key', 'Invalid avatar key')
     }
     const stat = await this.storage.stat(cmd.key)

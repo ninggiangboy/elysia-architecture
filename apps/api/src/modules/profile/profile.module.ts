@@ -13,11 +13,14 @@ import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outb
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import { CreateProfileOnUserRegistered } from './application/handlers/create-profile-on-user-registered'
 import { DeleteOldAvatar } from './application/handlers/delete-old-avatar'
+import { DeleteOldCover } from './application/handlers/delete-old-cover'
 import { GenerateAvatarThumbnails } from './application/handlers/generate-avatar-thumbnails'
 import { ProfileLoader } from './application/profile-loader'
 import { GetMe } from './application/use-cases/get-me'
 import { RequestAvatarUpload } from './application/use-cases/request-avatar-upload'
+import { RequestCoverUpload } from './application/use-cases/request-cover-upload'
 import { SetAvatar } from './application/use-cases/set-avatar'
+import { SetCover } from './application/use-cases/set-cover'
 import { UpdateProfile } from './application/use-cases/update-profile'
 import { DrizzleProfileRepository } from './infrastructure/persistence/drizzle-profile-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
@@ -59,11 +62,14 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
         updateProfile: new UpdateProfile(loader, profiles, storage, clock),
         requestAvatarUpload: new RequestAvatarUpload(storage, ids),
         setAvatar: new SetAvatar(loader, profiles, storage, outboxWriter, database, clock),
+        requestCoverUpload: new RequestCoverUpload(storage, ids),
+        setCover: new SetCover(loader, profiles, storage, outboxWriter, database, clock),
       },
     }),
     handlers: [
       new CreateProfileOnUserRegistered(profiles, inboxGuard, clock),
       new DeleteOldAvatar(storage, inboxGuard),
+      new DeleteOldCover(storage, inboxGuard),
       new GenerateAvatarThumbnails(storage, new SharpImageResizer(), inboxGuard, log),
     ],
     outbox: { name: 'profile', table: outbox },

@@ -10,6 +10,12 @@ export const AVATAR_CONTENT_TYPES = {
 
 export type AvatarContentType = keyof typeof AVATAR_CONTENT_TYPES
 
+export const COVER_MAX_BYTES = 5 * 1024 * 1024
+
+export const COVER_CONTENT_TYPES = AVATAR_CONTENT_TYPES
+
+export type CoverContentType = keyof typeof COVER_CONTENT_TYPES
+
 export const DISPLAY_NAME_MAX = 50
 export const BIO_MAX = 280
 
