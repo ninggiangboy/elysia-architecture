@@ -26,7 +26,7 @@ const pem = z
   .transform((v) => v.replace(/\\n/g, '\n'))
 
 const schema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
   PORT: z.coerce.number().int().default(3000),
   APP_ROLES: z
     .string()

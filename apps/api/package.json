@@ -6,7 +6,7 @@
     ".": "./src/app.ts"
   },
   "scripts": {
-    "dev": "bun --env-file=../../.env --watch src/main.ts",
+    "dev": "NODE_ENV=development bun --env-file=../../.env --watch src/main.ts",
     "start": "bun src/main.ts",
     "build": "bun build src/main.ts --target=bun --outdir=dist",
     "keys:generate": "bun scripts/generate-keys.ts",

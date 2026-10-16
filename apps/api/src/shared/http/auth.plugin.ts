@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia'
 import { UnauthorizedError } from '#/shared/application/errors'
 import { requestContext } from '#/shared/infrastructure/request-context'
+import { bearerSecurity, errorResponse } from './openapi'
 
 export interface AuthSession {
   userId: string
@@ -19,6 +20,8 @@ export interface TokenVerifier {
 export const authPlugin = (verifier: TokenVerifier) =>
   new Elysia({ name: 'auth' }).macro({
     auth: {
+      detail: { security: bearerSecurity },
+      response: { 401: errorResponse(401, 'missing_token', 'invalid_token') },
       // Đọc từ `request` chứ không từ `headers`: route khai báo schema headers sẽ bị lược bỏ các header không khai báo.
       async resolve({ request }) {
         const header = request.headers.get('authorization')
