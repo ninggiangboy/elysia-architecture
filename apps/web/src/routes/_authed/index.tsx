@@ -1,6 +1,7 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import { CircleAlert } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { PageHeader, Section } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,11 +26,12 @@ export const Route = createFileRoute('/_authed/')({
 })
 
 function ProfilePage() {
+  const { t } = useTranslation()
   const { data: me } = useSuspenseQuery(meQuery)
 
   return (
     <>
-      <PageHeader title="Profile" description="Manage how you appear and how you sign in." />
+      <PageHeader title={t('profile.title')} description={t('profile.description')} />
 
       <Card>
         <CoverUploader coverUrl={me.coverUrl} />
@@ -54,24 +56,15 @@ function ProfilePage() {
         )}
       </Card>
 
-      <Section
-        title="Personal information"
-        description="Your display name and a short bio, shown to people you interact with."
-      >
+      <Section title={t('profile.personalTitle')} description={t('profile.personalDescription')}>
         <EditProfileForm me={me} />
       </Section>
 
-      <Section
-        title="Email address"
-        description="We send a confirmation link to the new address. Your email only changes once you open it."
-      >
+      <Section title={t('profile.emailTitle')} description={t('profile.emailDescription')}>
         <ChangeEmailForm currentEmail={me.email} />
       </Section>
 
-      <Section
-        title="Signed-in devices"
-        description="Devices that can access your account. A device you sign out stops refreshing its session and may stay active for up to 15 more minutes."
-      >
+      <Section title={t('profile.devicesTitle')} description={t('profile.devicesDescription')}>
         <SessionsList />
       </Section>
     </>
@@ -79,12 +72,13 @@ function ProfilePage() {
 }
 
 function ProfileSkeleton() {
+  const { t } = useTranslation()
   return (
     <div
       role="status"
       className="flex flex-col gap-8"
       aria-busy="true"
-      aria-label="Loading profile"
+      aria-label={t('profile.loading')}
     >
       <div className="flex flex-col gap-2">
         <Skeleton className="h-7 w-32" />
@@ -114,6 +108,7 @@ function ProfileSkeleton() {
 }
 
 function ProfileError({ error }: { error: unknown }) {
+  const { t } = useTranslation()
   const router = useRouter()
   return (
     <Card role="alert" className="flex flex-col items-center gap-3 px-6 py-10 text-center">
@@ -121,13 +116,13 @@ function ProfileError({ error }: { error: unknown }) {
         <CircleAlert className="size-5" aria-hidden />
       </span>
       <div>
-        <h1 className="font-semibold">Could not load your profile</h1>
+        <h1 className="font-semibold">{t('profile.loadFailed')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {error instanceof Error ? error.message : 'Something went wrong, please try again'}
+          {error instanceof Error ? error.message : t('common.unknownError')}
         </p>
       </div>
       <Button variant="outline" size="sm" onClick={() => router.invalidate()}>
-        Try again
+        {t('common.tryAgain')}
       </Button>
     </Card>
   )

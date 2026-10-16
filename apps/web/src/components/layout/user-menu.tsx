@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { ChevronDown, LoaderCircle, LogOut, ShieldCheck } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Avatar } from '@/components/ui/avatar'
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown'
 import { logout } from '@/features/auth/queries'
@@ -11,6 +12,7 @@ import { formatDate } from '@/lib/format'
 
 /** Header account menu: who is signed in (name, email, bio, member since) and the sign-out action. */
 export function UserMenu() {
+  const { t } = useTranslation()
   const { user } = useAuth()
   const { data: me } = useQuery(meQuery)
   const navigate = useNavigate()
@@ -32,9 +34,9 @@ export function UserMenu() {
   return (
     <Dropdown>
       <DropdownTrigger
-        aria-label="Account menu"
+        aria-label={t('menu.account')}
         title={email}
-        className="group flex h-9 items-center gap-1.5 rounded-full py-1 pr-2 pl-1 outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted"
+        className="group flex h-10 items-center sm:h-9 gap-1.5 rounded-full py-1 pr-2 pl-1 outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted"
       >
         <Avatar decorative src={me?.avatarUrl ?? null} name={name} className="size-7 text-[11px]" />
         <ChevronDown
@@ -42,7 +44,10 @@ export function UserMenu() {
           aria-hidden
         />
       </DropdownTrigger>
-      <DropdownContent className="w-72 max-w-[calc(100vw-2rem)] p-0" aria-label="Account">
+      <DropdownContent
+        className="w-72 max-w-[calc(100vw-2rem)] p-0"
+        aria-label={t('menu.accountLabel')}
+      >
         <div className="flex items-start gap-3 p-4" data-testid="user-menu-info">
           <Avatar
             decorative
@@ -62,7 +67,7 @@ export function UserMenu() {
             )}
             {me.createdAt && (
               <p className="text-xs text-muted-foreground/80">
-                Member since {formatDate(me.createdAt)}
+                {t('menu.memberSince', { date: formatDate(me.createdAt) })}
               </p>
             )}
           </div>
@@ -70,7 +75,7 @@ export function UserMenu() {
         <div className="border-t border-border p-1">
           <DropdownItem onSelect={() => navigate({ to: '/security' })}>
             <ShieldCheck aria-hidden />
-            Security
+            {t('menu.security')}
           </DropdownItem>
           <DropdownItem
             closeOnSelect={false}
@@ -83,7 +88,7 @@ export function UserMenu() {
             ) : (
               <LogOut aria-hidden />
             )}
-            Sign out
+            {t('menu.signOut')}
           </DropdownItem>
         </div>
       </DropdownContent>

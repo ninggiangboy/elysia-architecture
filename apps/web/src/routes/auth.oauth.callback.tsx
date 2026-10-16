@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
@@ -24,13 +25,14 @@ export const Route = createFileRoute('/auth/oauth/callback')({
 })
 
 function OAuthCallbackPage() {
+  const { t } = useTranslation()
   const { code, state, error: providerError } = Route.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const failure = providerError
-    ? 'The sign-in was cancelled or denied.'
+    ? t('callback.cancelled')
     : !code || !state
-      ? 'Invalid link.'
+      ? t('callback.invalidLink')
       : null
   const [error, setError] = useState<string | null>(failure)
 
@@ -48,30 +50,30 @@ function OAuthCallbackPage() {
           await navigate({ to: '/', replace: true })
           return
         }
-        toast.success(`${providerName(result.provider)} connected`)
+        toast.success(t('callback.connected', { provider: providerName(result.provider) }))
         await queryClient.invalidateQueries({ queryKey: connectedAccountsQuery.queryKey })
         await navigate({ to: '/security', replace: true })
       })
       .catch((err) => setError(errorMessage(err)))
-  }, [failure, code, state, navigate, queryClient])
+  }, [failure, code, state, navigate, queryClient, t])
 
   return (
     <AuthShell>
       {error ? (
         <StatusPanel
           tone="error"
-          title="Could not sign in"
+          title={t('callback.couldNotSignIn')}
           action={
             <Button asChild variant="outline">
-              <Link to="/login">Back to sign in</Link>
+              <Link to="/login">{t('callback.backToSignIn')}</Link>
             </Button>
           }
         >
           {error}
         </StatusPanel>
       ) : (
-        <StatusPanel tone="pending" title="Signing you in…">
-          Finishing with your account provider.
+        <StatusPanel tone="pending" title={t('callback.signingIn')}>
+          {t('callback.finishing')}
         </StatusPanel>
       )}
     </AuthShell>

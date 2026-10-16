@@ -1,6 +1,7 @@
 import { BIO_MAX, DISPLAY_NAME_MAX } from '@app/shared-types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -28,6 +29,7 @@ const isConflict = (err: unknown) =>
   err instanceof ApiError && (err.code === 'version_conflict' || err.code === 'profile_conflict')
 
 export function EditProfileForm({ me }: { me: Me }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   // The server version the form is editing; `me` may move ahead of it (another tab, an avatar upload, a refetch).
   const [base, setBase] = useState(me)
@@ -64,7 +66,7 @@ export function EditProfileForm({ me }: { me: Me }) {
       setBase(data)
       setValues(toValues(data))
       setConflict(false)
-      toast.success('Changes saved')
+      toast.success(t('profile.saved'))
     },
     onError: async (err, version) => {
       if (!isConflict(err)) {
@@ -94,7 +96,7 @@ export function EditProfileForm({ me }: { me: Me }) {
         <CardContent className="flex flex-col gap-5">
           {conflict && <ConflictNotice latest={toValues(me)} mine={values} />}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="displayName">Display name</Label>
+            <Label htmlFor="displayName">{t('profile.displayName')}</Label>
             <Input
               id="displayName"
               required
@@ -106,7 +108,7 @@ export function EditProfileForm({ me }: { me: Me }) {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-baseline justify-between gap-2">
-              <Label htmlFor="bio">Bio</Label>
+              <Label htmlFor="bio">{t('profile.bio')}</Label>
               <span
                 className={cn(
                   'text-xs tabular-nums text-muted-foreground',
@@ -119,7 +121,7 @@ export function EditProfileForm({ me }: { me: Me }) {
             <Textarea
               id="bio"
               maxLength={BIO_MAX}
-              placeholder="A sentence or two about yourself"
+              placeholder={t('profile.bioPlaceholder')}
               value={values.bio}
               onChange={set('bio')}
             />
@@ -135,7 +137,7 @@ export function EditProfileForm({ me }: { me: Me }) {
                 onClick={loadLatest}
                 disabled={save.isPending}
               >
-                Load latest
+                {t('profile.loadLatest')}
               </Button>
               <Button
                 type="button"
@@ -144,13 +146,13 @@ export function EditProfileForm({ me }: { me: Me }) {
                 onClick={() => save.mutate(me.version)}
                 loading={save.isPending}
               >
-                Overwrite with mine
+                {t('profile.overwrite')}
               </Button>
             </div>
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                {dirty ? 'You have unsaved changes.' : 'Up to date.'}
+                {dirty ? t('profile.unsaved') : t('profile.upToDate')}
               </p>
               <div className="ml-auto flex gap-2">
                 {dirty && (
@@ -161,11 +163,11 @@ export function EditProfileForm({ me }: { me: Me }) {
                     onClick={() => setValues(toValues(base))}
                     disabled={save.isPending}
                   >
-                    Discard
+                    {t('profile.discard')}
                   </Button>
                 )}
                 <Button type="submit" size="sm" disabled={!dirty} loading={save.isPending}>
-                  Save changes
+                  {t('profile.save')}
                 </Button>
               </div>
             </>
@@ -177,13 +179,14 @@ export function EditProfileForm({ me }: { me: Me }) {
 }
 
 function ConflictNotice({ latest, mine }: { latest: Values; mine: Values }) {
+  const { t } = useTranslation()
   const changed = [
     {
-      label: 'Display name',
+      label: t('profile.displayName'),
       value: latest.displayName,
       differs: latest.displayName !== mine.displayName,
     },
-    { label: 'Bio', value: latest.bio, differs: latest.bio !== mine.bio },
+    { label: t('profile.bio'), value: latest.bio, differs: latest.bio !== mine.bio },
   ].filter((f) => f.differs)
 
   return (
@@ -192,20 +195,22 @@ function ConflictNotice({ latest, mine }: { latest: Values; mine: Values }) {
       data-testid="profile-conflict"
       className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm"
     >
-      <p className="font-medium">Your profile was changed elsewhere while you were editing.</p>
+      <p className="font-medium">{t('profile.conflictTitle')}</p>
       {changed.length > 0 && (
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
           {changed.map((f) => (
             <div key={f.label} className="contents">
-              <dt className="text-muted-foreground">{f.label} now</dt>
-              <dd className="min-w-0 break-words">{f.value || <em>empty</em>}</dd>
+              <dt className="text-muted-foreground">
+                {t('profile.conflictField', { field: f.label })}
+              </dt>
+              <dd className="min-w-0 break-words">
+                {f.value || <em>{t('profile.conflictEmpty')}</em>}
+              </dd>
             </div>
           ))}
         </dl>
       )}
-      <p className="text-xs text-muted-foreground">
-        Load the latest version and drop your edits, or keep your edits and overwrite it.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('profile.conflictHelp')}</p>
     </div>
   )
 }

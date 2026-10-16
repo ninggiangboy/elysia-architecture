@@ -39,7 +39,7 @@ export function Dialog({
       }}
       onClick={(e) => e.target === ref.current && pressedBackdrop.current && !busy && onClose()}
       className={cn(
-        'm-auto w-[calc(100%-2rem)] max-w-md overflow-hidden rounded-xl border border-border bg-card p-0 text-foreground shadow-xl backdrop:bg-black/50',
+        'm-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-border bg-card p-0 text-foreground shadow-xl backdrop:bg-black/50',
         className,
       )}
     >

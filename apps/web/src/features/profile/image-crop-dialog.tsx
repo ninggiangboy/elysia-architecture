@@ -1,8 +1,10 @@
 import { Minus, Plus } from 'lucide-react'
 import { type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
+import { i18n } from '@/i18n'
 import { errorMessage } from '@/lib/api'
 import {
   type Crop,
@@ -45,6 +47,7 @@ export function ImageCropDialog({
   onClose: () => void
   className?: string
 }) {
+  const { t } = useTranslation()
   const [image, setImage] = useState<Loaded | null>(null)
   const [crop, setCrop] = useState<Crop>({ zoom: 1, x: 0, y: 0 })
   const [frameWidth, setFrameWidth] = useState(0)
@@ -63,7 +66,7 @@ export function ImageCropDialog({
       setCrop(initialCrop({ width: element.naturalWidth, height: element.naturalHeight }))
     }
     element.onerror = () => {
-      toast.error('Could not read this image')
+      toast.error(i18n.t('crop.unreadable'))
       closeRef.current()
     }
     element.src = url
@@ -163,7 +166,7 @@ export function ImageCropDialog({
         role="application"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: a custom pan/zoom surface operated with the keyboard
         tabIndex={0}
-        aria-label="Crop area. Drag or use the arrow keys to move the image, plus and minus to zoom."
+        aria-label={t('crop.area')}
         style={{ aspectRatio: aspect }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -198,7 +201,7 @@ export function ImageCropDialog({
         <Minus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
         <input
           type="range"
-          aria-label="Zoom"
+          aria-label={t('crop.zoom')}
           min={MIN_ZOOM}
           max={MAX_ZOOM}
           step={0.01}
@@ -209,16 +212,14 @@ export function ImageCropDialog({
         />
         <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </div>
-      <p className="-mt-2 text-xs text-muted-foreground">
-        Drag to reposition. Scroll or use the slider to zoom.
-      </p>
+      <p className="-mt-2 text-xs text-muted-foreground">{t('crop.help')}</p>
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" size="sm" onClick={onClose} disabled={busy}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button type="button" size="sm" onClick={save} loading={busy} disabled={!image}>
-          Save
+          {t('crop.save')}
         </Button>
       </div>
     </Dialog>

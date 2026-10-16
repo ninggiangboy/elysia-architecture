@@ -1,6 +1,13 @@
 import type { App } from '@app/api'
-import type { ApiErrorBody } from '@app/shared-types'
+import {
+  type ApiErrorBody,
+  AVATAR_MAX_BYTES,
+  BIO_MAX,
+  COVER_MAX_BYTES,
+  DISPLAY_NAME_MAX,
+} from '@app/shared-types'
 import { treaty } from '@elysiajs/eden'
+import { currentLocale, i18n } from '@/i18n'
 import { authStore } from './auth-store'
 import { apiOrigin } from './config'
 import { refreshSession } from './session'
@@ -25,6 +32,8 @@ const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const headers = new Headers(init?.headers)
     const token = authStore.get().accessToken
     if (token) headers.set('authorization', `Bearer ${token}`)
+    // Lets the server write its answers (and, for a new account, its mail) in the language the app is showing.
+    headers.set('accept-language', currentLocale())
     return fetch(input, { ...init, headers, credentials: 'include' })
   }
   await simulateLatency(input, init)
@@ -37,6 +46,25 @@ const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 
 /** Fully typed client inferred from the backend (Eden Treaty) — change the API on the server and the web app fails to compile. */
 export const http = treaty<App>(apiOrigin(), { fetcher: authFetch })
+
+const MB = 1024 * 1024
+/** The numbers some error messages quote (the server's rules, shared through `@app/shared-types`). */
+const LIMITS = {
+  displayNameMax: DISPLAY_NAME_MAX,
+  bioMax: BIO_MAX,
+  avatarMb: AVATAR_MAX_BYTES / MB,
+  coverMb: COVER_MAX_BYTES / MB,
+}
+
+// The key comes from the server at run time, so it cannot be one of the typed literal keys.
+const translateDynamic = i18n.t.bind(i18n) as (key: string, options?: object) => string
+
+/** What to show for an API error: our translation of its `code`, else the server's own text, else a generic line. */
+function apiErrorMessage(code: string | undefined, serverMessage: string | undefined): string {
+  const key = `errors.${code}`
+  if (code && i18n.exists(key)) return translateDynamic(key, LIMITS)
+  return serverMessage ?? i18n.t('common.unknownError')
+}
 
 export class ApiError extends Error {
   constructor(
@@ -55,7 +83,7 @@ export function unwrap<R extends { data: unknown; error: unknown }>(
     const { status, value } = res.error as { status: number; value: ApiErrorBody | undefined }
     throw new ApiError(
       value?.error?.code ?? 'unknown_error',
-      value?.error?.message ?? 'Something went wrong, please try again',
+      apiErrorMessage(value?.error?.code, value?.error?.message),
       status,
     )
   }
@@ -63,4 +91,4 @@ export function unwrap<R extends { data: unknown; error: unknown }>(
 }
 
 export const errorMessage = (err: unknown) =>
-  err instanceof Error ? err.message : 'Something went wrong, please try again'
+  err instanceof Error ? err.message : i18n.t('common.unknownError')

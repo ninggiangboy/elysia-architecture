@@ -29,7 +29,8 @@ export function applyCreated(queryClient: QueryClient, data: Record<string, unkn
   const item = {
     id: data.id,
     kind: String(data.kind),
-    title: String(data.title),
+    template: typeof data.template === 'string' ? data.template : null,
+    title: String(data.title ?? ''),
     body: String(data.body ?? ''),
     data: (data.data ?? {}) as Item['data'],
     read: false,

@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Fingerprint, MailCheck } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function LoginPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [sentTo, setSentTo] = useState<string | null>(null)
   const send = useMutation({
@@ -69,16 +71,18 @@ function LoginPage() {
               <MailCheck className="size-6" aria-hidden />
             </span>
             <div className="flex flex-col gap-1.5">
-              <h1 className="text-lg font-semibold tracking-tight">Check your inbox</h1>
+              <h1 className="text-lg font-semibold tracking-tight">{t('login.sentTitle')}</h1>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                We sent a sign-in link to{' '}
-                <span className="font-medium break-all text-foreground">{sentTo}</span>. It is valid
-                for 15 minutes.
+                <Trans
+                  i18nKey="login.sent"
+                  values={{ email: sentTo }}
+                  components={{ b: <span className="font-medium break-all text-foreground" /> }}
+                />
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               <Button variant="ghost" size="sm" onClick={() => setSentTo(null)}>
-                <ArrowLeft aria-hidden /> Use a different email
+                <ArrowLeft aria-hidden /> {t('login.differentEmail')}
               </Button>
               <Button
                 variant="outline"
@@ -86,7 +90,7 @@ function LoginPage() {
                 loading={send.isPending}
                 onClick={() => send.mutate(sentTo)}
               >
-                Resend link
+                {t('login.resend')}
               </Button>
             </div>
           </CardContent>
@@ -94,13 +98,11 @@ function LoginPage() {
           <CardContent>
             <form onSubmit={submit} className="flex flex-col gap-5">
               <div className="flex flex-col gap-1.5">
-                <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Enter your email and we will send you a sign-in link — no password needed.
-                </p>
+                <h1 className="text-xl font-semibold tracking-tight">{t('login.title')}</h1>
+                <p className="text-sm leading-relaxed text-muted-foreground">{t('login.intro')}</p>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('login.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -108,21 +110,21 @@ function LoginPage() {
                   autoFocus
                   autoComplete="email"
                   inputMode="email"
-                  placeholder="you@example.com"
-                  className="h-10"
+                  placeholder={t('login.emailPlaceholder')}
+                  className="sm:h-10"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <Button type="submit" size="lg" loading={send.isPending} disabled={busy}>
-                Send sign-in link
+                {t('login.send')}
               </Button>
             </form>
             {showAlternatives && (
               <div className="mt-5 flex flex-col gap-3">
                 <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden>
                   <span className="h-px flex-1 bg-border" />
-                  or
+                  {t('login.or')}
                   <span className="h-px flex-1 bg-border" />
                 </div>
                 {browserSupportsWebAuthn() && (
@@ -134,7 +136,7 @@ function LoginPage() {
                     disabled={busy}
                     onClick={() => passkey.mutate()}
                   >
-                    <Fingerprint aria-hidden /> Sign in with a passkey
+                    <Fingerprint aria-hidden /> {t('login.passkey')}
                   </Button>
                 )}
                 {providers.map((provider) => (
@@ -148,7 +150,7 @@ function LoginPage() {
                     onClick={() => oauth.mutate(provider)}
                   >
                     <ProviderIcon provider={provider} className="size-4" />
-                    Continue with {providerName(provider)}
+                    {t('login.continueWith', { provider: providerName(provider) })}
                   </Button>
                 ))}
               </div>
@@ -156,9 +158,7 @@ function LoginPage() {
           </CardContent>
         )}
       </Card>
-      <p className="mt-6 text-center text-xs text-muted-foreground">
-        New here? The same link creates your account.
-      </p>
+      <p className="mt-6 text-center text-xs text-muted-foreground">{t('login.newHere')}</p>
     </AuthShell>
   )
 }

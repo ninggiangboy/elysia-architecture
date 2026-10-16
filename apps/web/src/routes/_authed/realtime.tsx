@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Send } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
@@ -17,12 +18,13 @@ export const Route = createFileRoute('/_authed/realtime')({
 })
 
 const STEPS = [
-  ['API', 'Your test event is written to the outbox.'],
-  ['Postgres', 'The relay publishes it with LISTEN/NOTIFY.'],
-  ['Every replica', 'Each API instance pushes it to the streams it holds.'],
+  ['realtime.stepApi', 'realtime.stepApiText'],
+  ['realtime.stepPostgres', 'realtime.stepPostgresText'],
+  ['realtime.stepReplicas', 'realtime.stepReplicasText'],
 ] as const
 
 function RealtimePage() {
+  const { t } = useTranslation()
   const [message, setMessage] = useState('hello')
   const send = useMutation({
     mutationFn: sendTestEvent,
@@ -35,19 +37,16 @@ function RealtimePage() {
 
   return (
     <>
-      <PageHeader
-        title="Realtime"
-        description="A live Server-Sent Events stream fanned out through Postgres — no Redis, works across any number of API replicas."
-      />
+      <PageHeader title={t('realtime.title')} description={t('realtime.description')} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
         <Card>
           <CardHeader>
-            <CardTitle>Send a test event</CardTitle>
-            <CardDescription>It should show up in the event log within a moment.</CardDescription>
+            <CardTitle>{t('realtime.sendTitle')}</CardTitle>
+            <CardDescription>{t('realtime.sendDescription')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="flex flex-col gap-3">
-              <Label htmlFor="test-message">Test message</Label>
+              <Label htmlFor="test-message">{t('realtime.message')}</Label>
               <div className="flex gap-2">
                 <Input
                   id="test-message"
@@ -59,11 +58,11 @@ function RealtimePage() {
                   type="submit"
                   disabled={!message.trim()}
                   loading={send.isPending}
-                  aria-label="Send test event"
-                  title="Send test event"
+                  aria-label={t('realtime.sendLabel')}
+                  title={t('realtime.sendLabel')}
                 >
                   {!send.isPending && <Send aria-hidden />}
-                  <span className="hidden sm:inline">Send</span>
+                  <span className="hidden sm:inline">{t('realtime.send')}</span>
                 </Button>
               </div>
             </form>
@@ -75,7 +74,7 @@ function RealtimePage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>How it travels</CardTitle>
+            <CardTitle>{t('realtime.howTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ol className="flex flex-col gap-4">
@@ -85,15 +84,14 @@ function RealtimePage() {
                     {i + 1}
                   </span>
                   <div className="text-sm">
-                    <p className="font-medium">{title}</p>
-                    <p className="text-muted-foreground">{text}</p>
+                    <p className="font-medium">{t(title)}</p>
+                    <p className="text-muted-foreground">{t(text)}</p>
                   </div>
                 </li>
               ))}
             </ol>
             <p className="mt-5 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-              Tip: sign in on a second device, then sign it out from the Profile page to watch the
-              session events arrive.
+              {t('realtime.tip')}
             </p>
           </CardContent>
         </Card>

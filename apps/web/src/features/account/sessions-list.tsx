@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { Monitor, Smartphone, Tablet } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -24,6 +25,7 @@ function DeviceIcon({ userAgent }: { userAgent: string | null }) {
 }
 
 export function SessionsList() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: sessions } = useSuspenseQuery(sessionsQuery)
   const key = sessionsQuery.queryKey
@@ -48,7 +50,7 @@ export function SessionsList() {
     mutationKey: REVOKE_KEY,
     mutationFn: revokeSession,
     onMutate: (id) => drop((s) => s.id !== id),
-    onSuccess: () => toast.success('Device signed out'),
+    onSuccess: () => toast.success(t('sessions.signedOut')),
     onError: (err, _id, undoable) => {
       undo(undoable)
       toast.error(errorMessage(err))
@@ -59,8 +61,7 @@ export function SessionsList() {
     mutationKey: REVOKE_KEY,
     mutationFn: revokeOtherSessions,
     onMutate: () => drop((s) => s.current),
-    onSuccess: ({ revoked }) =>
-      toast.success(`Signed out ${revoked} other ${revoked === 1 ? 'device' : 'devices'}`),
+    onSuccess: ({ revoked }) => toast.success(t('sessions.signedOutOthers', { count: revoked })),
     onError: (err, _v, undoable) => {
       undo(undoable)
       toast.error(errorMessage(err))
@@ -78,24 +79,36 @@ export function SessionsList() {
     <Card>
       <ul className="divide-y divide-border" data-testid="sessions">
         {ordered.map((s) => (
-          <li key={s.id} className="flex items-center gap-4 px-5 py-4 sm:px-6">
+          <li
+            key={s.id}
+            className="flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4 sm:flex-nowrap sm:px-6"
+          >
             <DeviceIcon userAgent={s.userAgent} />
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
                 <span className="truncate">{describeDevice(s.userAgent)}</span>
-                {s.current && <Badge variant="accent">This device</Badge>}
+                {s.current && <Badge variant="accent">{t('sessions.thisDevice')}</Badge>}
               </p>
               <p className="flex flex-wrap gap-x-1.5 text-xs text-muted-foreground [&>span+span]:before:mr-1.5 [&>span+span]:before:content-['·']">
-                <span>{s.ip ?? 'Unknown IP'}</span>
+                <span>{s.ip ?? t('time.unknownIp')}</span>
                 <span title={formatDate(s.lastActiveAt)}>
-                  {s.current ? 'Active now' : `Active ${formatRelative(s.lastActiveAt)}`}
+                  {s.current
+                    ? t('sessions.activeNow')
+                    : t('sessions.active', { when: formatRelative(s.lastActiveAt) })}
                 </span>
-                <span title={formatDate(s.startedAt)}>Signed in {formatRelative(s.startedAt)}</span>
+                <span title={formatDate(s.startedAt)}>
+                  {t('sessions.signedIn', { when: formatRelative(s.startedAt) })}
+                </span>
               </p>
             </div>
             {!s.current && (
-              <Button variant="outline" size="sm" onClick={() => revoke.mutate(s.id)}>
-                Sign out
+              <Button
+                variant="outline"
+                size="sm"
+                className="max-sm:w-full"
+                onClick={() => revoke.mutate(s.id)}
+              >
+                {t('sessions.signOut')}
               </Button>
             )}
           </li>
@@ -103,9 +116,7 @@ export function SessionsList() {
       </ul>
       <CardFooter>
         <p className="text-xs text-muted-foreground">
-          {others > 0
-            ? `${others} other ${others === 1 ? 'device is' : 'devices are'} signed in.`
-            : 'Only this device is signed in.'}
+          {others > 0 ? t('sessions.othersSignedIn', { count: others }) : t('sessions.onlyThis')}
         </p>
         {others > 0 && (
           <Button
@@ -114,7 +125,7 @@ export function SessionsList() {
             className="ml-auto"
             onClick={() => revokeOthers.mutate()}
           >
-            Sign out all other devices
+            {t('sessions.signOutOthers')}
           </Button>
         )}
       </CardFooter>

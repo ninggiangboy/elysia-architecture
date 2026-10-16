@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { NotificationsPanel } from './notifications-panel'
 import { markNotificationsSeen, unseenCountQuery } from './queries'
@@ -11,6 +12,7 @@ import { markNotificationsSeen, unseenCountQuery } from './queries'
  * Kept fresh by `useLiveSession`.
  */
 export function NotificationBell() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
   const { data: unseen = 0 } = useQuery(unseenCountQuery)
@@ -30,9 +32,11 @@ export function NotificationBell() {
   return (
     <Popover onOpenChange={setOpen}>
       <PopoverTrigger
-        aria-label={unseen > 0 ? `Notifications, ${unseen} new` : 'Notifications'}
-        title="Notifications"
-        className="relative grid size-9 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted aria-expanded:text-foreground"
+        aria-label={
+          unseen > 0 ? t('notifications.newCount', { count: unseen }) : t('notifications.title')
+        }
+        title={t('notifications.title')}
+        className="relative grid size-10 place-items-center sm:size-9 rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted aria-expanded:text-foreground"
       >
         <Bell className="size-[18px]" aria-hidden />
         {unseen > 0 && (
@@ -47,7 +51,7 @@ export function NotificationBell() {
       {/* On phones the bell is not at the screen edge: pin the panel to the (blurred, hence containing) header instead. */}
       <PopoverContent
         className="w-96 max-sm:fixed max-sm:inset-x-4 max-sm:top-[3.75rem] max-sm:mt-0 max-sm:w-auto"
-        aria-label="Notifications"
+        aria-label={t('notifications.title')}
       >
         <NotificationsPanel />
       </PopoverContent>

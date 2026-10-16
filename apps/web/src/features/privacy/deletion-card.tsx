@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardFooter } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { Progress } from './progress'
 import { cancelDeletion, deletionQuery, scheduleDeletion } from './queries'
 
 export function DeletionCard() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: deletion } = useSuspenseQuery(deletionQuery)
   const [confirming, setConfirming] = useState(false)
@@ -30,7 +32,7 @@ export function DeletionCard() {
   const cancel = useMutation({
     mutationFn: cancelDeletion,
     onSuccess: () => {
-      toast.success('Your account will not be deleted')
+      toast.success(t('privacy.deletion.cancelled'))
       void refresh()
     },
     onError: (err) => {
@@ -43,15 +45,17 @@ export function DeletionCard() {
     return (
       <Card>
         <div className="flex flex-col gap-3 px-5 py-5 sm:px-6" data-testid="deletion-running">
-          <p className="text-sm font-medium">Your account is being deleted</p>
+          <p className="text-sm font-medium">{t('privacy.deletion.running')}</p>
           <Progress
             done={deletion.progress.done}
             total={deletion.progress.total}
-            label="Deletion progress"
+            label={t('privacy.deletion.progress')}
           />
           <p className="text-xs text-muted-foreground">
-            {deletion.progress.done} of {deletion.progress.total} parts erased. This can no longer
-            be cancelled; you will be signed out when it is done.
+            {t('privacy.deletion.runningParts', {
+              done: deletion.progress.done,
+              total: deletion.progress.total,
+            })}
           </p>
         </div>
       </Card>
@@ -63,21 +67,18 @@ export function DeletionCard() {
       {deletion ? (
         <div className="flex flex-col gap-1 px-5 py-5 sm:px-6" data-testid="deletion-scheduled">
           <p className="text-sm font-medium">
-            Your account will be deleted on {formatDate(deletion.scheduledFor)}
+            {t('privacy.deletion.scheduled', { date: formatDate(deletion.scheduledFor) })}
           </p>
-          <p className="text-sm text-muted-foreground">
-            Until then everything works as usual, and you can change your mind.
-          </p>
+          <p className="text-sm text-muted-foreground">{t('privacy.deletion.scheduledText')}</p>
         </div>
       ) : (
         <p className="px-5 py-5 text-sm text-muted-foreground sm:px-6">
-          Deleting your account erases your profile, your files, your notifications and your sign-in
-          methods. We wait before we start, so you can still change your mind.
+          {t('privacy.deletion.explain')}
         </p>
       )}
       <CardFooter>
         <p className="text-xs text-muted-foreground">
-          {deletion ? 'Cancelling does not need a confirmation.' : 'Asks you to confirm it is you.'}
+          {deletion ? t('privacy.deletion.cancelNoConfirm') : t('privacy.deletion.needsConfirm')}
         </p>
         {deletion ? (
           <Button
@@ -87,7 +88,7 @@ export function DeletionCard() {
             loading={cancel.isPending}
             onClick={() => cancel.mutate()}
           >
-            Cancel the deletion
+            {t('privacy.deletion.cancel')}
           </Button>
         ) : (
           <Button
@@ -96,21 +97,19 @@ export function DeletionCard() {
             className="ml-auto"
             onClick={() => setConfirming(true)}
           >
-            Delete my account
+            {t('privacy.deletion.delete')}
           </Button>
         )}
       </CardFooter>
 
       {confirming && (
         <Dialog
-          title="Delete your account?"
+          title={t('privacy.deletion.dialogTitle')}
           busy={schedule.isPending}
           onClose={() => setConfirming(false)}
         >
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Your account and everything in it will be erased for good once the waiting period is
-            over. We email you now, and you can cancel from this page until then. Want a copy first?
-            Request an export above.
+            {t('privacy.deletion.dialogBody')}
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -119,7 +118,7 @@ export function DeletionCard() {
               disabled={schedule.isPending}
               onClick={() => setConfirming(false)}
             >
-              Keep my account
+              {t('privacy.deletion.keep')}
             </Button>
             <Button
               variant="destructive"
@@ -127,7 +126,7 @@ export function DeletionCard() {
               loading={schedule.isPending}
               onClick={() => schedule.mutate()}
             >
-              Delete my account
+              {t('privacy.deletion.delete')}
             </Button>
           </div>
         </Dialog>

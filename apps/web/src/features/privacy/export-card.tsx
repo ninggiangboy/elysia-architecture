@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import type { TFunction } from 'i18next'
 import { Download, FileArchive } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,30 +12,34 @@ import { formatBytes, formatDate } from '@/lib/format'
 import { Progress } from './progress'
 import { type DataExport, exportDownloadUrl, exportsQuery, requestExport } from './queries'
 
-const STATUS: Record<
+const STATUS = {
+  collecting: { label: 'privacy.export.collecting', variant: 'default' },
+  assembling: { label: 'privacy.export.assembling', variant: 'default' },
+  ready: { label: 'privacy.export.ready', variant: 'success' },
+  failed: { label: 'privacy.export.failed', variant: 'warning' },
+  expired: { label: 'privacy.export.expired', variant: 'default' },
+} as const satisfies Record<
   DataExport['status'],
   { label: string; variant: 'default' | 'success' | 'warning' }
-> = {
-  collecting: { label: 'Collecting', variant: 'default' },
-  assembling: { label: 'Packing', variant: 'default' },
-  ready: { label: 'Ready', variant: 'success' },
-  failed: { label: 'Failed', variant: 'warning' },
-  expired: { label: 'Expired', variant: 'default' },
-}
+>
 
 const inProgress = (e: DataExport) => e.status === 'collecting' || e.status === 'assembling'
 
 /** The line under the date: what the user needs to know about this export right now. */
-function summary(e: DataExport): string {
+function summary(e: DataExport, t: TFunction): string {
   switch (e.status) {
-    case 'ready':
-      return `${e.size ? `${formatBytes(e.size)} · ` : ''}available until ${e.expiresAt ? formatDate(e.expiresAt) : '—'}`
+    case 'ready': {
+      const date = e.expiresAt ? formatDate(e.expiresAt) : '—'
+      return e.size
+        ? t('privacy.export.readySummarySized', { size: formatBytes(e.size), date })
+        : t('privacy.export.readySummary', { date })
+    }
     case 'failed':
-      return 'Something went wrong. You can request it again.'
+      return t('privacy.export.failedSummary')
     case 'expired':
-      return 'The download is no longer available.'
+      return t('privacy.export.expiredSummary')
     default:
-      return `${e.progress.done} of ${e.progress.total} parts collected`
+      return t('privacy.export.parts', { done: e.progress.done, total: e.progress.total })
   }
 }
 
@@ -46,6 +52,7 @@ function ExportRow({
   downloading: boolean
   onDownload: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <li className="flex flex-col gap-3 px-5 py-4 sm:px-6" data-testid="export">
       <div className="flex items-center gap-3">
@@ -54,25 +61,30 @@ function ExportRow({
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-            Requested {formatDate(e.requestedAt)}
-            <Badge variant={STATUS[e.status].variant}>{STATUS[e.status].label}</Badge>
+            {t('privacy.export.requested', { date: formatDate(e.requestedAt) })}
+            <Badge variant={STATUS[e.status].variant}>{t(STATUS[e.status].label)}</Badge>
           </p>
-          <p className="truncate text-xs text-muted-foreground">{summary(e)}</p>
+          <p className="truncate text-xs text-muted-foreground">{summary(e, t)}</p>
         </div>
         {e.status === 'ready' && (
           <Button variant="outline" size="sm" loading={downloading} onClick={onDownload}>
-            <Download aria-hidden /> Download
+            <Download aria-hidden /> {t('privacy.export.download')}
           </Button>
         )}
       </div>
       {inProgress(e) && (
-        <Progress done={e.progress.done} total={e.progress.total} label="Export progress" />
+        <Progress
+          done={e.progress.done}
+          total={e.progress.total}
+          label={t('privacy.export.progress')}
+        />
       )}
     </li>
   )
 }
 
 export function ExportCard() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: exports } = useSuspenseQuery(exportsQuery)
   const busy = exports.some(inProgress)
@@ -80,7 +92,7 @@ export function ExportCard() {
   const request = useMutation({
     mutationFn: requestExport,
     onSuccess: () => {
-      toast.success('Preparing your export. We will email you the link when it is ready.')
+      toast.success(t('privacy.export.requestedToast'))
       void queryClient.invalidateQueries({ queryKey: exportsQuery.queryKey })
     },
     onError: (err) => {
@@ -100,10 +112,10 @@ export function ExportCard() {
     <Card>
       {exports.length === 0 ? (
         <p className="px-5 py-6 text-sm text-muted-foreground sm:px-6" data-testid="no-exports">
-          You have not requested an export yet.
+          {t('privacy.export.none')}
         </p>
       ) : (
-        <ul className="divide-y divide-border" aria-label="Data exports">
+        <ul className="divide-y divide-border" aria-label={t('privacy.export.list')}>
           {exports.map((e) => (
             <ExportRow
               key={e.id}
@@ -115,10 +127,7 @@ export function ExportCard() {
         </ul>
       )}
       <CardFooter>
-        <p className="text-xs text-muted-foreground">
-          A zip with what each part of the service holds about you. Asking for it, and downloading
-          it, ask you to confirm it is you.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('privacy.export.footer')}</p>
         <Button
           size="sm"
           variant="outline"
@@ -127,7 +136,7 @@ export function ExportCard() {
           loading={request.isPending}
           onClick={() => request.mutate()}
         >
-          Request an export
+          {t('privacy.export.request')}
         </Button>
       </CardFooter>
     </Card>

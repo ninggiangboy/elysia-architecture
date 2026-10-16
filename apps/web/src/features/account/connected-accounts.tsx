@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -10,6 +11,7 @@ import { connectedAccountsQuery, disconnectAccount, startConnect } from './queri
 
 /** Google / GitHub accounts that can sign in to this account. Renders nothing when the server has no providers. */
 export function ConnectedAccounts() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: providers } = useSuspenseQuery(oauthProvidersQuery)
   const { data: accounts } = useSuspenseQuery(connectedAccountsQuery)
@@ -25,7 +27,7 @@ export function ConnectedAccounts() {
   const disconnect = useMutation({
     mutationFn: disconnectAccount,
     onSuccess: (_, provider) => {
-      toast.success(`${providerName(provider)} disconnected`)
+      toast.success(t('accounts.disconnected', { provider: providerName(provider) }))
       void queryClient.invalidateQueries({ queryKey: connectedAccountsQuery.queryKey })
     },
     onError: (err) => {
@@ -37,7 +39,7 @@ export function ConnectedAccounts() {
 
   return (
     <Card>
-      <ul className="divide-y divide-border" aria-label="Connected accounts">
+      <ul className="divide-y divide-border" aria-label={t('accounts.list')}>
         {providers.map((provider) => {
           const account = accounts.find((a) => a.provider === provider)
           return (
@@ -52,7 +54,9 @@ export function ConnectedAccounts() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{providerName(provider)}</p>
                 <p className="truncate text-xs text-muted-foreground">
-                  {account ? (account.email ?? 'Connected') : 'Not connected'}
+                  {account
+                    ? (account.email ?? t('accounts.connected'))
+                    : t('accounts.notConnected')}
                 </p>
               </div>
               {account ? (
@@ -63,7 +67,7 @@ export function ConnectedAccounts() {
                   disabled={disconnect.isPending}
                   onClick={() => disconnect.mutate(provider)}
                 >
-                  Disconnect
+                  {t('accounts.disconnect')}
                 </Button>
               ) : (
                 <Button
@@ -73,7 +77,7 @@ export function ConnectedAccounts() {
                   disabled={connect.isPending}
                   onClick={() => connect.mutate(provider)}
                 >
-                  Connect
+                  {t('accounts.connect')}
                 </Button>
               )}
             </li>

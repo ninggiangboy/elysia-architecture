@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { PageHeader, Section } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConnectedAccounts } from '@/features/account/connected-accounts'
@@ -18,30 +19,19 @@ export const Route = createFileRoute('/_authed/security')({
 })
 
 function SecurityPage() {
+  const { t } = useTranslation()
   return (
     <>
-      <PageHeader
-        title="Security"
-        description="Choose how you sign in. An email link always works; these add faster ways in."
-      />
-      <Section
-        title="Passkeys"
-        description="Sign in with your fingerprint, face or screen lock. Passkeys cannot be phished and never leave your device unless you sync them."
-      >
+      <PageHeader title={t('security.title')} description={t('security.description')} />
+      <Section title={t('security.passkeysTitle')} description={t('security.passkeysDescription')}>
         <PasskeysCard />
       </Section>
-      <Section
-        title="Connected accounts"
-        description="Sign in with Google or GitHub. We only match an account by an email the provider has verified."
-      >
+      <Section title={t('security.accountsTitle')} description={t('security.accountsDescription')}>
         <ConnectedAccounts />
       </Section>
-      <Section
-        title="Your data"
-        description="Take a copy with you, or have your account and everything in it erased."
-      >
+      <Section title={t('security.dataTitle')} description={t('security.dataDescription')}>
         <Link to="/privacy" className="text-sm font-medium text-primary hover:underline">
-          Export or delete your data
+          {t('security.dataLink')}
         </Link>
       </Section>
     </>
@@ -49,12 +39,13 @@ function SecurityPage() {
 }
 
 function SecuritySkeleton() {
+  const { t } = useTranslation()
   return (
     <div
       role="status"
       className="flex flex-col gap-8"
       aria-busy="true"
-      aria-label="Loading security settings"
+      aria-label={t('security.loading')}
     >
       <div className="flex flex-col gap-2">
         <Skeleton className="h-7 w-32" />

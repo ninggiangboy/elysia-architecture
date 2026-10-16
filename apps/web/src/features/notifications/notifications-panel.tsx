@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Bell, CheckCheck, Inbox, LogIn, Mail, Settings, ShieldAlert, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,7 @@ import {
   notificationsQuery,
   unreadCountQuery,
 } from './queries'
+import { notificationText } from './text'
 
 const KIND_ICONS: Record<string, { icon: typeof Bell; className: string }> = {
   welcome: { icon: Sparkles, className: 'bg-accent text-accent-foreground' },
@@ -31,6 +33,7 @@ const DEFAULT_ICON = { icon: Bell, className: 'bg-muted text-muted-foreground' }
 
 /** The body of the bell popover: the inbox with mark-as-read, and the way into the notification settings. */
 export function NotificationsPanel() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const closePopover = usePopoverClose()
   const { data, isPending, error, hasNextPage, fetchNextPage, isFetchingNextPage } =
@@ -70,17 +73,19 @@ export function NotificationsPanel() {
     <>
       <div className="flex items-center justify-between gap-2 border-b border-border py-2 pr-2 pl-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold tracking-tight">Notifications</h2>
-          {unread > 0 && <Badge variant="accent">{unread} unread</Badge>}
+          <h2 className="text-sm font-semibold tracking-tight">{t('notifications.title')}</h2>
+          {unread > 0 && (
+            <Badge variant="accent">{t('notifications.unread', { count: unread })}</Badge>
+          )}
         </div>
         <div className="flex items-center gap-0.5">
           {items.length > 0 && (
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
-              aria-label="Mark all as read"
-              title="Mark all as read"
+              className="size-9 sm:size-8"
+              aria-label={t('notifications.markAll')}
+              title={t('notifications.markAll')}
               disabled={unread === 0}
               onClick={() => markAll.mutate()}
             >
@@ -90,9 +95,9 @@ export function NotificationsPanel() {
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
-            aria-label="Notification settings"
-            title="Notification settings"
+            className="size-9 sm:size-8"
+            aria-label={t('notifications.settings')}
+            title={t('notifications.settings')}
             asChild
           >
             <Link to="/notifications/settings" onClick={closePopover}>
@@ -106,7 +111,7 @@ export function NotificationsPanel() {
         {isPending ? (
           <ul
             aria-busy="true"
-            aria-label="Loading notifications"
+            aria-label={t('notifications.loading')}
             className="divide-y divide-border"
           >
             {[0, 1, 2].map((i) => (
@@ -129,14 +134,15 @@ export function NotificationsPanel() {
               <Inbox className="size-5" aria-hidden />
             </span>
             <div>
-              <p className="text-sm font-medium">You're all caught up</p>
-              <p className="mt-1 text-sm text-muted-foreground">You have no notifications yet.</p>
+              <p className="text-sm font-medium">{t('notifications.caughtUp')}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t('notifications.empty')}</p>
             </div>
           </div>
         ) : (
           <ul className="divide-y divide-border" data-testid="notifications">
             {items.map((n) => {
               const { icon: Icon, className } = KIND_ICONS[n.kind] ?? DEFAULT_ICON
+              const text = notificationText(n)
               return (
                 <li
                   key={n.id}
@@ -163,19 +169,23 @@ export function NotificationsPanel() {
                   </span>
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <p className="flex flex-wrap items-center gap-x-2 text-sm">
-                      {!n.read && <span className="sr-only">Unread: </span>}
+                      {!n.read && (
+                        <span className="sr-only">{t('notifications.unreadPrefix')}</span>
+                      )}
                       <span
                         className={cn(
                           'font-medium',
                           n.read ? 'text-muted-foreground' : 'text-foreground',
                         )}
                       >
-                        {n.title}
+                        {text.title}
                       </span>
                       {n.count > 1 && <Badge>×{n.count}</Badge>}
                     </p>
-                    {n.body && (
-                      <p className="text-[13px] leading-relaxed text-muted-foreground">{n.body}</p>
+                    {text.body && (
+                      <p className="text-[13px] leading-relaxed text-muted-foreground">
+                        {text.body}
+                      </p>
                     )}
                     <time
                       dateTime={n.createdAt}
@@ -189,10 +199,10 @@ export function NotificationsPanel() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="-my-1 -mr-2 h-7 px-2 text-xs"
+                      className="-my-1.5 -mr-2 h-8 px-2.5 text-xs sm:-my-1 sm:h-7 sm:px-2"
                       onClick={() => markRead.mutate(n.id)}
                     >
-                      Mark read
+                      {t('notifications.markRead')}
                     </Button>
                   )}
                 </li>
@@ -209,7 +219,7 @@ export function NotificationsPanel() {
               loading={isFetchingNextPage}
               onClick={() => fetchNextPage()}
             >
-              Load older
+              {t('notifications.loadOlder')}
             </Button>
           </div>
         )}

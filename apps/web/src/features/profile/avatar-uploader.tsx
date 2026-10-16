@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Camera } from 'lucide-react'
 import { type ChangeEvent, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/avatar'
+import { i18n } from '@/i18n'
 import { errorMessage } from '@/lib/api'
 import { sourceError } from '@/lib/crop'
 import { ImageCropDialog } from './image-crop-dialog'
@@ -12,11 +14,12 @@ async function uploadAvatar(image: Blob) {
   // 1) request a presigned URL  2) PUT straight to S3 (image bytes never pass through the API)  3) tell the API to set the avatar
   const ticket = await requestAvatarUpload(image)
   const put = await fetch(ticket.uploadUrl, { method: 'PUT', headers: ticket.headers, body: image })
-  if (!put.ok) throw new Error('Image upload failed, please try again')
+  if (!put.ok) throw new Error(i18n.t('profile.uploadFailed'))
   return setAvatar(ticket.key)
 }
 
 export function AvatarUploader({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -26,7 +29,7 @@ export function AvatarUploader({ name, avatarUrl }: { name: string; avatarUrl: s
     onSuccess: (data) => {
       queryClient.setQueryData(['me'], data)
       setFile(null)
-      toast.success('Profile picture updated')
+      toast.success(t('profile.pictureUpdated'))
     },
     onError: (err) => toast.error(errorMessage(err)),
   })
@@ -50,8 +53,8 @@ export function AvatarUploader({ name, avatarUrl }: { name: string; avatarUrl: s
       <button
         type="button"
         onClick={() => input.current?.click()}
-        aria-label="Change profile picture"
-        title="Change profile picture"
+        aria-label={t('profile.changePicture')}
+        title={t('profile.changePicture')}
         className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <Camera className="size-4" aria-hidden />
@@ -67,7 +70,7 @@ export function AvatarUploader({ name, avatarUrl }: { name: string; avatarUrl: s
       {file && (
         <ImageCropDialog
           file={file}
-          title="Profile picture"
+          title={t('profile.picture')}
           aspect={1}
           round
           outputWidth={512}

@@ -1,4 +1,5 @@
-const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+import { currentLocale, i18n } from '@/i18n'
+
 const STEPS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [
   ['second', 60],
   ['minute', 60],
@@ -9,14 +10,19 @@ const STEPS: ReadonlyArray<readonly [Intl.RelativeTimeFormatUnit, number]> = [
   ['year', Number.POSITIVE_INFINITY],
 ]
 
-/** "Oct 16, 2026, 6:15 PM" */
+/** "Oct 16, 2026, 6:15 PM" / "16 thg 10, 2026, 18:15", in the app's language. */
 export const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  new Date(iso).toLocaleString(currentLocale(), { dateStyle: 'medium', timeStyle: 'short' })
+
+/** "October 16, 2026 (UTC)" / "16 tháng 10, 2026 (UTC)": the calendar day in UTC, the way the server's mail spells it. */
+export const formatUtcDay = (iso: string) =>
+  `${new Intl.DateTimeFormat(currentLocale(), { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(iso))} (UTC)`
 
 /** "just now", "5 minutes ago", "yesterday", … */
 export function formatRelative(iso: string, now = Date.now()) {
+  const relative = new Intl.RelativeTimeFormat(currentLocale(), { numeric: 'auto' })
   let value = (new Date(iso).getTime() - now) / 1000
-  if (Math.abs(value) < 45) return 'just now'
+  if (Math.abs(value) < 45) return i18n.t('time.justNow')
   for (const [unit, size] of STEPS) {
     if (Math.abs(value) < size) return relative.format(Math.round(value), unit)
     value /= size

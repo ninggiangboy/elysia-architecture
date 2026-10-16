@@ -48,7 +48,7 @@
     </style>
     <script>
       // Apply the saved (or system) theme before the first paint, so a dark page never flashes light (keep in sync with src/lib/theme.ts).
-      ;(function () {
+      ;(() => {
         var saved = null
         try {
           saved = localStorage.getItem('theme')

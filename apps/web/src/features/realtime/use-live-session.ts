@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { sessionsQuery } from '@/features/account/queries'
 import { applyCreated, applyRead, applySeen } from '@/features/notifications/live-cache'
+import { liveTitle } from '@/features/notifications/text'
+import { i18n } from '@/i18n'
 import { forgetPush, syncPush } from '@/lib/push'
 import { connectSse, type RealtimeMessage } from '@/lib/realtime'
 import { clearSession } from '@/lib/session'
@@ -41,7 +43,7 @@ export function useLiveSession() {
     const refreshPrivacy = () => queryClient.invalidateQueries({ queryKey: ['privacy'] })
 
     const signOutHere = () => {
-      toast.warning('This device was signed out from another device')
+      toast.warning(i18n.t('notifications.live.signedOut'))
       void forgetPush()
       clearSession()
       queryClient.clear()
@@ -58,7 +60,7 @@ export function useLiveSession() {
       'privacy.export.progress': () => void refreshPrivacy(),
       'privacy.export.failed': () => void refreshPrivacy(),
       'privacy.export.ready'() {
-        toast.success('Your data export is ready')
+        toast.success(i18n.t('notifications.live.exportReady'))
         void refreshPrivacy()
       },
       'privacy.deletion.changed': () => void refreshPrivacy(),
@@ -66,7 +68,7 @@ export function useLiveSession() {
         void refreshPrivacy()
         // The last part erased: the account is gone, so is this session's reason to exist.
         if (data && data.done === data.total) {
-          toast.success('Your account has been deleted')
+          toast.success(i18n.t('notifications.live.deleted'))
           void forgetPush()
           clearSession()
           queryClient.clear()
@@ -77,7 +79,7 @@ export function useLiveSession() {
         const now = Date.now()
         if (data?.kind === 'security_alert' || now - lastToastAt >= TOAST_QUIET_MS) {
           lastToastAt = now
-          toast(String(data?.title ?? 'New notification'))
+          toast(liveTitle(data))
         }
         void applyCreated(queryClient, data)
       },

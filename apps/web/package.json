@@ -7,7 +7,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test": "bun test src"
   },
   "dependencies": {
     "@app/shared-types": "workspace:*",
@@ -21,9 +22,11 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "elysia": "^1.4.30",
+    "i18next": "^26.4.7",
     "lucide-react": "^1.57.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-i18next": "^17.0.20",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0"
   },

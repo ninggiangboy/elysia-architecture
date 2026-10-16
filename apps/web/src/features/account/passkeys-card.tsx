@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import { Fingerprint, Plus } from 'lucide-react'
 import { useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { browserSupportsWebAuthn, passkeyCancelled, passkeyErrorMessage } from '
 import { addPasskey, type Passkey, passkeysQuery, removePasskey } from './queries'
 
 export function PasskeysCard() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: passkeys } = useSuspenseQuery(passkeysQuery)
   const [removing, setRemoving] = useState<Passkey | null>(null)
@@ -22,7 +24,7 @@ export function PasskeysCard() {
   const add = useMutation({
     mutationFn: () => addPasskey(describeDevice(navigator.userAgent)),
     onSuccess: (created) => {
-      toast.success(`Passkey "${created.name}" added`)
+      toast.success(t('passkeys.addedToast', { name: created.name }))
       void queryClient.invalidateQueries({ queryKey: passkeysQuery.queryKey })
     },
     onError: (err) => {
@@ -33,7 +35,7 @@ export function PasskeysCard() {
   const remove = useMutation({
     mutationFn: removePasskey,
     onSuccess: () => {
-      toast.success('Passkey removed')
+      toast.success(t('passkeys.removedToast'))
       setRemoving(null)
       void queryClient.invalidateQueries({ queryKey: passkeysQuery.queryKey })
     },
@@ -47,11 +49,10 @@ export function PasskeysCard() {
     <Card>
       {passkeys.length === 0 ? (
         <p className="px-5 py-6 text-sm text-muted-foreground sm:px-6" data-testid="no-passkeys">
-          No passkeys yet. A passkey lets you sign in with your fingerprint, face or screen lock —
-          no email link needed.
+          {t('passkeys.none')}
         </p>
       ) : (
-        <ul className="divide-y divide-border" aria-label="Passkeys">
+        <ul className="divide-y divide-border" aria-label={t('passkeys.list')}>
           {passkeys.map((p) => (
             <li
               key={p.id}
@@ -64,15 +65,19 @@ export function PasskeysCard() {
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
                   <span className="truncate">{p.name}</span>
-                  {p.deviceType === 'multiDevice' && <Badge variant="outline">Synced</Badge>}
+                  {p.deviceType === 'multiDevice' && (
+                    <Badge variant="outline">{t('passkeys.synced')}</Badge>
+                  )}
                 </p>
                 <p className="truncate text-xs text-muted-foreground">
-                  Added {formatDate(p.createdAt)} ·{' '}
-                  {p.lastUsedAt ? `used ${formatRelative(p.lastUsedAt)}` : 'never used'}
+                  {t('passkeys.added', { date: formatDate(p.createdAt) })} ·{' '}
+                  {p.lastUsedAt
+                    ? t('passkeys.usedAt', { when: formatRelative(p.lastUsedAt) })
+                    : t('passkeys.neverUsed')}
                 </p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setRemoving(p)}>
-                Remove
+                {t('common.remove')}
               </Button>
             </li>
           ))}
@@ -80,9 +85,7 @@ export function PasskeysCard() {
       )}
       <CardFooter>
         <p className="text-xs text-muted-foreground">
-          {supported
-            ? 'Adding or removing one asks you to confirm it is you.'
-            : 'This browser does not support passkeys.'}
+          {supported ? t('passkeys.supported') : t('passkeys.unsupported')}
         </p>
         <Button
           size="sm"
@@ -92,20 +95,22 @@ export function PasskeysCard() {
           loading={add.isPending}
           onClick={() => add.mutate()}
         >
-          <Plus aria-hidden /> Add a passkey
+          <Plus aria-hidden /> {t('passkeys.add')}
         </Button>
       </CardFooter>
 
       {removing && (
         <Dialog
-          title="Remove this passkey?"
+          title={t('passkeys.removeTitle')}
           busy={remove.isPending}
           onClose={() => setRemoving(null)}
         >
           <p className="text-sm leading-relaxed text-muted-foreground">
-            You will no longer be able to sign in with <strong>{removing.name}</strong>. You can
-            still sign in with an email link. Delete it from your device’s passkey list too if you
-            do not want to see it offered.
+            <Trans
+              i18nKey="passkeys.removeBody"
+              values={{ name: removing.name }}
+              components={{ b: <strong /> }}
+            />
           </p>
           <div className="flex justify-end gap-2">
             <Button
@@ -114,7 +119,7 @@ export function PasskeysCard() {
               disabled={remove.isPending}
               onClick={() => setRemoving(null)}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -122,7 +127,7 @@ export function PasskeysCard() {
               loading={remove.isPending}
               onClick={() => remove.mutate(removing.id)}
             >
-              Remove
+              {t('common.remove')}
             </Button>
           </div>
         </Dialog>

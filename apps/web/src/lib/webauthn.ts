@@ -3,6 +3,7 @@ import type {
   PublicKeyCredentialRequestOptionsJSON,
 } from '@simplewebauthn/browser'
 import { startAuthentication, startRegistration, WebAuthnError } from '@simplewebauthn/browser'
+import { i18n } from '@/i18n'
 
 export { browserSupportsWebAuthn } from '@simplewebauthn/browser'
 
@@ -15,12 +16,12 @@ export const passkeyCancelled = (err: unknown) =>
 /** Explains the failures a person can act on; the rest keep their own message. */
 export function passkeyErrorMessage(err: unknown): string {
   if (err instanceof WebAuthnError && err.code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') {
-    return 'This device already has a passkey for your account.'
+    return i18n.t('passkeys.alreadyRegistered')
   }
   if (err instanceof DOMException && err.name === 'NotAllowedError') {
-    return 'The passkey prompt was dismissed or timed out.'
+    return i18n.t('passkeys.dismissed')
   }
-  return err instanceof Error ? err.message : 'Something went wrong, please try again'
+  return err instanceof Error ? err.message : i18n.t('common.unknownError')
 }
 
 // The server returns the options as opaque JSON; the browser library knows their shape.

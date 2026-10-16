@@ -1,17 +1,19 @@
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
 import { useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown'
 import { type ThemePreference, themeStore, useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
-const OPTIONS: ReadonlyArray<{ value: ThemePreference; label: string; icon: typeof Sun }> = [
-  { value: 'light', label: 'Light', icon: Sun },
-  { value: 'dark', label: 'Dark', icon: Moon },
-  { value: 'system', label: 'System', icon: Monitor },
-]
+const OPTIONS = [
+  { value: 'light', label: 'theme.light', icon: Sun },
+  { value: 'dark', label: 'theme.dark', icon: Moon },
+  { value: 'system', label: 'theme.system', icon: Monitor },
+] as const satisfies ReadonlyArray<{ value: ThemePreference; label: string; icon: typeof Sun }>
 
 /** A menu to pick light / dark / system; the trigger shows the theme currently in effect. */
 export function ThemeToggle({ className }: { className?: string }) {
+  const { t } = useTranslation()
   const { preference, resolved } = useTheme()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const Icon = resolved === 'dark' ? Moon : Sun
@@ -25,21 +27,21 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <Dropdown>
       <DropdownTrigger
-        aria-label="Theme"
-        title="Theme"
+        aria-label={t('theme.label')}
+        title={t('theme.label')}
         className={cn(
-          'inline-flex size-9 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted aria-expanded:text-foreground',
+          'inline-flex size-10 items-center sm:size-9 justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted aria-expanded:text-foreground',
           className,
         )}
         ref={triggerRef}
       >
         <Icon className="size-4" aria-hidden />
       </DropdownTrigger>
-      <DropdownContent className="min-w-40" aria-label="Theme">
+      <DropdownContent className="min-w-40" aria-label={t('theme.label')}>
         {OPTIONS.map(({ value, label, icon: ItemIcon }) => (
           <DropdownItem key={value} checked={preference === value} onSelect={() => choose(value)}>
             <ItemIcon aria-hidden />
-            <span className="flex-1">{label}</span>
+            <span className="flex-1">{t(label)}</span>
             {preference === value && <Check className="!text-primary" aria-hidden />}
           </DropdownItem>
         ))}

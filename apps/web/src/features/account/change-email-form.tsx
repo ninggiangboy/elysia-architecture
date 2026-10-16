@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { type FormEvent, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
@@ -10,11 +11,12 @@ import { errorMessage } from '@/lib/api'
 import { requestEmailChange } from './queries'
 
 export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
+  const { t } = useTranslation()
   const [newEmail, setNewEmail] = useState('')
   const request = useMutation({
     mutationFn: requestEmailChange,
     onSuccess: (_, email) => {
-      toast.success(`Confirmation link sent to ${email}`)
+      toast.success(t('email.sent', { email }))
       setNewEmail('')
     },
     onError: (err) => {
@@ -32,25 +34,25 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
       <form onSubmit={submit}>
         <CardContent className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium leading-none">Current email</span>
+            <span className="text-sm font-medium leading-none">{t('email.current')}</span>
             <p className="truncate text-sm text-muted-foreground">{currentEmail}</p>
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="newEmail">New email</Label>
+            <Label htmlFor="newEmail">{t('email.new')}</Label>
             <Input
               id="newEmail"
               type="email"
               required
               autoComplete="email"
               inputMode="email"
-              placeholder="new@example.com"
+              placeholder={t('email.newPlaceholder')}
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
             />
           </div>
         </CardContent>
         <CardFooter>
-          <p className="text-xs text-muted-foreground">The link is valid for 30 minutes.</p>
+          <p className="text-xs text-muted-foreground">{t('email.validFor')}</p>
           <Button
             type="submit"
             size="sm"
@@ -59,7 +61,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
             disabled={!newEmail.trim()}
             loading={request.isPending}
           >
-            Send confirmation link
+            {t('email.send')}
           </Button>
         </CardFooter>
       </form>

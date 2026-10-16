@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Fingerprint, Mail } from 'lucide-react'
 import { type FormEvent, useState, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
@@ -18,6 +19,7 @@ export function StepUpHost() {
 }
 
 function StepUpDialog() {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<'choose' | 'code'>('choose')
   const [code, setCode] = useState('')
   const { data: passkeys } = useQuery(passkeysQuery)
@@ -49,12 +51,10 @@ function StepUpDialog() {
   }
 
   return (
-    <Dialog title="Confirm it is you" busy={busy} onClose={() => stepUpDialog.settle(false)}>
+    <Dialog title={t('stepUp.title')} busy={busy} onClose={() => stepUpDialog.settle(false)}>
       {mode === 'choose' ? (
         <div className="flex flex-col gap-4">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            This change affects how you sign in, so we need to check it is really you.
-          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{t('stepUp.intro')}</p>
           <div className="flex flex-col gap-2">
             {hasPasskey && (
               <Button
@@ -62,7 +62,7 @@ function StepUpDialog() {
                 disabled={busy}
                 onClick={() => usePasskey.mutate()}
               >
-                <Fingerprint aria-hidden /> Use a passkey
+                <Fingerprint aria-hidden /> {t('stepUp.passkey')}
               </Button>
             )}
             <Button
@@ -71,17 +71,15 @@ function StepUpDialog() {
               disabled={busy}
               onClick={() => sendCode.mutate()}
             >
-              <Mail aria-hidden /> Email me a code
+              <Mail aria-hidden /> {t('stepUp.emailCode')}
             </Button>
           </div>
         </div>
       ) : (
         <form onSubmit={submit} className="flex flex-col gap-4">
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            We emailed you a 6-digit code. It is valid for 10 minutes.
-          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">{t('stepUp.sentCode')}</p>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="step-up-code">Confirmation code</Label>
+            <Label htmlFor="step-up-code">{t('stepUp.code')}</Label>
             <Input
               id="step-up-code"
               autoFocus
@@ -105,7 +103,7 @@ function StepUpDialog() {
               disabled={busy}
               onClick={() => sendCode.mutate()}
             >
-              Send a new code
+              {t('stepUp.sendNew')}
             </Button>
             <Button
               type="submit"
@@ -113,7 +111,7 @@ function StepUpDialog() {
               loading={verify.isPending}
               disabled={code.trim().length < 6}
             >
-              Confirm
+              {t('stepUp.confirm')}
             </Button>
           </div>
         </form>
@@ -125,7 +123,7 @@ function StepUpDialog() {
           className="self-start"
           onClick={() => stepUpDialog.settle(false)}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
       )}
     </Dialog>

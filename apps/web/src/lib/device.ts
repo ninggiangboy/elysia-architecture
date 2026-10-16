@@ -1,4 +1,5 @@
 // Shared by the signed-in devices list and the default name of a new passkey.
+import { i18n } from '@/i18n'
 
 type Matchers = ReadonlyArray<readonly [RegExp, string]>
 
@@ -20,9 +21,9 @@ const detect = (matchers: Matchers, ua: string) => matchers.find(([re]) => re.te
 
 /** "Chrome on macOS" from a User-Agent; good enough for recognising a device, not for anything security-relevant. */
 export function describeDevice(userAgent: string | null) {
-  if (!userAgent) return 'Unknown device'
+  if (!userAgent) return i18n.t('device.unknown')
   const browser = detect(BROWSERS, userAgent)
   const os = detect(SYSTEMS, userAgent)
-  if (browser && os) return `${browser} on ${os}`
+  if (browser && os) return i18n.t('device.on', { browser, os })
   return browser ?? os ?? userAgent.slice(0, 40)
 }

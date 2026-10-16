@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
 import { Button } from '@/components/ui/button'
@@ -15,9 +16,10 @@ export const Route = createFileRoute('/auth/callback')({
 })
 
 function CallbackPage() {
+  const { t } = useTranslation()
   const { token } = Route.useSearch()
   const navigate = useNavigate()
-  const [error, setError] = useState<string | null>(token ? null : 'Invalid link.')
+  const [error, setError] = useState<string | null>(token ? null : t('callback.invalidLink'))
 
   useEffect(() => {
     if (!token) return
@@ -32,18 +34,18 @@ function CallbackPage() {
       {error ? (
         <StatusPanel
           tone="error"
-          title="Could not sign in"
+          title={t('callback.couldNotSignIn')}
           action={
             <Button asChild variant="outline">
-              <Link to="/login">Request a new link</Link>
+              <Link to="/login">{t('callback.requestNewLink')}</Link>
             </Button>
           }
         >
           {error}
         </StatusPanel>
       ) : (
-        <StatusPanel tone="pending" title="Signing you in…">
-          Verifying your sign-in link.
+        <StatusPanel tone="pending" title={t('callback.signingIn')}>
+          {t('callback.verifying')}
         </StatusPanel>
       )}
     </AuthShell>

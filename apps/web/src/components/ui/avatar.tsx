@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 /** "Ada Lovelace" → "AL", "ada.lovelace" → "AL", "ada" → "AD". */
@@ -19,6 +20,7 @@ export function Avatar({
   /** Hide from assistive tech when the name is already next to it. */
   decorative?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <span
       aria-hidden={decorative || undefined}
@@ -30,7 +32,7 @@ export function Avatar({
       {src ? (
         <img
           src={src}
-          alt={decorative ? '' : `Profile picture of ${name}`}
+          alt={decorative ? '' : t('profile.pictureOf', { name })}
           className="size-full object-cover"
         />
       ) : (

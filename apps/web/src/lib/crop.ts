@@ -1,4 +1,5 @@
 import { COVER_CONTENT_TYPES } from '@app/shared-types'
+import { i18n } from '@/i18n'
 
 export const MIN_ZOOM = 1
 export const MAX_ZOOM = 4
@@ -45,9 +46,9 @@ export function clampCrop(image: Size, aspect: number, crop: Crop): Crop {
 
 /** Error message for a file that cannot be used as a source image, or null. */
 export function sourceError(file: File): string | null {
-  if (!(file.type in COVER_CONTENT_TYPES)) return 'Image must be JPEG, PNG or WebP'
+  if (!(file.type in COVER_CONTENT_TYPES)) return i18n.t('crop.badType')
   if (file.size > SOURCE_MAX_BYTES)
-    return `Image must be at most ${SOURCE_MAX_BYTES / 1024 / 1024} MB`
+    return i18n.t('crop.tooLarge', { mb: SOURCE_MAX_BYTES / 1024 / 1024 })
   return null
 }
 
@@ -68,7 +69,7 @@ export function renderCrop(
   canvas.width = width
   canvas.height = Math.round(width / aspect)
   const ctx = canvas.getContext('2d')
-  if (!ctx) return Promise.reject(new Error('Could not process this image'))
+  if (!ctx) return Promise.reject(new Error(i18n.t('crop.unprocessable')))
   ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(
     image,
@@ -83,7 +84,7 @@ export function renderCrop(
   )
   return new Promise((resolve, reject) =>
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('Could not process this image'))),
+      (blob) => (blob ? resolve(blob) : reject(new Error(i18n.t('crop.unprocessable')))),
       'image/webp',
       0.9,
     ),

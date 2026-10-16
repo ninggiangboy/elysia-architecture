@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
 import { Button } from '@/components/ui/button'
@@ -16,10 +17,11 @@ export const Route = createFileRoute('/account/confirm-email')({
 })
 
 function ConfirmEmailPage() {
+  const { t } = useTranslation()
   const { token } = Route.useSearch()
   const queryClient = useQueryClient()
   const [result, setResult] = useState<{ email: string } | { error: string } | null>(
-    token ? null : { error: 'Invalid link.' },
+    token ? null : { error: t('callback.invalidLink') },
   )
 
   useEffect(() => {
@@ -34,24 +36,27 @@ function ConfirmEmailPage() {
 
   const home = (
     <Button asChild variant="outline">
-      <Link to="/">Back to home</Link>
+      <Link to="/">{t('common.backToHome')}</Link>
     </Button>
   )
 
   return (
     <AuthShell>
       {!result ? (
-        <StatusPanel tone="pending" title="Confirming…">
-          Updating your account email.
+        <StatusPanel tone="pending" title={t('confirmEmail.confirming')}>
+          {t('confirmEmail.updating')}
         </StatusPanel>
       ) : 'error' in result ? (
-        <StatusPanel tone="error" title="Could not confirm" action={home}>
+        <StatusPanel tone="error" title={t('confirmEmail.failed')} action={home}>
           {result.error}
         </StatusPanel>
       ) : (
-        <StatusPanel tone="success" title="Email changed" action={home}>
-          Your account email is now{' '}
-          <span className="font-medium break-all text-foreground">{result.email}</span>.
+        <StatusPanel tone="success" title={t('confirmEmail.changedTitle')} action={home}>
+          <Trans
+            i18nKey="confirmEmail.changed"
+            values={{ email: result.email }}
+            components={{ b: <span className="font-medium break-all text-foreground" /> }}
+          />
         </StatusPanel>
       )}
     </AuthShell>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BellOff, BellRing } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -9,23 +10,15 @@ import { cn } from '@/lib/utils'
 
 const pushStateQuery = { queryKey: ['notifications', 'push-state'], queryFn: pushState }
 
-const COPY: Record<'on' | 'off' | 'denied', { title: string; text: string }> = {
-  on: {
-    title: 'Browser notifications are on',
-    text: 'This browser shows a system notification when something happens, even when the app is closed.',
-  },
-  off: {
-    title: 'Browser notifications are off',
-    text: 'Get a system notification on this browser, even when the app is closed.',
-  },
-  denied: {
-    title: 'Browser notifications are blocked',
-    text: "Allow them in your browser's site settings to get alerts here.",
-  },
-}
+const COPY = {
+  on: { title: 'notifications.push.onTitle', text: 'notifications.push.onText' },
+  off: { title: 'notifications.push.offTitle', text: 'notifications.push.offText' },
+  denied: { title: 'notifications.push.deniedTitle', text: 'notifications.push.deniedText' },
+} as const
 
 /** Turns Web Push on or off for THIS browser. Renders nothing where it cannot work. */
 export function PushToggle() {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { data: state } = useQuery(pushStateQuery)
   const toggle = useMutation({
@@ -54,12 +47,12 @@ export function PushToggle() {
         )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <p className="text-sm font-medium">{copy.title}</p>
+        <p className="text-sm font-medium">{t(copy.title)}</p>
         <p
           className="text-sm text-muted-foreground"
           data-testid={denied ? 'push-denied' : undefined}
         >
-          {copy.text}
+          {t(copy.text)}
         </p>
       </div>
       {!denied && (
@@ -72,7 +65,7 @@ export function PushToggle() {
           data-testid="push-toggle"
         >
           {!toggle.isPending && (on ? <BellOff aria-hidden /> : <BellRing aria-hidden />)}
-          {on ? 'Turn off' : 'Turn on'}
+          {on ? t('notifications.push.turnOff') : t('notifications.push.turnOn')}
         </Button>
       )}
     </Card>

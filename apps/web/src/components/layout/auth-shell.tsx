@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
+import { LanguageSwitcher } from './language-switcher'
 import { Logo } from './logo'
 import { ThemeToggle } from './theme-toggle'
 
@@ -12,7 +13,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
         aria-hidden
         className="absolute top-[-12rem] left-1/2 -z-10 h-[24rem] w-[44rem] max-w-[140vw] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/25 via-fuchsia-500/15 to-sky-400/20 blur-3xl"
       />
-      <ThemeToggle className="absolute top-3 right-3 sm:top-4 sm:right-4" />
+      <div className="absolute top-3 right-3 flex items-center gap-1 sm:top-4 sm:right-4">
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </div>
       <header className="flex justify-center px-4 pt-10 sm:pt-16">
         <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight">
           <Logo className="size-8" />

@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { PageHeader, Section } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DeletionCard } from '@/features/privacy/deletion-card'
@@ -16,22 +17,14 @@ export const Route = createFileRoute('/_authed/privacy')({
 })
 
 function PrivacyPage() {
+  const { t } = useTranslation()
   return (
     <>
-      <PageHeader
-        title="Privacy"
-        description="Take a copy of your data with you, or have it erased."
-      />
-      <Section
-        title="Export your data"
-        description="We collect what every part of the service holds about you into one file and email you the link. The link works for a week."
-      >
+      <PageHeader title={t('privacy.title')} description={t('privacy.description')} />
+      <Section title={t('privacy.exportTitle')} description={t('privacy.exportDescription')}>
         <ExportCard />
       </Section>
-      <Section
-        title="Delete your account"
-        description="Erases your account and all of its data from every part of the service."
-      >
+      <Section title={t('privacy.deleteTitle')} description={t('privacy.deleteDescription')}>
         <DeletionCard />
       </Section>
     </>
@@ -39,12 +32,13 @@ function PrivacyPage() {
 }
 
 function PrivacySkeleton() {
+  const { t } = useTranslation()
   return (
     <div
       role="status"
       className="flex flex-col gap-8"
       aria-busy="true"
-      aria-label="Loading privacy settings"
+      aria-label={t('privacy.loading')}
     >
       <div className="flex flex-col gap-2">
         <Skeleton className="h-7 w-28" />
