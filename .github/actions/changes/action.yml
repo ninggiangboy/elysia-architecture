@@ -1,7 +1,8 @@
 name: Detect changed paths
 description: >
-  Reports which areas of the repo changed (see .github/filters.yml). Pull requests are filtered;
-  every other event (push to main, schedule, manual) reports everything as changed so main is always fully verified.
+  Reports which areas of the repo changed (see .github/filters.yml). Pull requests and pushes are filtered
+  (a push is diffed against the commit before it, so the whole pushed range counts). Anything else (schedule,
+  manual, or a push with no usable "before" such as a new branch) reports everything as changed.
 
 outputs:
   code:
@@ -23,19 +24,20 @@ runs:
   steps:
     - uses: dorny/paths-filter@v3
       id: filter
+      if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000')
       with:
         filters: .github/filters.yml
     - id: result
       shell: bash
       env:
-        EVENT: ${{ github.event_name }}
+        FILTERED: ${{ steps.filter.conclusion == 'success' }}
         CODE: ${{ steps.filter.outputs.code }}
         DEPS: ${{ steps.filter.outputs.deps }}
         E2E: ${{ steps.filter.outputs.e2e }}
         IMAGE_API: ${{ steps.filter.outputs.image_api }}
         IMAGE_WEB: ${{ steps.filter.outputs.image_web }}
       run: |
-        if [ "$EVENT" != "pull_request" ]; then
+        if [ "$FILTERED" != true ]; then
           CODE=true DEPS=true E2E=true IMAGE_API=true IMAGE_WEB=true
         fi
         apps=()

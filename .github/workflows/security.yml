@@ -8,8 +8,10 @@ on:
     - cron: "0 3 * * 1" # weekly, Monday 03:00 UTC
 
 concurrency:
-  group: security-${{ github.ref }}
-  cancel-in-progress: true
+  group: security-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  # Only PR runs are superseded. Push runs get their own group (the sha): each is diffed against the previous push,
+  # so cancelling or queue-dropping one would leave its changes unchecked.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

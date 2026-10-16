@@ -1,5 +1,5 @@
 # Path filters consumed by .github/actions/changes (dorny/paths-filter).
-# Add new top-level code/config paths to `code`, or docs-only PRs will skip CI for them.
+# Add new top-level code/config paths to `code`, or docs-only PRs and pushes will skip CI for them.
 
 code:
   - apps/**
