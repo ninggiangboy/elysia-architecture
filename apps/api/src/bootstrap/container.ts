@@ -1,6 +1,7 @@
 import { createIdentityModule } from '#/modules/identity/identity.module'
 import { createNotificationModule } from '#/modules/notification/notification.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
+import { createRealtimeModule } from '#/modules/realtime/realtime.module'
 import type { IntegrationEventHandler, Mailer } from '#/shared/application/ports'
 import type { Config } from '#/shared/infrastructure/config'
 import { Database } from '#/shared/infrastructure/db/database'
@@ -80,8 +81,20 @@ export async function createContainer(
     },
   })
 
+  const realtime = createRealtimeModule({
+    database,
+    clock,
+    ids,
+    log: logger,
+    verifier: identity.verifier,
+  })
+
   const bus = new InProcessMessageBus(logger)
-  const handlers: IntegrationEventHandler[] = [...profile.handlers, ...notification.handlers]
+  const handlers: IntegrationEventHandler[] = [
+    ...profile.handlers,
+    ...notification.handlers,
+    ...realtime.handlers,
+  ]
   for (const handler of handlers) bus.subscribe(handler)
 
   const relay = new OutboxRelay(database, [identity.outbox, profile.outbox], bus, logger, {
@@ -95,12 +108,13 @@ export async function createContainer(
     clock,
     ids,
     storage,
-    modules: { identity, profile, notification },
+    modules: { identity, profile, notification, realtime },
     database,
     bus,
     relay,
     async close() {
       await relay.stop()
+      await realtime.stop()
       await database.close()
     },
   }

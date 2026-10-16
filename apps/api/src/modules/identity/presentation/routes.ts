@@ -6,6 +6,11 @@ import { API_PREFIX } from '#/shared/http/constants'
 import { errorResponse, validationError } from '#/shared/http/openapi'
 import type { ConfirmEmailChange } from '../application/use-cases/confirm-email-change'
 import type { Logout } from '../application/use-cases/logout'
+import type {
+  ListSessions,
+  RevokeOtherSessions,
+  RevokeSession,
+} from '../application/use-cases/manage-sessions'
 import type { RefreshSession } from '../application/use-cases/refresh-session'
 import type { RequestEmailChange } from '../application/use-cases/request-email-change'
 import type { RequestMagicLink } from '../application/use-cases/request-magic-link'
@@ -23,6 +28,9 @@ export interface IdentityRouteDeps {
     verifyMagicLink: VerifyMagicLink
     refreshSession: RefreshSession
     logout: Logout
+    listSessions: ListSessions
+    revokeSession: RevokeSession
+    revokeOtherSessions: RevokeOtherSessions
     requestEmailChange: RequestEmailChange
     confirmEmailChange: ConfirmEmailChange
   }
@@ -48,6 +56,21 @@ const sessionBody = t.Object(
   },
   { description: 'New session. The refresh token is set in the HttpOnly cookie `refresh_token`' },
 )
+
+const deviceSessionBody = t.Object({
+  id: t.String({
+    format: 'uuid',
+    description: 'Session id (pass it to `DELETE /account/sessions/{id}`)',
+  }),
+  current: t.Boolean({ description: 'True for the session that made this request' }),
+  userAgent: t.Nullable(t.String()),
+  ip: t.Nullable(t.String()),
+  startedAt: t.String({ format: 'date-time', description: 'When the device signed in' }),
+  lastActiveAt: t.String({
+    format: 'date-time',
+    description: 'Last time its session was refreshed',
+  }),
+})
 
 const sentBody = t.Object({ status: t.Literal('sent') })
 
@@ -147,7 +170,7 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
     .post(
       '/logout',
       async ({ auth, cookie, set }) => {
-        await uc.logout.execute({ sessionId: auth.sessionId })
+        await uc.logout.execute({ userId: auth.userId, sessionId: auth.sessionId })
         clearRefreshCookie(cookie, deps.secureCookies)
         set.status = 204
       },
@@ -186,6 +209,68 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           400: validationError('invalid_email', 'email_unchanged'),
           404: errorResponse(404, 'user_not_found'),
           409: errorResponse(409, 'email_taken'),
+        },
+      },
+    )
+    .get(
+      '/sessions',
+      async ({ auth }) => {
+        const sessions = await uc.listSessions.execute({
+          userId: auth.userId,
+          currentSessionId: auth.sessionId,
+        })
+        return {
+          sessions: sessions.map((s) => ({
+            ...s,
+            startedAt: s.startedAt.toISOString(),
+            lastActiveAt: s.lastActiveAt.toISOString(),
+          })),
+        }
+      },
+      {
+        auth: true,
+        detail: {
+          summary: 'List signed-in devices',
+          description:
+            'Sessions of the account that can still refresh, most recently active first.',
+        },
+        response: { 200: t.Object({ sessions: t.Array(deviceSessionBody) }) },
+      },
+    )
+    .delete(
+      '/sessions',
+      ({ auth }) =>
+        uc.revokeOtherSessions.execute({ userId: auth.userId, currentSessionId: auth.sessionId }),
+      {
+        auth: true,
+        detail: {
+          summary: 'Sign out all other devices',
+          description:
+            'Revokes every session except the current one. Access tokens already issued stay valid until they expire.',
+        },
+        response: { 200: t.Object({ revoked: t.Number({ description: 'Sessions ended' }) }) },
+      },
+    )
+    .delete(
+      '/sessions/:id',
+      async ({ auth, params, cookie, set }) => {
+        await uc.revokeSession.execute({ userId: auth.userId, sessionId: params.id })
+        if (params.id === auth.sessionId) clearRefreshCookie(cookie, deps.secureCookies)
+        set.status = 204
+      },
+      {
+        auth: true,
+        cookie: cookieSchema,
+        params: t.Object({ id: t.String({ format: 'uuid' }) }),
+        detail: {
+          summary: 'Sign out a device',
+          description:
+            'Remote logout: revokes the session so it can no longer refresh. Its current access token stays valid until it expires (≤ 15 min).',
+        },
+        response: {
+          204: t.Void({ description: 'Session revoked' }),
+          400: validationError(),
+          404: errorResponse(404, 'session_not_found'),
         },
       },
     )

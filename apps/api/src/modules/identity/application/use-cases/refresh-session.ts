@@ -1,7 +1,8 @@
 import { UnauthorizedError } from '#/shared/application/errors'
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
 import type { RefreshTokenRepository, UserRepository } from '../../domain/repositories'
 import type { TokenService } from '../ports'
+import { sessionRevoked } from '../session-events'
 import type { SessionIssuer, SessionMeta } from '../session-issuer'
 import type { VerifyMagicLinkResult } from './verify-magic-link'
 
@@ -11,6 +12,7 @@ export class RefreshSession {
     private users: UserRepository,
     private sessions: SessionIssuer,
     private tokens: TokenService,
+    private outbox: OutboxWriter,
     private uow: UnitOfWork,
     private ids: IdGenerator,
     private clock: Clock,
@@ -28,7 +30,19 @@ export class RefreshSession {
         const known = await this.refreshTokens.findByHash(hash)
         // A rotated token that is used again → treat as stolen, revoke the whole session.
         if (known && !known.isRecentlyRotated(now)) {
-          await this.refreshTokens.revokeFamily(known.familyId, now)
+          const revoked = await this.refreshTokens.revokeUserSession(
+            known.userId,
+            known.familyId,
+            now,
+          )
+          if (revoked) {
+            await this.outbox.add([
+              sessionRevoked(
+                { userId: known.userId, sessionId: known.familyId, reason: 'token_reuse' },
+                now,
+              ),
+            ])
+          }
         }
         return null
       }

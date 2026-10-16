@@ -136,7 +136,7 @@ export const PNG_1X1 = Uint8Array.from(
 )
 
 /** Full sign-in via magic link; returns the access token + refresh cookie. */
-export async function login(api: ReturnType<typeof client>, email: string) {
+export async function login(api: ReturnType<typeof client>, email: string, userAgent?: string) {
   const ip = uniqueIp()
   const before = await countMails(email, 'sign-in')
   const requested = await api('POST', '/api/auth/magic-link', { body: { email }, ip })
@@ -145,6 +145,7 @@ export async function login(api: ReturnType<typeof client>, email: string) {
   const verified = await api('POST', '/api/auth/magic-link/verify', {
     body: { token: mail.token },
     ip,
+    headers: userAgent ? { 'user-agent': userAgent } : undefined,
   })
   if (verified.status !== 200)
     throw new Error(`verify failed: ${verified.status} ${JSON.stringify(verified.json)}`)

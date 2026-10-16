@@ -1,7 +1,8 @@
-import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/features/auth/queries'
+import { useLiveSession } from '@/features/realtime/use-live-session'
 import { useAuth } from '@/lib/auth-store'
 import { ensureSession } from '@/lib/session'
 
@@ -15,12 +16,24 @@ export const Route = createFileRoute('/_authed')({
 function AuthedLayout() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  useLiveSession()
 
   return (
     <div className="min-h-screen">
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
-          <span className="font-semibold">Elysia Architecture</span>
+          <nav className="flex items-center gap-4">
+            <span className="font-semibold">Elysia Architecture</span>
+            <Link to="/" className="text-sm text-muted-foreground [&.active]:text-foreground">
+              Profile
+            </Link>
+            <Link
+              to="/realtime"
+              className="text-sm text-muted-foreground [&.active]:text-foreground"
+            >
+              Realtime
+            </Link>
+          </nav>
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-muted-foreground sm:inline">{user?.email}</span>
             <Button

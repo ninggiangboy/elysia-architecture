@@ -2,12 +2,18 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { ChangeEmailForm } from '@/features/account/change-email-form'
+import { sessionsQuery } from '@/features/account/queries'
+import { SessionsList } from '@/features/account/sessions-list'
 import { AvatarUploader } from '@/features/profile/avatar-uploader'
 import { EditProfileForm } from '@/features/profile/edit-profile-form'
 import { meQuery } from '@/features/profile/queries'
 
 export const Route = createFileRoute('/_authed/')({
-  loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(meQuery),
+      context.queryClient.ensureQueryData(sessionsQuery),
+    ]),
   pendingComponent: () => <p className="text-sm text-muted-foreground">Loading…</p>,
   errorComponent: ({ error }) => (
     <p role="alert" className="text-sm text-destructive">
@@ -48,6 +54,15 @@ function ProfilePage() {
           click that link.
         </CardDescription>
         <ChangeEmailForm currentEmail={me.email} />
+      </Card>
+
+      <Card>
+        <CardTitle>Signed-in devices</CardTitle>
+        <CardDescription>
+          Devices that can currently access your account. Signing one out stops it from refreshing
+          its session; it may stay active for up to 15 more minutes.
+        </CardDescription>
+        <SessionsList />
       </Card>
     </>
   )

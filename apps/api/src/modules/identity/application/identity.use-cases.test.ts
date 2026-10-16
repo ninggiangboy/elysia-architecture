@@ -10,7 +10,7 @@ import {
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from '../domain/email'
 import type { MagicLink } from '../domain/magic-link'
-import { RefreshToken } from '../domain/refresh-token'
+import { type DeviceSession, RefreshToken } from '../domain/refresh-token'
 import type {
   MagicLinkRepository,
   RefreshTokenRepository,
@@ -19,6 +19,8 @@ import type {
 import type { User } from '../domain/user'
 import type { TokenService } from './ports'
 import { SessionIssuer } from './session-issuer'
+import { Logout } from './use-cases/logout'
+import { ListSessions, RevokeOtherSessions, RevokeSession } from './use-cases/manage-sessions'
 import { RefreshSession } from './use-cases/refresh-session'
 import { RequestMagicLink } from './use-cases/request-magic-link'
 import { VerifyMagicLink } from './use-cases/verify-magic-link'
@@ -90,8 +92,32 @@ class MemRefreshTokens implements RefreshTokenRepository {
     r.replacedById = replacedById
     return this.view(r)
   }
-  async revokeFamily(familyId: string, now: Date) {
-    for (const r of this.rows) if (r.token.familyId === familyId && !r.revokedAt) r.revokedAt = now
+  private live(userId: string, now: Date) {
+    return this.rows.filter(
+      (r) => r.token.userId === userId && !r.revokedAt && r.token.expiresAt > now,
+    )
+  }
+  async listActiveSessions(userId: string, now: Date) {
+    const live = this.live(userId, now).sort(
+      (a, b) => b.token.createdAt.getTime() - a.token.createdAt.getTime(),
+    )
+    return live.map<DeviceSession>((r) => ({
+      id: r.token.familyId,
+      userAgent: null,
+      ip: null,
+      startedAt: this.rows.find((x) => x.token.familyId === r.token.familyId)!.token.createdAt,
+      lastActiveAt: r.token.createdAt,
+    }))
+  }
+  async revokeUserSession(userId: string, familyId: string, now: Date) {
+    const rows = this.live(userId, now).filter((r) => r.token.familyId === familyId)
+    for (const r of rows) r.revokedAt = now
+    return rows.length > 0
+  }
+  async revokeOtherSessions(userId: string, exceptFamilyId: string, now: Date) {
+    const rows = this.live(userId, now).filter((r) => r.token.familyId !== exceptFamilyId)
+    for (const r of rows) r.revokedAt = now
+    return [...new Set(rows.map((r) => r.token.familyId))]
   }
   active(familyId: string) {
     return this.rows.filter((r) => r.token.familyId === familyId && !r.revokedAt).length
@@ -135,7 +161,11 @@ describe('identity use cases', () => {
         clock,
       ),
       verify: new VerifyMagicLink(links, users, sessions, tokens, outbox, uow, ids, clock),
-      refresh: new RefreshSession(refresh, users, sessions, tokens, uow, ids, clock),
+      refresh: new RefreshSession(refresh, users, sessions, tokens, outbox, uow, ids, clock),
+      list: new ListSessions(refresh, clock),
+      revoke: new RevokeSession(refresh, outbox, uow, clock),
+      revokeOthers: new RevokeOtherSessions(refresh, outbox, uow, clock),
+      logout: new Logout(refresh, outbox, uow, clock),
     }
   }
 
@@ -255,6 +285,127 @@ describe('identity use cases', () => {
       await expect(
         uc.refresh.execute({ refreshToken: session.session.refreshToken, meta }),
       ).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+  })
+  describe('device sessions', () => {
+    const signIn = async (uc: ReturnType<typeof build>, email: string) => {
+      await uc.request.execute({ email, ip: '1.1.1.1' })
+      return uc.verify.execute({ token: outbox.events.at(-1)?.payload.token as string, meta })
+    }
+    const familyOf = (result: Awaited<ReturnType<typeof signIn>>) =>
+      refresh.rows.find((r) => r.token.tokenHash === sha256Hex(result.session.refreshToken))!.token
+        .familyId
+
+    test('lists only the caller’s live sessions and flags the current one', async () => {
+      const uc = build()
+      const phone = await signIn(uc, 'a@b.co')
+      clock.advance(1000)
+      const laptop = await signIn(uc, 'a@b.co')
+      await signIn(uc, 'other@b.co')
+
+      const list = await uc.list.execute({
+        userId: phone.user.id,
+        currentSessionId: familyOf(laptop),
+      })
+      expect(list.map((s) => s.id)).toEqual([familyOf(laptop), familyOf(phone)]) // most recent first
+      expect(list.map((s) => s.current)).toEqual([true, false])
+    })
+
+    test('revoking a session kills its refresh token and removes it from the list', async () => {
+      const uc = build()
+      const phone = await signIn(uc, 'a@b.co')
+      const laptop = await signIn(uc, 'a@b.co')
+
+      await uc.revoke.execute({ userId: phone.user.id, sessionId: familyOf(phone) })
+      await expect(
+        uc.refresh.execute({ refreshToken: phone.session.refreshToken, meta }),
+      ).rejects.toBeInstanceOf(UnauthorizedError)
+      await uc.refresh.execute({ refreshToken: laptop.session.refreshToken, meta }) // untouched
+
+      const list = await uc.list.execute({ userId: phone.user.id, currentSessionId: 'x' })
+      expect(list.map((s) => s.id)).toEqual([familyOf(laptop)])
+    })
+
+    test('a user cannot revoke someone else’s session, nor the same session twice', async () => {
+      const uc = build()
+      const mine = await signIn(uc, 'a@b.co')
+      const theirs = await signIn(uc, 'other@b.co')
+
+      await expect(
+        uc.revoke.execute({ userId: mine.user.id, sessionId: familyOf(theirs) }),
+      ).rejects.toMatchObject({ code: 'session_not_found' })
+      expect(refresh.active(familyOf(theirs))).toBe(1)
+
+      await uc.revoke.execute({ userId: mine.user.id, sessionId: familyOf(mine) })
+      await expect(
+        uc.revoke.execute({ userId: mine.user.id, sessionId: familyOf(mine) }),
+      ).rejects.toMatchObject({ code: 'session_not_found' })
+    })
+
+    test('emits session_started on sign-in and session_revoked on every way a session ends', async () => {
+      const uc = build()
+      const first = await signIn(uc, 'a@b.co')
+      const second = await signIn(uc, 'a@b.co')
+      const third = await signIn(uc, 'a@b.co')
+      const started = outbox.events.filter((e) => e.type === IdentityEvents.SessionStarted)
+      expect(started.map((e) => e.payload.sessionId)).toEqual([
+        familyOf(first),
+        familyOf(second),
+        familyOf(third),
+      ])
+      expect(started[0]?.payload).toMatchObject({
+        userId: first.user.id,
+        ip: '1.1.1.1',
+        userAgent: 'test',
+      })
+
+      const revoked = () =>
+        outbox.events
+          .filter((e) => e.type === IdentityEvents.SessionRevoked)
+          .map((e) => [e.payload.sessionId, e.payload.reason])
+
+      await uc.revoke.execute({ userId: first.user.id, sessionId: familyOf(first) })
+      await uc.logout.execute({ userId: first.user.id, sessionId: familyOf(second) })
+      await uc.logout.execute({ userId: first.user.id, sessionId: familyOf(second) }) // already gone: no event
+      expect(revoked()).toEqual([
+        [familyOf(first), 'revoked_by_user'],
+        [familyOf(second), 'logout'],
+      ])
+
+      const fourth = await signIn(uc, 'a@b.co')
+      await uc.revokeOthers.execute({ userId: first.user.id, currentSessionId: familyOf(fourth) })
+      expect(revoked().slice(2)).toEqual([[familyOf(third), 'revoked_by_user']])
+    })
+
+    test('token reuse (theft) revokes the session and says so', async () => {
+      const uc = build()
+      const session = await signIn(uc, 'a@b.co')
+      await uc.refresh.execute({ refreshToken: session.session.refreshToken, meta })
+      clock.advance(60_000)
+      await expect(
+        uc.refresh.execute({ refreshToken: session.session.refreshToken, meta }),
+      ).rejects.toBeInstanceOf(UnauthorizedError)
+      const revoked = outbox.events.filter((e) => e.type === IdentityEvents.SessionRevoked)
+      expect(revoked.map((e) => e.payload)).toMatchObject([
+        { sessionId: familyOf(session), reason: 'token_reuse' },
+      ])
+    })
+
+    test('sign out everywhere else keeps only the current session', async () => {
+      const uc = build()
+      const a = await signIn(uc, 'a@b.co')
+      await signIn(uc, 'a@b.co')
+      await signIn(uc, 'a@b.co')
+      const other = await signIn(uc, 'other@b.co')
+
+      const out = await uc.revokeOthers.execute({
+        userId: a.user.id,
+        currentSessionId: familyOf(a),
+      })
+      expect(out.revoked).toBe(2)
+      const list = await uc.list.execute({ userId: a.user.id, currentSessionId: familyOf(a) })
+      expect(list.map((s) => s.id)).toEqual([familyOf(a)])
+      expect(refresh.active(familyOf(other))).toBe(1)
     })
   })
 })

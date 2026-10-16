@@ -22,7 +22,9 @@ async function shutdown(signal: string) {
   if (shuttingDown) return
   shuttingDown = true
   logger.info({ signal }, 'shutting down')
-  // Order: stop accepting requests → stop the relay (wait for the running batch) → close the DB pool.
+  // Order: close live SSE streams (else `stop` waits on them) → stop accepting requests →
+  // stop the relay (wait for the running batch) → close the DB pool.
+  await container.modules.realtime.stop()
   await app?.stop()
   await container.close()
   process.exit(0)

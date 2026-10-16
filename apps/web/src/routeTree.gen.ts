@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as AuthedRealtimeRouteImport } from './routes/_authed/realtime'
 import { Route as AccountConfirmEmailRouteImport } from './routes/account.confirm-email'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
@@ -35,6 +36,11 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedRealtimeRoute = AuthedRealtimeRouteImport.update({
+  id: '/realtime',
+  path: '/realtime',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AccountConfirmEmailRoute = AccountConfirmEmailRouteImport.update({
   id: '/account/confirm-email',
   path: '/account/confirm-email',
@@ -50,12 +56,14 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthedIndexRoute
@@ -65,6 +73,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/_authed/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/': typeof AuthedIndexRoute
@@ -72,14 +81,26 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/docs' | '/login' | '/account/confirm-email' | '/auth/callback'
+    | '/'
+    | '/docs'
+    | '/login'
+    | '/realtime'
+    | '/account/confirm-email'
+    | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/docs' | '/login' | '/account/confirm-email' | '/auth/callback' | '/'
+  to:
+    | '/docs'
+    | '/login'
+    | '/realtime'
+    | '/account/confirm-email'
+    | '/auth/callback'
+    | '/'
   id:
     | '__root__'
     | '/_authed'
     | '/docs'
     | '/login'
+    | '/_authed/realtime'
     | '/account/confirm-email'
     | '/auth/callback'
     | '/_authed/'
@@ -123,6 +144,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/realtime': {
+      id: '/_authed/realtime'
+      path: '/realtime'
+      fullPath: '/realtime'
+      preLoaderRoute: typeof AuthedRealtimeRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/account/confirm-email': {
       id: '/account/confirm-email'
       path: '/account/confirm-email'
@@ -141,10 +169,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
+  AuthedRealtimeRoute: typeof AuthedRealtimeRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedRealtimeRoute: AuthedRealtimeRoute,
   AuthedIndexRoute: AuthedIndexRoute,
 }
 

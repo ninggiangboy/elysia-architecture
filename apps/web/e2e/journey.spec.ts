@@ -100,6 +100,13 @@ test.describe
       await expect(page.getByTestId('account-email')).toHaveText(newEmail)
     })
 
+    test('lists the signed-in devices, marking this one', async () => {
+      const list = page.getByTestId('sessions')
+      await expect(list.getByRole('listitem')).toHaveCount(1)
+      await expect(list.getByText('This device')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Sign out all other devices' })).toHaveCount(0)
+    })
+
     test('sign out ends the session', async () => {
       await page.getByRole('button', { name: 'Sign out' }).click()
       await expect(page).toHaveURL(/\/login$/)

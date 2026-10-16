@@ -27,3 +27,14 @@ export class RefreshToken {
     )
   }
 }
+
+/** A signed-in device = the family's single live token, plus when the family started. */
+export interface DeviceSession {
+  /** = family id; also the `sid` claim of access tokens. */
+  id: string
+  userAgent: string | null
+  ip: string | null
+  startedAt: Date
+  /** Last time the session's refresh token was issued/rotated. */
+  lastActiveAt: Date
+}

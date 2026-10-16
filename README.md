@@ -29,6 +29,8 @@ bun run dev          # api :3000 + web :5173
 | http://localhost:8333 | SeaweedFS S3 (key `app-access-key` / `app-secret-key`, bucket `avatars`) |
 | localhost:5433 | Postgres (`app`/`app`, db `app`) — port 5433 so it does not clash with an existing Postgres on 5432 (change with `POSTGRES_PORT`) |
 
+Realtime check: open http://localhost:5173/realtime — a live SSE stream; send a test event, or sign in on a second browser and sign it out from the profile page.
+
 Sign in: enter any email at `/login` → open Mailpit → click the link in the mail.
 
 ## Built-in use cases
@@ -38,9 +40,11 @@ Sign in: enter any email at `/login` → open Mailpit → click the link in the 
 | Sign in with a magic link | `POST /auth/magic-link`, `POST /auth/magic-link/verify` |
 | Refresh the session (rotation, reuse detection) | `POST /auth/refresh` |
 | Sign out | `POST /auth/logout` |
+| List signed-in devices, remote logout (one / all others) | `GET /account/sessions`, `DELETE /account/sessions/{id}`, `DELETE /account/sessions` |
 | View account + profile | `GET /me` |
 | Update profile (optimistic lock via `If-Match`) | `PATCH /me/profile` |
 | Upload avatar (presigned URL to SeaweedFS) | `POST /me/avatar/upload-url`, `PUT /me/avatar` |
+| Live events over SSE (`session.started`, `session.revoked`, `realtime.test`) | `GET /realtime/events`, `POST /realtime/test` |
 | Welcome mail + profile creation (via outbox) | event `identity.user_registered.v1` |
 | Change email (confirmed from the new inbox) | `POST /account/email-change`, `POST /account/email-change/confirm` |
 | JWKS so other services can verify tokens | `GET /.well-known/jwks.json` |

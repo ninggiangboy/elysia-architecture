@@ -7,6 +7,8 @@ export const IdentityEvents = {
   UserRegistered: 'identity.user_registered.v1',
   EmailChangeRequested: 'identity.email_change_requested.v1',
   EmailChanged: 'identity.email_changed.v1',
+  SessionStarted: 'identity.session_started.v1',
+  SessionRevoked: 'identity.session_revoked.v1',
 } as const
 
 export interface MagicLinkRequestedPayload {
@@ -34,4 +36,22 @@ export interface EmailChangedPayload {
   oldEmail: string
   newEmail: string
   changedAt: string
+}
+
+export interface SessionStartedPayload {
+  userId: string
+  /** Id of the new login session (the `sid` claim of its access tokens). */
+  sessionId: string
+  ip: string | null
+  userAgent: string | null
+  startedAt: string
+}
+
+export type SessionRevokedReason = 'logout' | 'revoked_by_user' | 'token_reuse'
+
+export interface SessionRevokedPayload {
+  userId: string
+  sessionId: string
+  reason: SessionRevokedReason
+  revokedAt: string
 }

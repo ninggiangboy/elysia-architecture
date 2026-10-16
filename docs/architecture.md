@@ -92,6 +92,14 @@ user_registered ──► profile.create-on-user-registered (inbox, same tx)   �
 **Session**: a 15-minute access JWT (stateless) + an opaque refresh token in the httpOnly cookie `Path=/api/auth`.
 Each refresh rotates the token within the same "family"; reusing a rotated token outside the 10-second window is treated as theft and revokes the whole family.
 Two tabs refreshing at once (within 10 seconds) are only rejected, and the session is not lost.
+A family **is** one signed-in device (its id is the `sid` claim), and each refresh row stores that device's user agent and IP. `GET /account/sessions` lists the user's families that still hold a live refresh token; `DELETE /account/sessions/{id}` (or `DELETE /account/sessions` for all but the current one) revokes them — scoped by `user_id`, so one user can never revoke another's session.
+
+**Realtime (SSE)**: the `realtime` module owns no tables; it pushes events to clients that are connected right now.
+- Flow: use case → outbox (`identity.session_started.v1`, `identity.session_revoked.v1`) → relay → `RealtimePushHandler` → `NOTIFY realtime` → every API instance that has a `LISTEN realtime` connection delivers to its own sockets. Postgres is the fan-out, so there is no Redis, no sticky sessions, and the relay may run in a different process from the API.
+- One transport, SSE (`GET /realtime/events`), carrying messages `{ id, type, data, at }`. It is consumed with `fetch` (not `EventSource`) so it can send `Authorization: Bearer`. Server → client only is all these use cases need; WebSocket was deliberately left out.
+- Remote logout is pushed to the revoked device (`session.revoked`) and the server then closes that session's connections, so the web app signs out immediately instead of after the 15-minute access token. Other devices of the user refresh their device list from the same event.
+- Best-effort by design: no replay, events older than 60 s are dropped, and a notification sent while an instance reconnects its LISTEN is lost — clients refetch their state whenever a stream (re)opens. Authentication is checked when the stream opens.
+- Deployment: the reverse proxy must not buffer responses and must allow long reads (see `docker/nginx/default.conf`); LISTEN needs a direct Postgres connection, not PgBouncer in transaction mode. On shutdown `realtime.stop()` runs before the HTTP server stops, otherwise open streams would hold it up.
 
 **Avatar**: `POST upload-url` issues a presigned PUT (5 minutes) → the browser PUTs straight to SeaweedFS → `PUT /me/avatar {key}` checks the key belongs to the user and `stat`s size/type
 (a presigned PUT cannot enforce them, so a bad file is deleted) → emits `profile.avatar_changed.v1` → a handler deletes the old file.
@@ -126,7 +134,7 @@ Requeue is safe because the inbox blocks handlers that already finished, so noth
 
 ## Deliberate trade-offs
 
-- **Logout does not revoke the access token immediately**: it stays valid for up to 15 minutes. Making it instant needs a denylist in a fast store (Redis) — the project deliberately avoids Redis.
+- **Logout (and remote logout of a device) does not revoke the access token immediately**: it stays valid for up to 15 minutes. Making it instant needs a denylist in a fast store (Redis) — the project deliberately avoids Redis.
 - **Magic-link rate limit in Postgres** (3/email, 10/IP per 15 minutes): correct with many instances, but a few extra requests can slip through under a race. Enough to stop spam; for something stricter, replace the adapter of the `MagicLinkThrottle` port.
 - **`x-forwarded-for` is trustworthy only behind a reverse proxy we control** (the nginx in compose sets it). Do not expose the API directly to the Internet while still trusting this header.
 - **Mail rate limiting uses one shared bucket for all mail types**: important mail (magic link) may queue behind welcome mail under load. If you need priority, split buckets by type (the `key` parameter) or order by priority when claiming.

@@ -72,6 +72,7 @@ export function buildApp(container: Container) {
     .use(healthRoutes(container))
     .use(container.modules.identity.routes)
     .use(container.modules.profile.routes)
+    .use(container.modules.realtime.routes)
 }
 
 export type App = ReturnType<typeof buildApp>

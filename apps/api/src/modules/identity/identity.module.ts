@@ -7,6 +7,11 @@ import { IdentityApiImpl } from './application/queries/identity-api-impl'
 import { SessionIssuer } from './application/session-issuer'
 import { ConfirmEmailChange } from './application/use-cases/confirm-email-change'
 import { Logout } from './application/use-cases/logout'
+import {
+  ListSessions,
+  RevokeOtherSessions,
+  RevokeSession,
+} from './application/use-cases/manage-sessions'
 import { RefreshSession } from './application/use-cases/refresh-session'
 import { RequestEmailChange } from './application/use-cases/request-email-change'
 import { RequestMagicLink } from './application/use-cases/request-magic-link'
@@ -100,11 +105,15 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         users,
         sessions,
         tokenService,
+        outboxWriter,
         database,
         ids,
         clock,
       ),
-      logout: new Logout(refreshTokens, clock),
+      logout: new Logout(refreshTokens, outboxWriter, database, clock),
+      listSessions: new ListSessions(refreshTokens, clock),
+      revokeSession: new RevokeSession(refreshTokens, outboxWriter, database, clock),
+      revokeOtherSessions: new RevokeOtherSessions(refreshTokens, outboxWriter, database, clock),
       requestEmailChange: new RequestEmailChange(
         users,
         emailChanges,

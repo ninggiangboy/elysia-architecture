@@ -4,6 +4,8 @@ import type { RefreshTokenRepository } from '../domain/repositories'
 import type { TokenService } from './ports'
 
 export interface SessionTokens {
+  /** The login session (refresh-token family) these tokens belong to. */
+  sessionId: string
   accessToken: string
   accessTokenExpiresIn: number
   refreshToken: string
@@ -56,6 +58,7 @@ export class SessionIssuer {
     )
     const access = await this.tokens.signAccessToken({ userId: params.userId, sessionId: familyId })
     return {
+      sessionId: familyId,
       accessToken: access.token,
       accessTokenExpiresIn: access.expiresInSeconds,
       refreshToken: opaque.token,

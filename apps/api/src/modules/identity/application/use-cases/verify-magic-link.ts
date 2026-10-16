@@ -3,6 +3,7 @@ import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/appl
 import type { MagicLinkRepository, UserRepository } from '../../domain/repositories'
 import { User } from '../../domain/user'
 import type { TokenService } from '../ports'
+import { sessionStarted } from '../session-events'
 import type { SessionIssuer, SessionMeta, SessionTokens } from '../session-issuer'
 
 export interface VerifyMagicLinkResult {
@@ -48,6 +49,17 @@ export class VerifyMagicLink {
         await this.outbox.add(user.pullEvents())
       }
       const session = await this.sessions.issue({ userId: user.id, meta: cmd.meta })
+      await this.outbox.add([
+        sessionStarted(
+          {
+            userId: user.id,
+            sessionId: session.sessionId,
+            ip: cmd.meta.ip,
+            userAgent: cmd.meta.userAgent,
+          },
+          now,
+        ),
+      ])
       return { user: { id: user.id, email: user.email.value }, session }
     })
 

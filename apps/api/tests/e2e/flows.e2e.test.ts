@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { sql } from 'drizzle-orm'
-import { createLocalJWKSet, jwtVerify } from 'jose'
+import { createLocalJWKSet, decodeJwt, jwtVerify } from 'jose'
 import { IdentityEvents } from '#/modules/identity/contracts'
 import { sha256Hex } from '#/shared/infrastructure/crypto'
 import {
@@ -332,6 +332,82 @@ describe('full user journey', () => {
     expect(out.status).toBe(204)
     expect(out.setCookie).toContain('refresh_token=;')
     expect((await api('POST', '/api/auth/refresh', { cookie: session.cookie })).status).toBe(401)
+  })
+})
+
+describe('device sessions', () => {
+  const sessionIdOf = (accessToken: string) => decodeJwt(accessToken).sid as string
+
+  test('lists devices, remotely signs one out, and keeps the others working', async () => {
+    const email = uniqueEmail('devices')
+    const phone = await login(api, email, 'PhoneApp/1.0')
+    const laptop = await login(api, email, 'LaptopBrowser/2.0')
+
+    expect((await api('GET', '/api/account/sessions')).status).toBe(401)
+    const listed = await api('GET', '/api/account/sessions', { token: laptop.accessToken })
+    expect(listed.status).toBe(200)
+    expect(listed.json.sessions).toHaveLength(2)
+    expect(listed.json.sessions[0]).toMatchObject({
+      id: sessionIdOf(laptop.accessToken),
+      current: true,
+      userAgent: 'LaptopBrowser/2.0',
+    })
+    expect(listed.json.sessions[1]).toMatchObject({
+      id: sessionIdOf(phone.accessToken),
+      current: false,
+      userAgent: 'PhoneApp/1.0',
+    })
+    expect(Date.parse(listed.json.sessions[0].startedAt)).not.toBeNaN()
+
+    const out = await api('DELETE', `/api/account/sessions/${sessionIdOf(phone.accessToken)}`, {
+      token: laptop.accessToken,
+      cookie: laptop.cookie,
+    })
+    expect(out.status).toBe(204)
+    expect(out.setCookie).toBeNull() // not the current device → its own cookie is untouched
+
+    expect((await api('POST', '/api/auth/refresh', { cookie: phone.cookie })).status).toBe(401)
+    expect((await api('POST', '/api/auth/refresh', { cookie: laptop.cookie })).status).toBe(200)
+    const after = await api('GET', '/api/account/sessions', { token: laptop.accessToken })
+    expect(after.json.sessions.map((s: { id: string }) => s.id)).toEqual([
+      sessionIdOf(laptop.accessToken),
+    ])
+  })
+
+  test('cannot touch another user’s session; unknown or malformed ids are rejected', async () => {
+    const mine = await login(api, uniqueEmail('mine'))
+    const theirs = await login(api, uniqueEmail('theirs'))
+
+    const stolen = await api('DELETE', `/api/account/sessions/${sessionIdOf(theirs.accessToken)}`, {
+      token: mine.accessToken,
+    })
+    expect(stolen.status).toBe(404)
+    expect(stolen.json.error.code).toBe('session_not_found')
+    expect((await api('POST', '/api/auth/refresh', { cookie: theirs.cookie })).status).toBe(200)
+
+    expect(
+      (await api('DELETE', '/api/account/sessions/not-a-uuid', { token: mine.accessToken })).status,
+    ).toBe(400)
+  })
+
+  test('revoking the current session also clears the cookie; "all others" keeps the caller', async () => {
+    const email = uniqueEmail('others')
+    const a = await login(api, email)
+    const b = await login(api, email)
+    const c = await login(api, email)
+
+    const out = await api('DELETE', '/api/account/sessions', { token: a.accessToken })
+    expect(out.status).toBe(200)
+    expect(out.json).toEqual({ revoked: 2 })
+    expect((await api('POST', '/api/auth/refresh', { cookie: b.cookie })).status).toBe(401)
+    expect((await api('POST', '/api/auth/refresh', { cookie: c.cookie })).status).toBe(401)
+    expect((await api('POST', '/api/auth/refresh', { cookie: a.cookie })).status).toBe(200)
+
+    const self = await api('DELETE', `/api/account/sessions/${sessionIdOf(a.accessToken)}`, {
+      token: a.accessToken,
+    })
+    expect(self.status).toBe(204)
+    expect(self.setCookie).toContain('refresh_token=;')
   })
 })
 

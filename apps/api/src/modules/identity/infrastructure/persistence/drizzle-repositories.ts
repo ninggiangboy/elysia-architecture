@@ -1,10 +1,10 @@
-import { and, eq, gt, isNull } from 'drizzle-orm'
+import { and, desc, eq, gt, isNull, min, ne } from 'drizzle-orm'
 import { ConflictError, VersionConflictError } from '#/shared/application/errors'
 import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'
 import { MagicLink } from '../../domain/magic-link'
-import { RefreshToken } from '../../domain/refresh-token'
+import { type DeviceSession, RefreshToken } from '../../domain/refresh-token'
 import type {
   EmailChangeRequestRepository,
   MagicLinkRepository,
@@ -202,11 +202,68 @@ export class DrizzleRefreshTokenRepository implements RefreshTokenRepository {
     return row ? toRefreshToken(row) : null
   }
 
-  async revokeFamily(familyId: string, now: Date): Promise<void> {
-    await this.database.executor
+  async listActiveSessions(userId: string, now: Date): Promise<DeviceSession[]> {
+    const ex = this.database.executor
+    const started = ex
+      .select({
+        familyId: refreshTokens.familyId,
+        startedAt: min(refreshTokens.createdAt).as('started_at'),
+      })
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, userId))
+      .groupBy(refreshTokens.familyId)
+      .as('started')
+    const rows = await ex
+      .select({
+        id: refreshTokens.familyId,
+        userAgent: refreshTokens.userAgent,
+        ip: refreshTokens.ip,
+        lastActiveAt: refreshTokens.createdAt,
+        startedAt: started.startedAt,
+      })
+      .from(refreshTokens)
+      .innerJoin(started, eq(started.familyId, refreshTokens.familyId))
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .orderBy(desc(refreshTokens.createdAt))
+    return rows.map((r) => ({ ...r, startedAt: r.startedAt ?? r.lastActiveAt }))
+  }
+
+  async revokeUserSession(userId: string, familyId: string, now: Date): Promise<boolean> {
+    const rows = await this.database.executor
       .update(refreshTokens)
       .set({ revokedAt: now })
-      .where(and(eq(refreshTokens.familyId, familyId), isNull(refreshTokens.revokedAt)))
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
+          eq(refreshTokens.familyId, familyId),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .returning({ id: refreshTokens.id })
+    return rows.length > 0
+  }
+
+  async revokeOtherSessions(userId: string, exceptFamilyId: string, now: Date): Promise<string[]> {
+    const rows = await this.database.executor
+      .update(refreshTokens)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
+          ne(refreshTokens.familyId, exceptFamilyId),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .returning({ familyId: refreshTokens.familyId })
+    return [...new Set(rows.map((r) => r.familyId))]
   }
 }
 
