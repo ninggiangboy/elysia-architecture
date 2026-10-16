@@ -44,7 +44,7 @@ Sign in: enter any email at `/login` → open Mailpit → click the link in the 
 | View account + profile | `GET /me` |
 | Update profile (optimistic lock via `If-Match`) | `PATCH /me/profile` |
 | Upload avatar (presigned URL to SeaweedFS) | `POST /me/avatar/upload-url`, `PUT /me/avatar` |
-| Live events over SSE (`session.started`, `session.revoked`, `realtime.test`) | `GET /realtime/events`, `POST /realtime/test` |
+| Live events over SSE (`session.revoked`, `realtime.test`) | `GET /realtime/events`, `POST /realtime/test` |
 | Welcome mail + profile creation (via outbox) | event `identity.user_registered.v1` |
 | Change email (confirmed from the new inbox) | `POST /account/email-change`, `POST /account/email-change/confirm` |
 | JWKS so other services can verify tokens | `GET /.well-known/jwks.json` |

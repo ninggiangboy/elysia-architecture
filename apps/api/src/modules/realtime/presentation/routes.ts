@@ -88,7 +88,7 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
         detail: {
           summary: 'Server-Sent Events stream',
           description:
-            'Live events for the signed-in user (`ready`, `session.started`, `session.revoked`, `realtime.test`). ' +
+            'Live events for the signed-in user (`ready`, `session.revoked`, `realtime.test`). ' +
             '`EventSource` cannot send an `Authorization` header, so consume it with `fetch` and read the body stream. ' +
             'Each `data:` is a JSON `{ id, type, data, at }`. No replay: refetch your state after reconnecting.',
         },

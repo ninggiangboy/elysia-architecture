@@ -9,7 +9,7 @@ import { clearSession } from '@/lib/session'
 /**
  * App-wide live channel (SSE) for a signed-in user:
  *  - this device was signed out remotely → sign out here immediately instead of waiting for the access token to expire;
- *  - another device signed in / out → refresh the device list;
+ *  - another device signed out → refresh the device list;
  *  - every (re)connect refetches it, because events sent while disconnected are not replayed.
  */
 export function useLiveSession() {
@@ -25,10 +25,6 @@ export function useLiveSession() {
       onMessage(m) {
         if (m.type === 'ready') {
           ownSessionId = m.data?.sessionId
-          void refreshDevices()
-        } else if (m.type === 'session.started') {
-          // Our own sign-in is announced to us too (the stream usually opens before the event is relayed).
-          if (m.data?.sessionId !== ownSessionId) toast.info('New sign-in on your account')
           void refreshDevices()
         } else if (m.type === 'session.revoked') {
           if (m.data?.sessionId !== ownSessionId) return void refreshDevices()

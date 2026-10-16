@@ -1,8 +1,4 @@
-import {
-  IdentityEvents,
-  type SessionRevokedPayload,
-  type SessionStartedPayload,
-} from '#/modules/identity/contracts'
+import { IdentityEvents, type SessionRevokedPayload } from '#/modules/identity/contracts'
 import type { Clock, IdGenerator, IntegrationEventHandler, Log } from '#/shared/application/ports'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
@@ -40,24 +36,6 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
       useCases: { sendTestEvent: new SendTestEvent(hub) },
     }),
     handlers: [
-      new RealtimePushHandler<SessionStartedPayload>(
-        'realtime.push-session-started',
-        IdentityEvents.SessionStarted,
-        (p) => ({
-          userId: p.userId,
-          event: {
-            type: 'session.started',
-            data: {
-              sessionId: p.sessionId,
-              ip: p.ip,
-              userAgent: p.userAgent,
-              startedAt: p.startedAt,
-            },
-          },
-        }),
-        hub,
-        clock,
-      ),
       new RealtimePushHandler<SessionRevokedPayload>(
         'realtime.push-session-revoked',
         IdentityEvents.SessionRevoked,

@@ -165,7 +165,7 @@ describe('server-sent events', () => {
 })
 
 describe('session events over realtime', () => {
-  test('a new sign-in is announced; remote logout reaches the device and closes its connections', async () => {
+  test('remote logout reaches the device and closes its connections', async () => {
     const email = uniqueEmail('devices-rt')
     const laptop = await login(apiA, email, 'Laptop/1.0')
     const laptopStream = await openSse(a.app, laptop.accessToken)
@@ -174,11 +174,6 @@ describe('session events over realtime', () => {
 
       const phone = await login(apiA, email, 'Phone/1.0')
       const phoneId = sessionIdOf(phone.accessToken)
-      const started = await laptopStream.next(
-        'session.started',
-        (m) => m.data.sessionId === phoneId,
-      )
-      expect(started.data).toMatchObject({ userAgent: 'Phone/1.0' })
 
       const phoneStream = await openSse(a.app, phone.accessToken)
       await phoneStream.next('ready')
