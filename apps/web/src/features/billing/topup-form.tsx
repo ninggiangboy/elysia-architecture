@@ -1,7 +1,7 @@
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Lock } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -189,9 +189,18 @@ function AmountStep({ onStarted }: { onStarted: (started: Started) => void }) {
   const amount = custom !== '' ? parseMoney(custom, currency) : preset
   const valid = rule !== undefined && amount !== null && amount >= rule.min && amount <= rule.max
 
+  // One key per currency and amount: pressing "continue" again for the same choice must not open a second payment.
+  const attempt = useRef<{ currency: string; amount: number; key: string } | null>(null)
+  const keyFor = (c: string, a: number) => {
+    if (attempt.current?.currency !== c || attempt.current.amount !== a)
+      attempt.current = { currency: c, amount: a, key: crypto.randomUUID() }
+    return attempt.current.key
+  }
+
   const start = useMutation({
     mutationFn: createTopUp,
-    onSuccess: (data, input) => onStarted({ ...data, ...input }),
+    onSuccess: (data, input) =>
+      onStarted({ ...data, currency: input.currency, amount: input.amount }),
     onError: (err) => toast.error(errorMessage(err)),
   })
 
@@ -203,7 +212,8 @@ function AmountStep({ onStarted }: { onStarted: (started: Started) => void }) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (valid && amount !== null) start.mutate({ currency, amount })
+    if (valid && amount !== null)
+      start.mutate({ currency, amount, idempotencyKey: keyFor(currency, amount) })
   }
 
   if (!rule) return null

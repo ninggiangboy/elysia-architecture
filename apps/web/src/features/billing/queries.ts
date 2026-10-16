@@ -34,5 +34,17 @@ export const topUpQuery = (id: string) =>
     queryFn: async () => unwrap(await http.api.billing.topups({ id }).get()),
   })
 
-export const createTopUp = async (input: { currency: string; amount: number }) =>
-  unwrap(await http.api.billing.topups.post(input))
+/**
+ * `idempotencyKey` stands for one intention to pay: sending the request again with it (a double click, a retry after a
+ * timeout) returns the same top-up instead of opening a second payment.
+ */
+export const createTopUp = async (input: {
+  currency: string
+  amount: number
+  idempotencyKey: string
+}) => {
+  const { idempotencyKey, ...body } = input
+  return unwrap(
+    await http.api.billing.topups.post(body, { headers: { 'idempotency-key': idempotencyKey } }),
+  )
+}
