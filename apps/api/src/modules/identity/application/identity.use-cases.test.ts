@@ -131,6 +131,7 @@ const tokens: TokenService = {
     return { token, hash: sha256Hex(token) }
   },
   hashOpaqueToken: sha256Hex,
+  newNumericCode: () => '123456',
   signAccessToken: async ({ userId, sessionId }) => ({
     token: `jwt:${userId}:${sessionId}`,
     expiresInSeconds: 900,

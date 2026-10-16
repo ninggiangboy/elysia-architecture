@@ -20,6 +20,7 @@ const errorShape = {
 const ERROR_DESCRIPTIONS = {
   400: 'Invalid data or business rule violation',
   401: 'Missing or invalid credentials',
+  403: 'Not allowed (for example a recent confirmation is required)',
   404: 'Resource not found',
   409: 'Conflicts with the current state',
   429: 'Rate limit exceeded',
@@ -57,8 +58,15 @@ export const openapiDocumentation = {
   },
   tags: [
     { name: 'health', description: 'Service health checks' },
-    { name: 'auth', description: 'Passwordless sign-in, sessions and JWKS' },
-    { name: 'account', description: "Operations on the current user's account" },
+    {
+      name: 'auth',
+      description: 'Passwordless sign-in (magic link, passkey, Google/GitHub), sessions and JWKS',
+    },
+    {
+      name: 'account',
+      description:
+        "Operations on the current user's account. Sensitive ones answer `403 step_up_required` until the user confirms again (`/account/step-up/*`).",
+    },
     { name: 'profile', description: 'Profile and avatar of the current user' },
     {
       name: 'notifications',

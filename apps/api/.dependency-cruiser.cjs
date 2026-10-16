@@ -1,6 +1,6 @@
 /** Architecture boundary rules — run with `bun run check:arch`. */
 const FRAMEWORKS =
-  'node_modules/(elysia|@elysiajs|drizzle-orm|drizzle-kit|postgres|nodemailer|jose|pino)/'
+  'node_modules/(elysia|@elysiajs|drizzle-orm|drizzle-kit|postgres|nodemailer|jose|pino|@simplewebauthn|arctic)/'
 const ROOT = '^src/(app|main|bootstrap)'
 
 module.exports = {

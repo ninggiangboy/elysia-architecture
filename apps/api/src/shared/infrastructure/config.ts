@@ -76,6 +76,21 @@ const schema = z
     ACCESS_TOKEN_TTL: duration('15m'),
     REFRESH_TOKEN_TTL: duration('30d'),
 
+    /** How long after signing in (or confirming again) sensitive actions — change email, add/remove a sign-in method — are allowed. */
+    STEP_UP_TTL: duration('5m'),
+
+    /** WebAuthn relying party. Defaults follow WEB_APP_URL; set them when the web app is served from a different host than users type. */
+    WEBAUTHN_RP_ID: blank,
+    WEBAUTHN_RP_NAME: z.string().default('Elysia Architecture'),
+    /** Origins the browser may report during a passkey ceremony. */
+    WEBAUTHN_ORIGINS: blank.transform((v) => (v ? csv(v) : undefined)),
+
+    /** OAuth sign-in. A provider is on only when both its id and secret are set. The redirect URI is `${WEB_APP_URL}/auth/oauth/callback`. */
+    GOOGLE_CLIENT_ID: blank,
+    GOOGLE_CLIENT_SECRET: blank,
+    GITHUB_CLIENT_ID: blank,
+    GITHUB_CLIENT_SECRET: blank,
+
     MAGIC_LINK_MAX_PER_EMAIL: z.coerce.number().int().positive().default(3),
     MAGIC_LINK_MAX_PER_IP: z.coerce.number().int().positive().default(10),
 
@@ -142,6 +157,17 @@ const schema = z
         path: ['VAPID_PUBLIC_KEY'],
         message: 'VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT must be set together',
       })
+    for (const [name, id, secret] of [
+      ['GOOGLE', env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET],
+      ['GITHUB', env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET],
+    ] as const) {
+      if (Boolean(id) !== Boolean(secret))
+        ctx.addIssue({
+          code: 'custom',
+          path: [`${name}_CLIENT_ID`],
+          message: `${name}_CLIENT_ID and ${name}_CLIENT_SECRET must be set together`,
+        })
+    }
     if (env.VAPID_SUBJECT && !/^(mailto:|https:\/\/)/.test(env.VAPID_SUBJECT))
       ctx.addIssue({
         code: 'custom',
@@ -150,10 +176,19 @@ const schema = z
       })
   })
 
-export type Config = z.infer<typeof schema>
+const config = schema.transform((env) => {
+  const webApp = new URL(env.WEB_APP_URL)
+  return {
+    ...env,
+    WEBAUTHN_RP_ID: env.WEBAUTHN_RP_ID ?? webApp.hostname,
+    WEBAUTHN_ORIGINS: env.WEBAUTHN_ORIGINS ?? [webApp.origin],
+  }
+})
+
+export type Config = z.infer<typeof config>
 
 export function loadConfig(env: Record<string, string | undefined> = process.env): Config {
-  const parsed = schema.safeParse(env)
+  const parsed = config.safeParse(env)
   if (!parsed.success) {
     const details = parsed.error.issues
       .map((i) => `  - ${i.path.join('.')}: ${i.message}`)

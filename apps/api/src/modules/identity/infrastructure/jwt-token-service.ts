@@ -8,7 +8,7 @@ import {
   SignJWT,
 } from 'jose'
 import type { IdGenerator } from '#/shared/application/ports'
-import { randomToken, sha256Hex } from '#/shared/infrastructure/crypto'
+import { randomDigits, randomToken, sha256Hex } from '#/shared/infrastructure/crypto'
 import type { TokenService } from '../application/ports'
 import type { AccessTokenClaims, AccessTokenVerifier } from '../contracts/access-token-verifier'
 
@@ -50,9 +50,16 @@ export class JwtTokenService implements TokenService, AccessTokenVerifier {
     return sha256Hex(token)
   }
 
-  async signAccessToken(claims: { userId: string; sessionId: string }) {
+  newNumericCode(digits: number): string {
+    return randomDigits(digits)
+  }
+
+  async signAccessToken(claims: { userId: string; sessionId: string; authTime?: Date }) {
     const now = Math.floor(Date.now() / 1000)
-    const token = await new SignJWT({ sid: claims.sessionId })
+    const token = await new SignJWT({
+      sid: claims.sessionId,
+      ...(claims.authTime && { auth_time: Math.floor(claims.authTime.getTime() / 1000) }),
+    })
       .setProtectedHeader({ alg: ALG, kid: this.options.kid })
       .setSubject(claims.userId)
       .setIssuer(this.options.issuer)
@@ -71,6 +78,10 @@ export class JwtTokenService implements TokenService, AccessTokenVerifier {
       audience: this.options.audience,
     })
     if (!payload.sub || typeof payload.sid !== 'string') throw new Error('Malformed token claims')
-    return { userId: payload.sub, sessionId: payload.sid }
+    return {
+      userId: payload.sub,
+      sessionId: payload.sid,
+      authTime: typeof payload.auth_time === 'number' ? payload.auth_time : undefined,
+    }
   }
 }

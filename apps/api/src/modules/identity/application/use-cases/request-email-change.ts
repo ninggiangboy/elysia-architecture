@@ -5,6 +5,7 @@ import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'
 import type { EmailChangeRequestRepository, UserRepository } from '../../domain/repositories'
 import type { TokenService } from '../ports'
+import type { StepUpPolicy } from '../step-up-policy'
 
 export class RequestEmailChange {
   constructor(
@@ -15,9 +16,17 @@ export class RequestEmailChange {
     private uow: UnitOfWork,
     private ids: IdGenerator,
     private clock: Clock,
+    private stepUp: StepUpPolicy,
   ) {}
 
-  async execute(cmd: { userId: string; newEmail: string }): Promise<void> {
+  async execute(cmd: {
+    userId: string
+    newEmail: string
+    /** `auth_time` of the access token making the request. */
+    authTime: number | undefined
+  }): Promise<void> {
+    // Changing the email hands over account recovery, so a stolen session alone must not be enough.
+    this.stepUp.assertFresh(cmd.authTime)
     const newEmail = Email.create(cmd.newEmail)
     const user = await this.users.findById(cmd.userId)
     if (!user) throw new NotFoundError('user_not_found', 'User not found')

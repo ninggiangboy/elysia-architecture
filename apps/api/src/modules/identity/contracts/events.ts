@@ -9,6 +9,11 @@ export const IdentityEvents = {
   EmailChanged: 'identity.email_changed.v1',
   SessionStarted: 'identity.session_started.v1',
   SessionRevoked: 'identity.session_revoked.v1',
+  StepUpCodeRequested: 'identity.step_up_code_requested.v1',
+  PasskeyAdded: 'identity.passkey_added.v1',
+  PasskeyRemoved: 'identity.passkey_removed.v1',
+  OAuthAccountLinked: 'identity.oauth_account_linked.v1',
+  OAuthAccountUnlinked: 'identity.oauth_account_unlinked.v1',
 } as const
 
 export interface MagicLinkRequestedPayload {
@@ -46,6 +51,8 @@ export interface SessionStartedPayload {
   userAgent: string | null
   /** True when this sign-in just created the account (the very first session). Absent on older messages = false. */
   newUser?: boolean
+  /** How the user proved who they are: `magic_link`, `passkey` or `oauth:<provider>`. Absent on older messages. */
+  method?: string
   startedAt: string
 }
 
@@ -56,4 +63,40 @@ export interface SessionRevokedPayload {
   sessionId: string
   reason: SessionRevokedReason
   revokedAt: string
+}
+
+export interface StepUpCodeRequestedPayload {
+  userId: string
+  email: string
+  /** Raw one-time code — lives in the outbox only until it is cleaned up. */
+  code: string
+  expiresAt: string
+}
+
+export interface PasskeyAddedPayload {
+  userId: string
+  passkeyId: string
+  name: string
+  addedAt: string
+}
+
+export interface PasskeyRemovedPayload {
+  userId: string
+  passkeyId: string
+  name: string
+  removedAt: string
+}
+
+export interface OAuthAccountLinkedPayload {
+  userId: string
+  provider: string
+  /** Address the provider reported, for display. */
+  email: string | null
+  linkedAt: string
+}
+
+export interface OAuthAccountUnlinkedPayload {
+  userId: string
+  provider: string
+  unlinkedAt: string
 }

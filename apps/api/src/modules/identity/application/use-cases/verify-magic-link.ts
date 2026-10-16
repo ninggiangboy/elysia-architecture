@@ -49,7 +49,7 @@ export class VerifyMagicLink {
         await this.users.save(user)
         await this.outbox.add(user.pullEvents())
       }
-      const session = await this.sessions.issue({ userId: user.id, meta: cmd.meta })
+      const session = await this.sessions.issue({ userId: user.id, fresh: true, meta: cmd.meta })
       await this.outbox.add([
         sessionStarted(
           {
@@ -58,6 +58,7 @@ export class VerifyMagicLink {
             ip: cmd.meta.ip,
             userAgent: cmd.meta.userAgent,
             newUser,
+            method: 'magic_link',
           },
           now,
         ),

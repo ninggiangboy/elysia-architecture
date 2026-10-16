@@ -1,3 +1,4 @@
+import type { OAuthGateway, WebAuthnService } from '#/modules/identity/application/ports'
 import { createIdentityModule } from '#/modules/identity/identity.module'
 import type { WebPushSender } from '#/modules/notification/application/ports'
 import { WebPushLibrarySender } from '#/modules/notification/infrastructure/web-push-sender'
@@ -24,6 +25,10 @@ export interface ContainerOverrides {
   mailer?: Mailer
   /** Replaces the Web Push sender (tests). Needs `VAPID_PUBLIC_KEY` in the config to take effect. */
   webPushSender?: WebPushSender
+  /** Replaces the WebAuthn relying party (tests drive it with a software authenticator). */
+  webauthn?: WebAuthnService
+  /** Replaces the Google/GitHub adapter (tests: a fake provider). */
+  oauth?: OAuthGateway
 }
 
 export async function createContainer(
@@ -79,7 +84,14 @@ export async function createContainer(
         }
       : undefined
 
-  const identity = await createIdentityModule({ database, config, clock, ids })
+  const identity = await createIdentityModule({
+    database,
+    config,
+    clock,
+    ids,
+    webauthn: overrides.webauthn,
+    oauth: overrides.oauth,
+  })
   const profile = createProfileModule({
     database,
     clock,

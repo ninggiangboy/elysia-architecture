@@ -49,6 +49,8 @@ an advisory lock; process roles (`APP_ROLES=api,worker`) let you peel the worker
 
 ### 5. Passwordless auth done properly
 - **Magic link** sign-in, consumed atomically, throttled per email and IP.
+- **Passkeys** (WebAuthn, usernameless) and **Google / GitHub** sign-in (authorization code + PKCE, account matched only on a provider-verified email).
+- **Step-up**: changing the email or a sign-in method needs a recent confirmation — a passkey or an emailed code — on top of a valid session.
 - **ES256 JWT** access tokens (15 min) with a `kid` and a public **JWKS** endpoint — other services verify tokens with no shared secret, and keys rotate.
 - **Rotating refresh tokens** in an httpOnly cookie, with **reuse detection**: replaying a rotated token outside a 10 s grace window is treated as theft and revokes the whole family — while two tabs refreshing at once don't log you out.
 - **Device management**: list signed-in devices, remote logout of one or all others.

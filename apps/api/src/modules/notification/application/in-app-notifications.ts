@@ -80,3 +80,47 @@ export const newSignInNotification = (p: {
   body: `${describeDevice(p.userAgent)}${p.ip ? ` (${p.ip})` : ''} signed in. If this was not you, sign that device out.`,
   data: { sessionId: p.sessionId, ip: p.ip, userAgent: p.userAgent, link: '/' },
 })
+
+const PROVIDER_NAMES: Record<string, string> = { google: 'Google', github: 'GitHub' }
+const providerName = (provider: string) => PROVIDER_NAMES[provider] ?? provider
+
+const securityAlert = (
+  userId: string,
+  title: string,
+  body: string,
+  data: Record<string, unknown> = {},
+): NotificationDraft => ({
+  userId,
+  kind: 'security_alert',
+  title,
+  body,
+  data: { ...data, link: '/security' },
+})
+
+export const passkeyAddedNotification = (p: { userId: string; name: string }) =>
+  securityAlert(
+    p.userId,
+    'A passkey was added',
+    `"${p.name}" can now sign in to your account. If this was not you, remove it and sign out your other devices.`,
+  )
+
+export const passkeyRemovedNotification = (p: { userId: string; name: string }) =>
+  securityAlert(
+    p.userId,
+    'A passkey was removed',
+    `"${p.name}" can no longer sign in to your account.`,
+  )
+
+export const oauthLinkedNotification = (p: { userId: string; provider: string }) =>
+  securityAlert(
+    p.userId,
+    `${providerName(p.provider)} was connected`,
+    `Your ${providerName(p.provider)} account can now sign in to your account. If this was not you, disconnect it and sign out your other devices.`,
+  )
+
+export const oauthUnlinkedNotification = (p: { userId: string; provider: string }) =>
+  securityAlert(
+    p.userId,
+    `${providerName(p.provider)} was disconnected`,
+    `Your ${providerName(p.provider)} account can no longer sign in to your account.`,
+  )

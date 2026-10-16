@@ -30,6 +30,17 @@ export function magicLinkMail(params: { url: string; expiresInMinutes: number })
   }
 }
 
+export function stepUpCodeMail(params: { code: string; expiresInMinutes: number }): MailContent {
+  return {
+    subject: `Your confirmation code: ${params.code}`,
+    text: `Your confirmation code is ${params.code}. It expires in ${params.expiresInMinutes} minutes.\n\nIf you did not ask for it, someone may be using your account: you can ignore this email, but consider signing out your other devices.`,
+    html: layout(
+      'Confirm it is you',
+      `Your confirmation code is <b style="font-size:24px;letter-spacing:4px">${escapeHtml(params.code)}</b><br>It expires in ${params.expiresInMinutes} minutes. If you did not ask for it, someone may be using your account: you can ignore this email, but consider signing out your other devices.`,
+    ),
+  }
+}
+
 export function welcomeMail(params: { email: string; appUrl: string }): MailContent {
   return {
     subject: 'Welcome!',

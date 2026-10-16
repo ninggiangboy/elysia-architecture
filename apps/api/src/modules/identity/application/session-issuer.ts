@@ -35,6 +35,8 @@ export class SessionIssuer {
     userId: string
     familyId?: string
     tokenId?: string
+    /** True when the user has just authenticated (sign-in): the access token then counts as a recent confirmation. */
+    fresh?: boolean
     meta: SessionMeta
   }): Promise<SessionTokens> {
     const now = this.clock.now()
@@ -56,7 +58,11 @@ export class SessionIssuer {
         params.meta.ip,
       ),
     )
-    const access = await this.tokens.signAccessToken({ userId: params.userId, sessionId: familyId })
+    const access = await this.tokens.signAccessToken({
+      userId: params.userId,
+      sessionId: familyId,
+      authTime: params.fresh ? now : undefined,
+    })
     return {
       sessionId: familyId,
       accessToken: access.token,

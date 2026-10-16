@@ -1,15 +1,84 @@
 import type { Email } from '../../domain/email'
+import type { OAuthProviderId } from '../../domain/oauth-account'
+import type { Passkey, PasskeyDeviceType } from '../../domain/passkey'
 
 export interface TokenService {
   /** Unguessable random token + hash to store in the DB. */
   newOpaqueToken(): { token: string; hash: string }
   hashOpaqueToken(token: string): string
+  /** Random one-time code of `digits` decimal digits (for a code the user types in). */
+  newNumericCode(digits: number): string
   signAccessToken(claims: {
     userId: string
     sessionId: string
+    /** When the user last proved who they are; sensitive actions require it to be recent. Omit on a plain refresh. */
+    authTime?: Date
   }): Promise<{ token: string; expiresInSeconds: number }>
 }
 
 export interface MagicLinkThrottle {
   isAllowed(email: Email, ip: string, now: Date): Promise<boolean>
+}
+
+/** The credential as the browser reports it: `id` is the base64url credential id, the rest is opaque to us. */
+export type WebAuthnResponse = { id: string } & Record<string, unknown>
+
+export interface RegisteredCredential {
+  credentialId: string
+  publicKey: Uint8Array
+  counter: number
+  transports: string[]
+  deviceType: PasskeyDeviceType
+  backedUp: boolean
+}
+
+export interface CredentialRef {
+  credentialId: string
+  transports: string[]
+}
+
+/** WebAuthn relying-party operations. `options` is the JSON the browser passes to `navigator.credentials`. */
+export interface WebAuthnService {
+  registrationOptions(params: {
+    userId: string
+    userName: string
+    existing: CredentialRef[]
+  }): Promise<{ challenge: string; options: unknown }>
+  /** null when the attestation does not check out (wrong challenge/origin, missing user verification…). */
+  verifyRegistration(params: {
+    response: WebAuthnResponse
+    challenge: string
+  }): Promise<RegisteredCredential | null>
+  /** Without `allow` the browser offers any passkey it holds for this site (usernameless sign-in). */
+  authenticationOptions(params: {
+    allow?: CredentialRef[]
+  }): Promise<{ challenge: string; options: unknown }>
+  /** null when the assertion does not check out. */
+  verifyAuthentication(params: {
+    response: WebAuthnResponse
+    challenge: string
+    passkey: Passkey
+  }): Promise<{ newCounter: number; backedUp: boolean } | null>
+}
+
+export interface OAuthProfile {
+  /** The provider's stable id for the person. */
+  providerUserId: string
+  email: string | null
+  /** True only when the provider vouches that the user controls `email`. */
+  emailVerified: boolean
+}
+
+/** Talks to Google / GitHub. Only providers with credentials in the config are enabled. */
+export interface OAuthGateway {
+  enabledProviders(): OAuthProviderId[]
+  authorizationUrl(
+    provider: OAuthProviderId,
+    params: { state: string; codeVerifier: string },
+  ): string
+  /** null when the provider rejects the code (expired, already used, wrong verifier). */
+  exchange(
+    provider: OAuthProviderId,
+    params: { code: string; codeVerifier: string },
+  ): Promise<OAuthProfile | null>
 }

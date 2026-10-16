@@ -3,8 +3,13 @@ import {
   type EmailChangeRequestedPayload,
   IdentityEvents,
   type MagicLinkRequestedPayload,
+  type OAuthAccountLinkedPayload,
+  type OAuthAccountUnlinkedPayload,
+  type PasskeyAddedPayload,
+  type PasskeyRemovedPayload,
   type SessionRevokedPayload,
   type SessionStartedPayload,
+  type StepUpCodeRequestedPayload,
   type UserRegisteredPayload,
 } from '#/modules/identity/contracts'
 import type {
@@ -27,6 +32,10 @@ import {
   emailChangedNotification,
   type NotificationDraft,
   newSignInNotification,
+  oauthLinkedNotification,
+  oauthUnlinkedNotification,
+  passkeyAddedNotification,
+  passkeyRemovedNotification,
   suspiciousSessionNotification,
   welcomeNotification,
 } from './application/in-app-notifications'
@@ -35,6 +44,7 @@ import {
   confirmEmailChangeMail,
   emailChangedNoticeMail,
   magicLinkMail,
+  stepUpCodeMail,
   welcomeMail,
 } from './application/templates'
 import { ThrottledMailer } from './application/throttled-mailer'
@@ -173,6 +183,39 @@ export function createNotificationModule({
         IdentityEvents.SessionRevoked,
         // Logouts and "sign out that device" are the user's own doing — only token theft is news.
         (p) => (p.reason === 'token_reuse' ? suspiciousSessionNotification(p) : null),
+      ),
+      inApp<PasskeyAddedPayload>(
+        'notification.in-app-passkey-added',
+        IdentityEvents.PasskeyAdded,
+        passkeyAddedNotification,
+      ),
+      inApp<PasskeyRemovedPayload>(
+        'notification.in-app-passkey-removed',
+        IdentityEvents.PasskeyRemoved,
+        passkeyRemovedNotification,
+      ),
+      inApp<OAuthAccountLinkedPayload>(
+        'notification.in-app-oauth-linked',
+        IdentityEvents.OAuthAccountLinked,
+        oauthLinkedNotification,
+      ),
+      inApp<OAuthAccountUnlinkedPayload>(
+        'notification.in-app-oauth-unlinked',
+        IdentityEvents.OAuthAccountUnlinked,
+        oauthUnlinkedNotification,
+      ),
+      new MailEventHandler<StepUpCodeRequestedPayload>(
+        'notification.send-step-up-code',
+        IdentityEvents.StepUpCodeRequested,
+        (p) => ({
+          to: p.email,
+          content: stepUpCodeMail({ code: p.code, expiresInMinutes: minutesUntil(p.expiresAt) }),
+          expiresAt: p.expiresAt,
+        }),
+        mailer,
+        guard,
+        clock,
+        log,
       ),
       new MailEventHandler<MagicLinkRequestedPayload>(
         'notification.send-magic-link',

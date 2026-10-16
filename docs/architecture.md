@@ -37,9 +37,9 @@
 
 | Module | Owns | Publishes | Consumes | Talks to |
 | --- | --- | --- | --- | --- |
-| `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked` | — | — |
+| `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters, passkeys, OAuth links, WebAuthn challenges / OAuth states / step-up codes (all short-lived) | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked`, `step_up_code_requested`, `passkey_added`, `passkey_removed`, `oauth_account_linked`, `oauth_account_unlinked` | — | — |
 | `profile` | profiles (display name, avatar, cover image, optimistic-lock `version`) | `avatar_changed`, `cover_changed` | `user_registered` (create profile), `avatar_changed` (delete old file, make thumbnails), `cover_changed` (delete old file) | `IdentityApi.getAccount` (sync, for `GET /me`) |
-| `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read` | identity events (mail, in-app), `session_revoked` (drop push subscriptions), `created` (Web Push) | — |
+| `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read` | identity events (mail, in-app — including the security alerts for added/removed sign-in methods), `session_revoked` (drop push subscriptions), `created` (Web Push) | — |
 | `realtime` | `realtime.events` (replay buffer, opt-in events only) | — | `session_revoked`, `notification.created/read` → SSE | — |
 
 Event names are `<module>.<name>.v1` (see each module's `contracts/events.ts`). Contracts are the *only* thing another module may import.
@@ -109,6 +109,46 @@ POST /auth/magic-link/verify ──► VerifyMagicLink
 user_registered ──► profile.create-on-user-registered (inbox, same tx)   ┐ two independent consumers
                 └─► notification.send-welcome (send mail → write inbox)   ┘
 ```
+
+**Sign in with a passkey (WebAuthn)**
+
+```
+POST /auth/passkey/options ──► BeginPasskeyLogin         challenge stored in identity.webauthn_challenges (5 min, single use)
+browser: navigator.credentials.get()                      no email typed: the browser offers the passkeys it holds for this site
+POST /auth/passkey/verify  ──► FinishPasskeyLogin
+   consume challenge (purpose = login) → passkey by credential id → verify signature, origin, rpId, user verification
+   → counter must advance (when the authenticator counts) → [tx: new session + session_started] → access JWT + cookie
+```
+
+Adding a passkey is `POST /account/passkeys/options` then `POST /account/passkeys` (needs a recent confirmation, see step-up). Passkeys are discoverable and always require user verification, so one is a complete sign-in on its own. Challenges live in Postgres (not in memory) because any instance may answer the second request; each one is bound to a purpose (`register`, `login`, `step_up`) and, for the last two, a user, so a challenge made for one ceremony cannot finish another. Synced passkeys (iCloud, Google) always report counter 0, so a counter that does not move is only suspicious when it ever did. `WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGINS` default to `WEB_APP_URL`: changing the RP id orphans every registered passkey.
+
+**Sign in with Google / GitHub (OAuth)**
+
+```
+POST /auth/oauth/{provider}/start ──► BeginOAuth        state (hashed) + PKCE verifier stored in identity.oauth_states (10 min, single use)
+browser ──► provider ──► WEB_APP_URL/auth/oauth/callback?code&state     (a page of the web app, like the magic-link page)
+POST /auth/oauth/callback {code, state} ──► CompleteOAuth
+   consume state → exchange code (+ verifier) → profile { id, email, emailVerified }
+   login: (provider, id) known → that user
+          else verified email → existing user with that email (link it) or a new user
+          else → 400 oauth_email_unverified
+   link:  must be called with the access token of the user who started it (state.userId), else 403
+```
+
+Providers are on only when both `*_CLIENT_ID` and `*_CLIENT_SECRET` are set; the redirect URI to register with them is `${WEB_APP_URL}/auth/oauth/callback`. The account is matched on the provider's stable id, never on email once linked. Before linking, the email must be one the provider vouches for (Google `email_verified`; GitHub: the *primary, verified* address from `/user/emails` — the profile email is user-typed and ignored); that is the same proof a magic link gives, so linking by it does not widen who can take an account over. Connecting from settings is bound to the user who started it: otherwise a victim could be tricked into attaching their Google account to the attacker's. The email sign-in always remains, so disconnecting can never lock anyone out.
+
+**Step-up (confirm again before sensitive actions)**
+
+Access tokens carry an `auth_time` claim (seconds): set when the user *just* authenticated (magic link, passkey, OAuth, or a step-up), absent on tokens from a plain refresh. `StepUpPolicy` (window `STEP_UP_TTL`, default 5 minutes) is checked **inside the use case**, not in the route: changing the email, adding/removing a passkey, connecting/disconnecting an OAuth account answer `403 step_up_required` otherwise. A stolen access token that is older than the window — or any token obtained by stealing only the refresh cookie — cannot reach these actions.
+
+```
+403 step_up_required ──► client opens "confirm it is you"
+   passkey:  POST /account/step-up/passkey/options → get() → /verify      (only the account's own passkeys)
+   email:    POST /account/step-up/email-code → 6-digit code by mail → POST …/verify {code}
+   both return a new access token for the SAME session with auth_time = now → client retries the action once
+```
+
+The emailed code is hashed (with the user id), valid 10 minutes, replaced by the next request, limited to 5 wrong guesses and 5 requests per 15 minutes. It proves control of the mailbox — the same root of trust as the magic link — so it is a weaker confirmation than a passkey but still stops anyone who holds only the session.
 
 **Session**: a 15-minute access JWT (stateless) + an opaque refresh token in the httpOnly cookie `Path=/api/auth`.
 Each refresh rotates the token within the same "family"; reusing a rotated token outside the 10-second window is treated as theft and revokes the whole family.
@@ -197,6 +237,10 @@ GitHub Actions: **CI** (lint, typecheck, `check:arch`, unit, build; then e2e wit
 
 ## Deliberate trade-offs
 
+- **Step-up is stateless, so it cannot be revoked**: a confirmed access token keeps its `auth_time` for the whole `STEP_UP_TTL` even if the user signs the device out meanwhile (same ≤ 15-minute caveat as below), and a refresh drops it — the user simply confirms again. A passkey is the strong method; the emailed code is only as strong as the mailbox, and either can be picked, so owning a passkey does not force it.
+- **OAuth step-up is deliberately not offered**: the attacker who holds a victim's browser session usually also holds their Google/GitHub session, so a redirect through the provider proves nothing extra.
+- **Challenge / state tables are written by unauthenticated calls** (`/auth/passkey/options`, `/auth/oauth/*/start`): rows are pruned an hour after expiry on the next insert, but there is no per-IP limit here the way the magic link has. Put a rate limit on `/api/auth/*` at the proxy if the API is exposed.
+- **Account deletion is not implemented**, so the step-up guard is not applied to it yet; when it is added it should call `StepUpPolicy.assertFresh` first, like `RequestEmailChange`.
 - **Logout (and remote logout of a device) does not revoke the access token immediately**: it stays valid for up to 15 minutes. Making it instant needs a denylist in a fast store (Redis) — the project deliberately avoids Redis.
 - **Magic-link rate limit in Postgres** (3/email, 10/IP per 15 minutes): correct with many instances, but a few extra requests can slip through under a race. Enough to stop spam; for something stricter, replace the adapter of the `MagicLinkThrottle` port.
 - **`x-forwarded-for` is trustworthy only behind a reverse proxy we control** (the nginx in compose sets it). Do not expose the API directly to the Internet while still trusting this header.

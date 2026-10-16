@@ -4,16 +4,36 @@ import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
 import { clientIp, userAgent } from '#/shared/http/client-info'
 import { API_PREFIX } from '#/shared/http/constants'
 import { errorResponse, validationError } from '#/shared/http/openapi'
+import type { WebAuthnResponse } from '../application/ports'
 import type { ConfirmEmailChange } from '../application/use-cases/confirm-email-change'
 import type { Logout } from '../application/use-cases/logout'
+import type { ListPasskeys, RemovePasskey } from '../application/use-cases/manage-passkeys'
 import type {
   ListSessions,
   RevokeOtherSessions,
   RevokeSession,
 } from '../application/use-cases/manage-sessions'
+import type {
+  BeginOAuth,
+  CompleteOAuth,
+  ListOAuthAccounts,
+  ListOAuthProviders,
+  UnlinkOAuthAccount,
+} from '../application/use-cases/oauth'
+import type { BeginPasskeyLogin, FinishPasskeyLogin } from '../application/use-cases/passkey-login'
+import type {
+  BeginPasskeyRegistration,
+  FinishPasskeyRegistration,
+} from '../application/use-cases/passkey-registration'
 import type { RefreshSession } from '../application/use-cases/refresh-session'
 import type { RequestEmailChange } from '../application/use-cases/request-email-change'
 import type { RequestMagicLink } from '../application/use-cases/request-magic-link'
+import type {
+  BeginStepUpPasskey,
+  FinishStepUpPasskey,
+  RequestStepUpCode,
+  VerifyStepUpCode,
+} from '../application/use-cases/step-up'
 import type {
   VerifyMagicLink,
   VerifyMagicLinkResult,
@@ -33,6 +53,21 @@ export interface IdentityRouteDeps {
     revokeOtherSessions: RevokeOtherSessions
     requestEmailChange: RequestEmailChange
     confirmEmailChange: ConfirmEmailChange
+    listOAuthProviders: ListOAuthProviders
+    beginOAuth: BeginOAuth
+    completeOAuth: CompleteOAuth
+    listOAuthAccounts: ListOAuthAccounts
+    unlinkOAuthAccount: UnlinkOAuthAccount
+    beginPasskeyLogin: BeginPasskeyLogin
+    finishPasskeyLogin: FinishPasskeyLogin
+    beginPasskeyRegistration: BeginPasskeyRegistration
+    finishPasskeyRegistration: FinishPasskeyRegistration
+    listPasskeys: ListPasskeys
+    removePasskey: RemovePasskey
+    requestStepUpCode: RequestStepUpCode
+    verifyStepUpCode: VerifyStepUpCode
+    beginStepUpPasskey: BeginStepUpPasskey
+    finishStepUpPasskey: FinishStepUpPasskey
   }
 }
 
@@ -73,6 +108,65 @@ const deviceSessionBody = t.Object({
 })
 
 const sentBody = t.Object({ status: t.Literal('sent') })
+
+/** What the browser's WebAuthn API returned. Only `id` is read by us; the library validates the rest. */
+const webauthnResponse = t.Object(
+  { id: t.String({ minLength: 1, maxLength: 1024 }) },
+  {
+    additionalProperties: true,
+    description: 'Result of `navigator.credentials.create/get`, as JSON',
+  },
+)
+const challengeId = t.String({
+  format: 'uuid',
+  description: 'Id returned together with the options',
+})
+const webauthnOptionsBody = t.Object({
+  challengeId,
+  options: t.Unknown({ description: 'JSON for `navigator.credentials.create/get({ publicKey })`' }),
+})
+const elevatedBody = t.Object(
+  {
+    accessToken: t.String({
+      description: 'Same session, with a fresh `auth_time` — use it from now on',
+    }),
+    expiresIn: t.Number({ description: 'Access token lifetime (seconds)' }),
+  },
+  { description: 'New access token that counts as a recent confirmation' },
+)
+const providerParam = t.Object({
+  provider: t.String({ description: 'Sign-in provider id', examples: ['google', 'github'] }),
+})
+const urlBody = t.Object({ url: t.String({ description: 'Send the browser here to continue' }) })
+const passkeyBody = t.Object({
+  id: t.String({ format: 'uuid' }),
+  name: t.String(),
+  deviceType: t.String({ description: '`singleDevice` or `multiDevice` (synced)' }),
+  backedUp: t.Boolean(),
+  createdAt: t.String({ format: 'date-time' }),
+  lastUsedAt: t.Nullable(t.String({ format: 'date-time' })),
+})
+const oauthAccountBody = t.Object({
+  provider: t.String(),
+  email: t.Nullable(t.String({ description: 'Address the provider reported' })),
+  linkedAt: t.String({ format: 'date-time' }),
+})
+
+const passkeyJson = (p: {
+  id: string
+  name: string
+  deviceType: string
+  backedUp: boolean
+  createdAt: Date
+  lastUsedAt: Date | null
+}) => ({
+  id: p.id,
+  name: p.name,
+  deviceType: p.deviceType,
+  backedUp: p.backedUp,
+  createdAt: p.createdAt.toISOString(),
+  lastUsedAt: p.lastUsedAt?.toISOString() ?? null,
+})
 
 const sessionResponse = (result: VerifyMagicLinkResult) => ({
   accessToken: result.session.accessToken,
@@ -184,13 +278,128 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         response: { 204: t.Void({ description: 'Signed out' }) },
       },
     )
+    .get('/oauth/providers', () => ({ providers: uc.listOAuthProviders.execute() }), {
+      detail: {
+        summary: 'List enabled OAuth providers',
+        description:
+          'Providers with credentials configured on the server, for the sign-in buttons.',
+      },
+      response: { 200: t.Object({ providers: t.Array(t.String()) }) },
+    })
+    .post(
+      '/oauth/:provider/start',
+      async ({ params }) => uc.beginOAuth.execute({ provider: params.provider, purpose: 'login' }),
+      {
+        params: providerParam,
+        detail: {
+          summary: 'Start OAuth sign-in',
+          description:
+            'Returns the provider URL to send the browser to. The provider sends it back to the web app at ' +
+            '`/auth/oauth/callback?code&state`, which finishes with `POST /auth/oauth/callback`.',
+        },
+        response: {
+          200: urlBody,
+          400: validationError(),
+          404: errorResponse(404, 'oauth_provider_unavailable'),
+        },
+      },
+    )
+    .post(
+      '/oauth/callback',
+      async ({ body, maybeAuth, request, server, cookie }) => {
+        const result = await uc.completeOAuth.execute({
+          state: body.state,
+          code: body.code,
+          authUserId: maybeAuth?.userId,
+          meta: { ip: clientIp(request, server), userAgent: userAgent(request) },
+        })
+        if (result.kind === 'link') {
+          return { purpose: 'link' as const, provider: result.provider, email: result.email }
+        }
+        setRefreshCookie(cookie, result, deps.secureCookies)
+        return { purpose: 'login' as const, ...sessionResponse(result) }
+      },
+      {
+        authOptional: true,
+        body: t.Object({
+          code: t.String({ minLength: 1, maxLength: 2048 }),
+          state: t.String({ minLength: 1, maxLength: 200 }),
+        }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Finish OAuth flow',
+          description:
+            'Exchanges the `code` the provider returned. For a sign-in it creates the session (and the account on first use). ' +
+            'For connecting a provider it must be called with the access token of the user who started it.',
+        },
+        response: {
+          200: t.Union([
+            t.Object({ purpose: t.Literal('login'), ...sessionBody.properties }),
+            t.Object({
+              purpose: t.Literal('link'),
+              provider: t.String(),
+              email: t.Nullable(t.String()),
+            }),
+          ]),
+          400: validationError(
+            'invalid_oauth_state',
+            'oauth_exchange_failed',
+            'oauth_email_unverified',
+          ),
+          403: errorResponse(403, 'oauth_state_mismatch'),
+          409: errorResponse(409, 'oauth_account_taken', 'oauth_provider_already_linked'),
+        },
+      },
+    )
+    .post('/passkey/options', () => uc.beginPasskeyLogin.execute(), {
+      detail: {
+        summary: 'Start passkey sign-in',
+        description:
+          'Options for `navigator.credentials.get`. No email is needed: the browser offers the passkeys it holds for this site.',
+      },
+      response: { 200: webauthnOptionsBody },
+    })
+    .post(
+      '/passkey/verify',
+      async ({ body, request, server, cookie }) => {
+        const result = await uc.finishPasskeyLogin.execute({
+          challengeId: body.challengeId,
+          response: body.response as WebAuthnResponse,
+          meta: { ip: clientIp(request, server), userAgent: userAgent(request) },
+        })
+        setRefreshCookie(cookie, result, deps.secureCookies)
+        return sessionResponse(result)
+      },
+      {
+        body: t.Object({ challengeId, response: webauthnResponse }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Sign in with a passkey',
+          description: 'Verifies the assertion and sets the refresh token cookie.',
+        },
+        response: {
+          200: sessionBody,
+          400: validationError('invalid_passkey_challenge'),
+          401: errorResponse(
+            401,
+            'passkey_not_recognized',
+            'passkey_rejected',
+            'passkey_counter_regressed',
+          ),
+        },
+      },
+    )
 
   const accountRoutes = new Elysia({ prefix: '/account', tags: ['account'] })
     .use(authPlugin(deps.verifier))
     .post(
       '/email-change',
       async ({ auth, body, set }) => {
-        await uc.requestEmailChange.execute({ userId: auth.userId, newEmail: body.newEmail })
+        await uc.requestEmailChange.execute({
+          userId: auth.userId,
+          newEmail: body.newEmail,
+          authTime: auth.authTime,
+        })
         set.status = 202
         return { status: 'sent' as const }
       },
@@ -207,6 +416,7 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
             description: 'Request accepted, the email will be sent asynchronously',
           }),
           400: validationError('invalid_email', 'email_unchanged'),
+          403: errorResponse(403, 'step_up_required'),
           404: errorResponse(404, 'user_not_found'),
           409: errorResponse(409, 'email_taken'),
         },
@@ -271,6 +481,225 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           204: t.Void({ description: 'Session revoked' }),
           400: validationError(),
           404: errorResponse(404, 'session_not_found'),
+        },
+      },
+    )
+    .post(
+      '/step-up/email-code',
+      async ({ auth, set }) => {
+        await uc.requestStepUpCode.execute({ userId: auth.userId })
+        set.status = 202
+        return { status: 'sent' as const }
+      },
+      {
+        auth: true,
+        detail: {
+          summary: 'Email a confirmation code',
+          description:
+            'Sends a 6-digit code to the account email. Entering it (`/step-up/email-code/verify`) confirms a sensitive action.',
+        },
+        response: {
+          202: t.Object(sentBody.properties, { description: 'The code will be mailed shortly' }),
+          429: errorResponse(429, 'step_up_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/step-up/email-code/verify',
+      ({ auth, body }) =>
+        uc.verifyStepUpCode.execute({
+          userId: auth.userId,
+          sessionId: auth.sessionId,
+          code: body.code,
+        }),
+      {
+        auth: true,
+        body: t.Object({
+          code: t.String({ minLength: 1, maxLength: 20, description: 'The 6-digit code' }),
+        }),
+        detail: {
+          summary: 'Confirm with an emailed code',
+          description: 'A wrong code counts against 5 attempts; the code lasts 10 minutes.',
+        },
+        response: { 200: elevatedBody, 400: validationError('invalid_step_up_code') },
+      },
+    )
+    .post(
+      '/step-up/passkey/options',
+      ({ auth }) => uc.beginStepUpPasskey.execute({ userId: auth.userId }),
+      {
+        auth: true,
+        detail: {
+          summary: 'Start confirming with a passkey',
+          description:
+            'Options for `navigator.credentials.get`, limited to the account’s own passkeys.',
+        },
+        response: { 200: webauthnOptionsBody, 400: validationError('no_passkeys') },
+      },
+    )
+    .post(
+      '/step-up/passkey/verify',
+      ({ auth, body }) =>
+        uc.finishStepUpPasskey.execute({
+          userId: auth.userId,
+          sessionId: auth.sessionId,
+          challengeId: body.challengeId,
+          response: body.response as WebAuthnResponse,
+        }),
+      {
+        auth: true,
+        body: t.Object({ challengeId, response: webauthnResponse }),
+        detail: { summary: 'Confirm with a passkey' },
+        response: {
+          200: elevatedBody,
+          400: validationError('invalid_passkey_challenge'),
+          401: errorResponse(401, 'passkey_not_recognized', 'passkey_rejected'),
+        },
+      },
+    )
+    .get(
+      '/passkeys',
+      async ({ auth }) => {
+        const passkeys = await uc.listPasskeys.execute({ userId: auth.userId })
+        return { passkeys: passkeys.map(passkeyJson) }
+      },
+      {
+        auth: true,
+        detail: { summary: 'List passkeys' },
+        response: { 200: t.Object({ passkeys: t.Array(passkeyBody) }) },
+      },
+    )
+    .post(
+      '/passkeys/options',
+      ({ auth }) =>
+        uc.beginPasskeyRegistration.execute({ userId: auth.userId, authTime: auth.authTime }),
+      {
+        auth: true,
+        detail: {
+          summary: 'Start adding a passkey',
+          description: 'Options for `navigator.credentials.create`. Needs a recent confirmation.',
+        },
+        response: {
+          200: webauthnOptionsBody,
+          403: errorResponse(403, 'step_up_required'),
+          409: errorResponse(409, 'passkey_limit_reached'),
+        },
+      },
+    )
+    .post(
+      '/passkeys',
+      async ({ auth, body, set }) => {
+        const passkey = await uc.finishPasskeyRegistration.execute({
+          userId: auth.userId,
+          authTime: auth.authTime,
+          challengeId: body.challengeId,
+          response: body.response as WebAuthnResponse,
+          name: body.name,
+        })
+        set.status = 201
+        return passkeyJson(passkey)
+      },
+      {
+        auth: true,
+        body: t.Object({
+          challengeId,
+          response: webauthnResponse,
+          name: t.Optional(t.String({ maxLength: 60, description: 'A label to recognise it by' })),
+        }),
+        detail: {
+          summary: 'Add a passkey',
+          description: 'Verifies the attestation and stores the passkey.',
+        },
+        response: {
+          201: passkeyBody,
+          400: validationError('invalid_passkey_challenge', 'passkey_verification_failed'),
+          403: errorResponse(403, 'step_up_required'),
+          409: errorResponse(409, 'passkey_exists'),
+        },
+      },
+    )
+    .delete(
+      '/passkeys/:id',
+      async ({ auth, params, set }) => {
+        await uc.removePasskey.execute({
+          userId: auth.userId,
+          passkeyId: params.id,
+          authTime: auth.authTime,
+        })
+        set.status = 204
+      },
+      {
+        auth: true,
+        params: t.Object({ id: t.String({ format: 'uuid' }) }),
+        detail: { summary: 'Remove a passkey', description: 'Needs a recent confirmation.' },
+        response: {
+          204: t.Void({ description: 'Passkey removed' }),
+          400: validationError(),
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'passkey_not_found'),
+        },
+      },
+    )
+    .get(
+      '/oauth',
+      async ({ auth }) => {
+        const accounts = await uc.listOAuthAccounts.execute({ userId: auth.userId })
+        return {
+          accounts: accounts.map((a) => ({ ...a, linkedAt: a.linkedAt.toISOString() })),
+        }
+      },
+      {
+        auth: true,
+        detail: { summary: 'List connected Google/GitHub accounts' },
+        response: { 200: t.Object({ accounts: t.Array(oauthAccountBody) }) },
+      },
+    )
+    .post(
+      '/oauth/:provider/link',
+      ({ auth, params }) =>
+        uc.beginOAuth.execute({
+          provider: params.provider,
+          purpose: 'link',
+          userId: auth.userId,
+          authTime: auth.authTime,
+        }),
+      {
+        auth: true,
+        params: providerParam,
+        detail: {
+          summary: 'Connect a provider',
+          description:
+            'Returns the provider URL to send the browser to; finish with `POST /auth/oauth/callback` while signed in. Needs a recent confirmation.',
+        },
+        response: {
+          200: urlBody,
+          400: validationError(),
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'oauth_provider_unavailable'),
+        },
+      },
+    )
+    .delete(
+      '/oauth/:provider',
+      async ({ auth, params, set }) => {
+        await uc.unlinkOAuthAccount.execute({
+          userId: auth.userId,
+          provider: params.provider,
+          authTime: auth.authTime,
+        })
+        set.status = 204
+      },
+      {
+        auth: true,
+        params: providerParam,
+        detail: {
+          summary: 'Disconnect a provider',
+          description: 'Email sign-in always remains. Needs a recent confirmation.',
+        },
+        response: {
+          204: t.Void({ description: 'Disconnected' }),
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'oauth_account_not_found'),
         },
       },
     )

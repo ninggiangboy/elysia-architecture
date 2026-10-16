@@ -47,3 +47,37 @@ describe('APP_ROLES', () => {
     expect(() => loadConfig({ ...base, APP_ROLES: 'api,relay' })).toThrow('APP_ROLES')
   })
 })
+
+describe('passkeys and OAuth', () => {
+  test('WebAuthn defaults follow WEB_APP_URL', () => {
+    const config = loadConfig({ ...base, WEB_APP_URL: 'https://app.example.com:8443/x' })
+    expect(config.WEBAUTHN_RP_ID).toBe('app.example.com')
+    expect(config.WEBAUTHN_ORIGINS).toEqual(['https://app.example.com:8443'])
+  })
+
+  test('WebAuthn can be pointed elsewhere', () => {
+    const config = loadConfig({
+      ...base,
+      WEBAUTHN_RP_ID: 'example.com',
+      WEBAUTHN_ORIGINS: 'https://a.example.com, https://b.example.com',
+    })
+    expect(config.WEBAUTHN_RP_ID).toBe('example.com')
+    expect(config.WEBAUTHN_ORIGINS).toEqual(['https://a.example.com', 'https://b.example.com'])
+  })
+
+  test('an OAuth provider needs both its id and its secret', () => {
+    expect(() => loadConfig({ ...base, GOOGLE_CLIENT_ID: 'id' })).toThrow('GOOGLE_CLIENT_SECRET')
+    expect(() => loadConfig({ ...base, GITHUB_CLIENT_SECRET: 's' })).toThrow('GITHUB_CLIENT_ID')
+    expect(
+      loadConfig({ ...base, GITHUB_CLIENT_ID: 'i', GITHUB_CLIENT_SECRET: 's' }).GITHUB_CLIENT_ID,
+    ).toBe('i')
+    expect(
+      loadConfig({ ...base, GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '' }).GOOGLE_CLIENT_ID,
+    ).toBeUndefined()
+  })
+
+  test('the confirmation window defaults to five minutes', () => {
+    expect(loadConfig(base).STEP_UP_TTL).toBe(300)
+    expect(loadConfig({ ...base, STEP_UP_TTL: '2m' }).STEP_UP_TTL).toBe(120)
+  })
+})
