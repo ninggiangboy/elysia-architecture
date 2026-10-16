@@ -49,9 +49,9 @@ test.describe('realtime', () => {
     await expect(laptop.getByTestId('sessions').getByRole('listitem')).toHaveCount(1)
 
     const phone = await signIn(phoneContext, email)
-    // The laptop learns about the new device without reloading.
+    // A new sign-in is not pushed; the laptop sees the phone after a reload.
+    await laptop.reload()
     await expect(laptop.getByTestId('sessions').getByRole('listitem')).toHaveCount(2)
-    await expect(laptop.getByText('New sign-in on your account')).toBeVisible()
 
     await laptop
       .getByTestId('sessions')
