@@ -1,10 +1,11 @@
 import { useMutation } from '@tanstack/react-query'
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { MailCheck } from 'lucide-react'
+import { ArrowLeft, MailCheck } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { toast } from 'sonner'
+import { AuthShell } from '@/components/layout/auth-shell'
 import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { requestMagicLink } from '@/features/auth/queries'
@@ -33,47 +34,69 @@ function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center px-4">
-      <Card className="w-full max-w-sm">
+    <AuthShell>
+      <Card>
         {sentTo ? (
-          <div className="flex flex-col items-center gap-3 text-center" role="status">
-            <MailCheck className="size-10 text-muted-foreground" aria-hidden />
-            <CardTitle>Check your inbox</CardTitle>
-            <CardDescription>
-              We sent a sign-in link to <b className="text-foreground">{sentTo}</b>. The link is
-              valid for 15 minutes.
-            </CardDescription>
-            <Button variant="ghost" size="sm" onClick={() => setSentTo(null)}>
-              Use a different email
-            </Button>
-          </div>
+          <CardContent className="flex flex-col items-center gap-4 py-8 text-center" role="status">
+            <span className="grid size-12 place-items-center rounded-full bg-accent text-accent-foreground">
+              <MailCheck className="size-6" aria-hidden />
+            </span>
+            <div className="flex flex-col gap-1.5">
+              <h1 className="text-lg font-semibold tracking-tight">Check your inbox</h1>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                We sent a sign-in link to{' '}
+                <span className="font-medium break-all text-foreground">{sentTo}</span>. It is valid
+                for 15 minutes.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setSentTo(null)}>
+                <ArrowLeft aria-hidden /> Use a different email
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={send.isPending}
+                onClick={() => send.mutate(sentTo)}
+              >
+                Resend link
+              </Button>
+            </div>
+          </CardContent>
         ) : (
-          <form onSubmit={submit} className="flex flex-col gap-4">
-            <div>
-              <CardTitle className="text-xl">Sign in</CardTitle>
-              <CardDescription>
-                Enter your email and we will send you a sign-in link — no password needed.
-              </CardDescription>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                autoFocus
-                autoComplete="email"
-                placeholder="ban@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <Button type="submit" disabled={send.isPending}>
-              {send.isPending ? 'Sending…' : 'Send sign-in link'}
-            </Button>
-          </form>
+          <CardContent>
+            <form onSubmit={submit} className="flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Enter your email and we will send you a sign-in link — no password needed.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  autoFocus
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="you@example.com"
+                  className="h-10"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <Button type="submit" size="lg" loading={send.isPending}>
+                Send sign-in link
+              </Button>
+            </form>
+          </CardContent>
         )}
       </Card>
-    </main>
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        New here? The same link creates your account.
+      </p>
+    </AuthShell>
   )
 }

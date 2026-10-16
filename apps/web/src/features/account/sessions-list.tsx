@@ -1,7 +1,11 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { Monitor, Smartphone, Tablet } from 'lucide-react'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardFooter } from '@/components/ui/card'
 import { errorMessage } from '@/lib/api'
+import { formatDate, formatRelative } from '@/lib/format'
 import { revokeOtherSessions, revokeSession, sessionsQuery } from './queries'
 
 type Matchers = ReadonlyArray<readonly [RegExp, string]>
@@ -31,8 +35,18 @@ function describeDevice(userAgent: string | null) {
   return browser ?? os ?? userAgent.slice(0, 40)
 }
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+function DeviceIcon({ userAgent }: { userAgent: string | null }) {
+  const Icon = /iPad|Tablet/.test(userAgent ?? '')
+    ? Tablet
+    : /Mobi|iPhone|Android/.test(userAgent ?? '')
+      ? Smartphone
+      : Monitor
+  return (
+    <span className="grid size-10 shrink-0 place-items-center rounded-lg border border-border bg-muted/50 text-muted-foreground">
+      <Icon className="size-5" aria-hidden />
+    </span>
+  )
+}
 
 export function SessionsList() {
   const queryClient = useQueryClient()
@@ -47,36 +61,42 @@ export function SessionsList() {
   })
   const revokeOthers = useMutation({
     mutationFn: revokeOtherSessions,
-    onSuccess: ({ revoked }) => toast.success(`Signed out ${revoked} other device(s)`),
+    onSuccess: ({ revoked }) =>
+      toast.success(`Signed out ${revoked} other ${revoked === 1 ? 'device' : 'devices'}`),
     onError: (err) => toast.error(errorMessage(err)),
     onSettled: refetch,
   })
 
-  const others = sessions.filter((s) => !s.current)
+  // This device first, then the most recently active.
+  const ordered = [...sessions].sort(
+    (a, b) => Number(b.current) - Number(a.current) || b.lastActiveAt.localeCompare(a.lastActiveAt),
+  )
+  const others = sessions.length - sessions.filter((s) => s.current).length
 
   return (
-    <div className="mt-4 flex flex-col gap-4">
-      <ul className="flex flex-col divide-y divide-border" data-testid="sessions">
-        {sessions.map((s) => (
-          <li key={s.id} className="flex items-center justify-between gap-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {describeDevice(s.userAgent)}
-                {s.current && (
-                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal">
-                    This device
-                  </span>
-                )}
+    <Card>
+      <ul className="divide-y divide-border" data-testid="sessions">
+        {ordered.map((s) => (
+          <li key={s.id} className="flex items-center gap-4 px-5 py-4 sm:px-6">
+            <DeviceIcon userAgent={s.userAgent} />
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
+                <span className="truncate">{describeDevice(s.userAgent)}</span>
+                {s.current && <Badge variant="accent">This device</Badge>}
               </p>
-              <p className="truncate text-xs text-muted-foreground">
-                {s.ip ?? 'Unknown IP'} · signed in {formatDate(s.startedAt)} · active{' '}
-                {formatDate(s.lastActiveAt)}
+              <p className="flex flex-wrap gap-x-1.5 text-xs text-muted-foreground [&>span+span]:before:mr-1.5 [&>span+span]:before:content-['·']">
+                <span>{s.ip ?? 'Unknown IP'}</span>
+                <span title={formatDate(s.lastActiveAt)}>
+                  {s.current ? 'Active now' : `Active ${formatRelative(s.lastActiveAt)}`}
+                </span>
+                <span title={formatDate(s.startedAt)}>Signed in {formatRelative(s.startedAt)}</span>
               </p>
             </div>
             {!s.current && (
               <Button
                 variant="outline"
                 size="sm"
+                loading={revoke.isPending && revoke.variables === s.id}
                 disabled={revoke.isPending}
                 onClick={() => revoke.mutate(s.id)}
               >
@@ -86,16 +106,24 @@ export function SessionsList() {
           </li>
         ))}
       </ul>
-      {others.length > 0 && (
-        <Button
-          variant="outline"
-          className="self-start"
-          disabled={revokeOthers.isPending}
-          onClick={() => revokeOthers.mutate()}
-        >
-          Sign out all other devices
-        </Button>
-      )}
-    </div>
+      <CardFooter>
+        <p className="text-xs text-muted-foreground">
+          {others > 0
+            ? `${others} other ${others === 1 ? 'device is' : 'devices are'} signed in.`
+            : 'Only this device is signed in.'}
+        </p>
+        {others > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="ml-auto"
+            loading={revokeOthers.isPending}
+            onClick={() => revokeOthers.mutate()}
+          >
+            Sign out all other devices
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
   )
 }

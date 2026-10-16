@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { AuthShell } from '@/components/layout/auth-shell'
+import { StatusPanel } from '@/components/layout/status-panel'
+import { Button } from '@/components/ui/button'
 import { verifyMagicLink } from '@/features/auth/queries'
 import { errorMessage } from '@/lib/api'
 import { once } from '@/lib/once'
@@ -26,20 +28,24 @@ function CallbackPage() {
   }, [token, navigate])
 
   return (
-    <main className="grid min-h-screen place-items-center px-4">
-      <Card className="w-full max-w-sm text-center" role="status">
-        {error ? (
-          <>
-            <CardTitle>Could not sign in</CardTitle>
-            <CardDescription>{error}</CardDescription>
-            <Link to="/login" className="mt-4 inline-block text-sm underline">
-              Request a new link
-            </Link>
-          </>
-        ) : (
-          <CardDescription>Signing in…</CardDescription>
-        )}
-      </Card>
-    </main>
+    <AuthShell>
+      {error ? (
+        <StatusPanel
+          tone="error"
+          title="Could not sign in"
+          action={
+            <Button asChild variant="outline">
+              <Link to="/login">Request a new link</Link>
+            </Button>
+          }
+        >
+          {error}
+        </StatusPanel>
+      ) : (
+        <StatusPanel tone="pending" title="Signing you in…">
+          Verifying your sign-in link.
+        </StatusPanel>
+      )}
+    </AuthShell>
   )
 }

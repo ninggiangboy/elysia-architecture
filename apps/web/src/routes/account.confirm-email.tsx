@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { Card, CardDescription, CardTitle } from '@/components/ui/card'
+import { AuthShell } from '@/components/layout/auth-shell'
+import { StatusPanel } from '@/components/layout/status-panel'
+import { Button } from '@/components/ui/button'
 import { confirmEmailChange } from '@/features/account/queries'
 import { errorMessage } from '@/lib/api'
 import { once } from '@/lib/once'
@@ -30,28 +32,28 @@ function ConfirmEmailPage() {
       .catch((err) => setResult({ error: errorMessage(err) }))
   }, [token, queryClient])
 
+  const home = (
+    <Button asChild variant="outline">
+      <Link to="/">Back to home</Link>
+    </Button>
+  )
+
   return (
-    <main className="grid min-h-screen place-items-center px-4">
-      <Card className="w-full max-w-sm text-center" role="status">
-        {!result ? (
-          <CardDescription>Confirming…</CardDescription>
-        ) : 'error' in result ? (
-          <>
-            <CardTitle>Could not confirm</CardTitle>
-            <CardDescription>{result.error}</CardDescription>
-          </>
-        ) : (
-          <>
-            <CardTitle>Email changed</CardTitle>
-            <CardDescription>
-              Your account email is now <b className="text-foreground">{result.email}</b>.
-            </CardDescription>
-          </>
-        )}
-        <Link to="/" className="mt-4 inline-block text-sm underline">
-          Back to home
-        </Link>
-      </Card>
-    </main>
+    <AuthShell>
+      {!result ? (
+        <StatusPanel tone="pending" title="Confirming…">
+          Updating your account email.
+        </StatusPanel>
+      ) : 'error' in result ? (
+        <StatusPanel tone="error" title="Could not confirm" action={home}>
+          {result.error}
+        </StatusPanel>
+      ) : (
+        <StatusPanel tone="success" title="Email changed" action={home}>
+          Your account email is now{' '}
+          <span className="font-medium break-all text-foreground">{result.email}</span>.
+        </StatusPanel>
+      )}
+    </AuthShell>
   )
 }

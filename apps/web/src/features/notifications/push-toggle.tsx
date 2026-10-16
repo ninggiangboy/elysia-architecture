@@ -2,10 +2,27 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BellOff, BellRing } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { errorMessage } from '@/lib/api'
 import { disablePush, enablePush, type PushState, pushState } from '@/lib/push'
+import { cn } from '@/lib/utils'
 
 const pushStateQuery = { queryKey: ['notifications', 'push-state'], queryFn: pushState }
+
+const COPY: Record<'on' | 'off' | 'denied', { title: string; text: string }> = {
+  on: {
+    title: 'Browser notifications are on',
+    text: 'This browser shows a system notification when something happens, even when the app is closed.',
+  },
+  off: {
+    title: 'Browser notifications are off',
+    text: 'Get a system notification on this browser, even when the app is closed.',
+  },
+  denied: {
+    title: 'Browser notifications are blocked',
+    text: "Allow them in your browser's site settings to get alerts here.",
+  },
+}
 
 /** Turns Web Push on or off for THIS browser. Renders nothing where it cannot work. */
 export function PushToggle() {
@@ -18,38 +35,46 @@ export function PushToggle() {
   })
 
   if (!state || state === 'unsupported' || state === 'unavailable') return null
-  if (state === 'denied')
-    return (
-      <p className="text-sm text-muted-foreground" data-testid="push-denied">
-        Browser notifications are blocked for this site. Allow them in your browser's site settings
-        to get alerts here.
-      </p>
-    )
 
+  const on = state === 'on'
+  const denied = state === 'denied'
+  const copy = COPY[state]
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
-      <p className="text-sm text-muted-foreground">
-        {state === 'on'
-          ? 'This browser shows a system notification when something happens, even when the app is closed.'
-          : 'Get a system notification on this browser, even when the app is closed.'}
-      </p>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={toggle.isPending}
-        onClick={() => toggle.mutate()}
-        data-testid="push-toggle"
-      >
-        {state === 'on' ? (
-          <>
-            <BellOff className="size-4" aria-hidden /> Turn off
-          </>
-        ) : (
-          <>
-            <BellRing className="size-4" aria-hidden /> Turn on
-          </>
+    <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:px-6">
+      <span
+        className={cn(
+          'grid size-10 shrink-0 place-items-center rounded-lg',
+          on ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground',
         )}
-      </Button>
-    </div>
+      >
+        {on ? (
+          <BellRing className="size-5" aria-hidden />
+        ) : (
+          <BellOff className="size-5" aria-hidden />
+        )}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="text-sm font-medium">{copy.title}</p>
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid={denied ? 'push-denied' : undefined}
+        >
+          {copy.text}
+        </p>
+      </div>
+      {!denied && (
+        <Button
+          variant={on ? 'outline' : 'default'}
+          size="sm"
+          className="self-start sm:self-center"
+          loading={toggle.isPending}
+          onClick={() => toggle.mutate()}
+          data-testid="push-toggle"
+        >
+          {!toggle.isPending && (on ? <BellOff aria-hidden /> : <BellRing aria-hidden />)}
+          {on ? 'Turn off' : 'Turn on'}
+        </Button>
+      )}
+    </Card>
   )
 }

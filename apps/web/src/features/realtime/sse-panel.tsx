@@ -1,7 +1,9 @@
+import { Plug, Trash2, Unplug } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { connectSse, type RealtimeMessage, type RealtimeStatus } from '@/lib/realtime'
+import { cn } from '@/lib/utils'
 
 interface LogEntry {
   key: number
@@ -10,6 +12,13 @@ interface LogEntry {
 }
 
 const MAX_LOG = 30
+
+const STATUS_STYLES: Record<RealtimeStatus, { badge: string; dot: string }> = {
+  open: { badge: 'bg-success/12 text-success', dot: 'bg-success animate-pulse' },
+  connecting: { badge: 'bg-warning/12 text-warning', dot: 'bg-warning' },
+  reconnecting: { badge: 'bg-warning/12 text-warning', dot: 'bg-warning' },
+  closed: { badge: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground/60' },
+}
 
 /** The live SSE connection with its status and the events it received. Mount = connect, unmount = disconnect. */
 export function SsePanel() {
@@ -33,37 +42,68 @@ export function SsePanel() {
     return () => connection.close()
   }, [enabled])
 
+  const style = STATUS_STYLES[status]
   return (
-    <Card>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <CardTitle>Server-Sent Events</CardTitle>
+    <Card className="flex flex-col">
+      <div className="flex flex-wrap items-start justify-between gap-4 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
+        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex items-center gap-2.5">
+            <CardTitle>Event log</CardTitle>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium',
+                style.badge,
+              )}
+            >
+              <span aria-hidden className={cn('size-1.5 rounded-full', style.dot)} />
+              <span data-testid="status-sse">{status}</span>
+            </span>
+          </div>
           <CardDescription>
             One-way stream over HTTP (fetch + Authorization header). Reconnects by itself.
           </CardDescription>
         </div>
-        <span
-          data-testid="status-sse"
-          className="shrink-0 rounded bg-muted px-2 py-1 text-xs font-medium"
-        >
-          {status}
-        </span>
-      </div>
-      <div className="mt-4">
-        <Button variant="outline" size="sm" onClick={() => setEnabled((v) => !v)}>
-          {enabled ? 'Disconnect' : 'Connect'}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={log.length === 0}
+            onClick={() => setLog([])}
+            aria-label="Clear log"
+            title="Clear log"
+          >
+            <Trash2 aria-hidden />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setEnabled((v) => !v)}>
+            {enabled ? <Unplug aria-hidden /> : <Plug aria-hidden />}
+            {enabled ? 'Disconnect' : 'Connect'}
+          </Button>
+        </div>
       </div>
       <ul
-        className="mt-4 flex max-h-64 flex-col gap-1 overflow-auto font-mono text-xs"
+        className="mx-5 mb-5 flex h-80 flex-col overflow-y-auto rounded-lg border border-border bg-muted/40 p-2 font-mono text-xs sm:mx-6 sm:mb-6 lg:h-[26rem]"
         data-testid="log-sse"
+        aria-live="polite"
       >
-        {log.length === 0 && <li className="text-muted-foreground">No events yet.</li>}
+        {log.length === 0 && (
+          <li className="m-auto px-4 text-center font-sans text-sm text-muted-foreground">
+            No events yet. Send a test event to see it here.
+          </li>
+        )}
         {log.map((entry) => (
-          <li key={entry.key} className="break-all">
-            <span className="text-muted-foreground">{entry.at}</span>{' '}
-            <strong>{entry.message.type}</strong>{' '}
-            {entry.message.data ? JSON.stringify(entry.message.data) : ''}
+          <li
+            key={entry.key}
+            className="flex flex-col gap-1 rounded-md px-2.5 py-2 hover:bg-card sm:flex-row sm:gap-3"
+          >
+            <span className="shrink-0 text-muted-foreground tabular-nums">{entry.at}</span>
+            <div className="min-w-0">
+              <span className="font-semibold text-accent-foreground">{entry.message.type}</span>
+              {entry.message.data && (
+                <pre className="mt-1 break-all whitespace-pre-wrap text-muted-foreground">
+                  {JSON.stringify(entry.message.data)}
+                </pre>
+              )}
+            </div>
           </li>
         ))}
       </ul>

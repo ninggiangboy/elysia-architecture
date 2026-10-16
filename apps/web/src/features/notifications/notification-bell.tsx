@@ -10,13 +10,14 @@ export function NotificationBell() {
     <Link
       to="/notifications"
       aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-      className="relative inline-flex size-9 items-center justify-center rounded-md hover:bg-muted"
+      title="Notifications"
+      className="relative grid size-9 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 [&.active]:bg-muted [&.active]:text-foreground"
     >
-      <Bell className="size-5" aria-hidden />
+      <Bell className="size-[18px]" aria-hidden />
       {unread > 0 && (
         <span
           data-testid="unread-badge"
-          className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-4 text-primary-foreground"
+          className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground ring-2 ring-background"
         >
           {unread > 99 ? '99+' : unread}
         </span>

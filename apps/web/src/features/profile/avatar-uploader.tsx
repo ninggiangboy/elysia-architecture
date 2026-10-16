@@ -1,6 +1,6 @@
 import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES } from '@app/shared-types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Camera } from 'lucide-react'
+import { Camera, LoaderCircle } from 'lucide-react'
 import { type ChangeEvent, useRef } from 'react'
 import { toast } from 'sonner'
 import { Avatar } from '@/components/ui/avatar'
@@ -40,14 +40,24 @@ export function AvatarUploader({ name, avatarUrl }: { name: string; avatarUrl: s
   }
 
   return (
-    <div className="relative">
-      <Avatar src={avatarUrl} name={name} />
+    <div className="relative -mt-10 w-fit shrink-0 sm:-mt-12">
+      <Avatar
+        src={avatarUrl}
+        name={name}
+        className="size-20 border-4 border-card text-2xl shadow-sm sm:size-24"
+      />
+      {upload.isPending && (
+        <span className="absolute inset-1 grid place-items-center rounded-full bg-black/45 text-white">
+          <LoaderCircle className="size-6 animate-spin" aria-hidden />
+        </span>
+      )}
       <button
         type="button"
         onClick={() => input.current?.click()}
         disabled={upload.isPending}
         aria-label="Change profile picture"
-        className="absolute -right-1 -bottom-1 grid size-8 place-items-center rounded-full border border-border bg-card shadow-sm hover:bg-muted disabled:opacity-50"
+        title="Change profile picture"
+        className="absolute right-0 bottom-0 grid size-8 place-items-center rounded-full border border-border bg-card text-foreground shadow-md transition-colors outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-50"
       >
         <Camera className="size-4" aria-hidden />
       </button>
