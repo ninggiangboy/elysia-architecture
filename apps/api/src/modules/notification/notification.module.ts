@@ -20,7 +20,9 @@ import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import { CreateNotificationHandler } from './application/handlers/create-notification-handler'
+import { DropPushSubscriptionsHandler } from './application/handlers/drop-push-subscriptions-handler'
 import { MailEventHandler } from './application/handlers/mail-event-handler'
+import { WebPushHandler } from './application/handlers/web-push-handler'
 import {
   emailChangedNotification,
   type NotificationDraft,
@@ -28,6 +30,7 @@ import {
   suspiciousSessionNotification,
   welcomeNotification,
 } from './application/in-app-notifications'
+import type { WebPushSender } from './application/ports'
 import {
   confirmEmailChangeMail,
   emailChangedNoticeMail,
@@ -36,8 +39,10 @@ import {
 } from './application/templates'
 import { ThrottledMailer } from './application/throttled-mailer'
 import { MarkAllNotificationsRead, MarkNotificationRead } from './application/use-cases/mark-read'
+import { SubscribeToPush, UnsubscribeFromPush } from './application/use-cases/push-subscriptions'
 import { GetUnreadCount, ListNotifications } from './application/use-cases/read-notifications'
 import { DrizzleNotificationRepository } from './infrastructure/persistence/drizzle-notification-repository'
+import { DrizzlePushSubscriptionRepository } from './infrastructure/persistence/drizzle-push-subscription-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
 import { PostgresSendRateLimiter } from './infrastructure/postgres-send-rate-limiter'
 import { notificationRoutes } from './presentation/routes'
@@ -52,6 +57,8 @@ export interface NotificationModuleDeps {
   log: Log
   verifier: TokenVerifier
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
+  /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
+  webPush?: { sender: WebPushSender; publicKey: string }
 }
 
 export interface NotificationModule {
@@ -73,6 +80,7 @@ export function createNotificationModule({
   log,
   verifier,
   sending,
+  webPush,
 }: NotificationModuleDeps): NotificationModule {
   const guard = new DrizzleInboxGuard(database, inbox)
   const mailer = new ThrottledMailer(
@@ -84,6 +92,7 @@ export function createNotificationModule({
     }),
   )
   const notifications = new DrizzleNotificationRepository(database)
+  const pushSubscriptions = new DrizzlePushSubscriptionRepository(database)
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
   const inApp = <TPayload>(
     name: string,
@@ -112,10 +121,19 @@ export function createNotificationModule({
         getUnreadCount: new GetUnreadCount(notifications),
         markRead: new MarkNotificationRead(notifications, outboxWriter, database, clock),
         markAllRead: new MarkAllNotificationsRead(notifications, outboxWriter, database, clock),
+        subscribeToPush: new SubscribeToPush(pushSubscriptions, database, ids, clock),
+        unsubscribeFromPush: new UnsubscribeFromPush(pushSubscriptions),
       },
+      webPushPublicKey: webPush?.publicKey ?? null,
     }),
     outbox: { name: 'notification', table: outbox },
     handlers: [
+      ...(webPush
+        ? [
+            new WebPushHandler(pushSubscriptions, webPush.sender, guard, clock, log),
+            new DropPushSubscriptionsHandler(pushSubscriptions),
+          ]
+        : []),
       inApp<UserRegisteredPayload>(
         'notification.in-app-welcome',
         IdentityEvents.UserRegistered,

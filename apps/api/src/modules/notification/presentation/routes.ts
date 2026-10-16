@@ -1,10 +1,16 @@
 import { Elysia, t } from 'elysia'
+import { NotFoundError } from '#/shared/application/errors'
 import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
+import { userAgent } from '#/shared/http/client-info'
 import { errorResponse, validationError } from '#/shared/http/openapi'
 import type {
   MarkAllNotificationsRead,
   MarkNotificationRead,
 } from '../application/use-cases/mark-read'
+import type {
+  SubscribeToPush,
+  UnsubscribeFromPush,
+} from '../application/use-cases/push-subscriptions'
 import {
   DEFAULT_PAGE_SIZE,
   type GetUnreadCount,
@@ -19,8 +25,20 @@ export interface NotificationRouteDeps {
     getUnreadCount: GetUnreadCount
     markRead: MarkNotificationRead
     markAllRead: MarkAllNotificationsRead
+    subscribeToPush: SubscribeToPush
+    unsubscribeFromPush: UnsubscribeFromPush
   }
+  /** VAPID public key the browser subscribes with; `null` = Web Push is not configured on this deployment. */
+  webPushPublicKey: string | null
 }
+
+const pushSubscriptionBody = t.Object({
+  endpoint: t.String({ minLength: 1, maxLength: 2048, description: '`PushSubscription.endpoint`' }),
+  keys: t.Object({
+    p256dh: t.String({ minLength: 1, maxLength: 256 }),
+    auth: t.String({ minLength: 1, maxLength: 256 }),
+  }),
+})
 
 const notificationBody = t.Object({
   id: t.String({ format: 'uuid' }),
@@ -37,7 +55,11 @@ const notificationBody = t.Object({
   readAt: t.Nullable(t.String({ format: 'date-time' })),
 })
 
-export const notificationRoutes = ({ verifier, useCases: uc }: NotificationRouteDeps) =>
+export const notificationRoutes = ({
+  verifier,
+  useCases: uc,
+  webPushPublicKey,
+}: NotificationRouteDeps) =>
   new Elysia({ prefix: '/notifications', tags: ['notifications'] })
     .use(authPlugin(verifier))
     .get(
@@ -99,6 +121,60 @@ export const notificationRoutes = ({ verifier, useCases: uc }: NotificationRoute
         ),
       },
     })
+    .get('/push/public-key', () => ({ publicKey: webPushPublicKey }), {
+      detail: {
+        summary: 'Web Push public key',
+        description:
+          'The VAPID application server key for `pushManager.subscribe`. `null` when Web Push is not configured.',
+      },
+      response: { 200: t.Object({ publicKey: t.Nullable(t.String()) }) },
+    })
+    .put(
+      '/push/subscription',
+      async ({ auth, body, request, set }) => {
+        if (!webPushPublicKey)
+          throw new NotFoundError('web_push_disabled', 'Web Push is not enabled')
+        await uc.subscribeToPush.execute({
+          userId: auth.userId,
+          sessionId: auth.sessionId,
+          endpoint: body.endpoint,
+          p256dh: body.keys.p256dh,
+          auth: body.keys.auth,
+          userAgent: userAgent(request),
+        })
+        set.status = 204
+      },
+      {
+        auth: true,
+        body: pushSubscriptionBody,
+        detail: {
+          summary: 'Register this browser for Web Push',
+          description:
+            'Idempotent. A browser that was registered by another account is moved to this one. The subscription ends with the login session that created it. At most 10 browsers per user: the oldest are dropped.',
+        },
+        response: {
+          204: t.Void({ description: 'Registered' }),
+          400: validationError(),
+          404: errorResponse(404, 'web_push_disabled'),
+        },
+      },
+    )
+    .delete(
+      '/push/subscription',
+      async ({ auth, body, set }) => {
+        await uc.unsubscribeFromPush.execute({ userId: auth.userId, endpoint: body.endpoint })
+        set.status = 204
+      },
+      {
+        auth: true,
+        body: t.Object({ endpoint: t.String({ minLength: 1, maxLength: 2048 }) }),
+        detail: {
+          summary: 'Stop Web Push for this browser',
+          description: 'Idempotent: an unknown endpoint also returns 204.',
+        },
+        response: { 204: t.Void({ description: 'Removed' }), 400: validationError() },
+      },
+    )
     .post(
       '/:id/read',
       async ({ auth, params, set }) => {

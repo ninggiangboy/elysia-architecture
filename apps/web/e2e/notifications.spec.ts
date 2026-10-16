@@ -11,6 +11,7 @@ test.describe('notifications', () => {
       baseURL: 'http://localhost:5173',
       extraHTTPHeaders: { 'x-forwarded-for': TEST_IP },
     })
+    await context.grantPermissions(['notifications'], { origin: 'http://localhost:5173' })
     const email = uniqueEmail('notif')
     const page = await context.newPage()
     await page.goto('/login')
@@ -28,6 +29,8 @@ test.describe('notifications', () => {
     await other.goto('/notifications')
     await expect(other.getByTestId('notifications').getByRole('listitem')).toHaveCount(1)
     await expect(other.getByText('Welcome aboard')).toBeVisible()
+    // Web Push is configured (VAPID keys in .env) and Chromium supports it: the opt-in is offered, not forced.
+    await expect(other.getByTestId('push-toggle')).toHaveText(/Turn on/)
 
     await other.getByRole('button', { name: 'Mark all as read' }).click()
     await expect(other.getByTestId('unread-badge')).toHaveCount(0)

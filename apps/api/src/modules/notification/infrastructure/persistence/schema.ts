@@ -9,6 +9,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
 import { inboxTable, outboxTable } from '#/shared/infrastructure/outbox/tables'
@@ -53,5 +54,25 @@ export const notifications = notificationSchema.table(
   (t) => [
     index('notifications_user_idx').on(t.userId, t.id.desc()),
     index('notifications_unread_idx').on(t.userId).where(sql`${t.readAt} is null`),
+  ],
+)
+
+/** One browser of a user that agreed to Web Push. `endpoint` identifies the browser, so it is unique across users. */
+export const pushSubscriptions = notificationSchema.table(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull(),
+    /** The login session (`sid`) that registered it: when that session ends, so does the subscription. */
+    sessionId: uuid('session_id').notNull(),
+    endpoint: text('endpoint').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [
+    uniqueIndex('push_subscriptions_endpoint_idx').on(t.endpoint),
+    index('push_subscriptions_user_idx').on(t.userId),
   ],
 )

@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { toast } from 'sonner'
 import { sessionsQuery } from '@/features/account/queries'
+import { forgetPush, syncPush } from '@/lib/push'
 import { connectSse } from '@/lib/realtime'
 import { clearSession } from '@/lib/session'
 
@@ -16,6 +17,11 @@ import { clearSession } from '@/lib/session'
 export function useLiveSession() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+
+  // Keeps this browser's push subscription tied to the current login session.
+  useEffect(() => {
+    void syncPush().catch(() => {})
+  }, [])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: one connection per mounted layout; both are stable
   useEffect(() => {
@@ -38,6 +44,7 @@ export function useLiveSession() {
         } else if (m.type === 'session.revoked') {
           if (m.data?.sessionId !== ownSessionId) return void refreshDevices()
           toast.warning('This device was signed out from another device')
+          void forgetPush()
           clearSession()
           queryClient.clear()
           void navigate({ to: '/login' })

@@ -1,4 +1,6 @@
 import { createIdentityModule } from '#/modules/identity/identity.module'
+import type { WebPushSender } from '#/modules/notification/application/ports'
+import { WebPushLibrarySender } from '#/modules/notification/infrastructure/web-push-sender'
 import { createNotificationModule } from '#/modules/notification/notification.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import { createRealtimeModule } from '#/modules/realtime/realtime.module'
@@ -20,6 +22,8 @@ import { InProcessMessageBus } from '#/shared/messaging/in-process-bus'
 export interface ContainerOverrides {
   /** Replaces the provider mailer (tests, or an SES adapter). The rate limiter is still wrapped around it. */
   mailer?: Mailer
+  /** Replaces the Web Push sender (tests). Needs `VAPID_PUBLIC_KEY` in the config to take effect. */
+  webPushSender?: WebPushSender
 }
 
 export async function createContainer(
@@ -59,6 +63,21 @@ export async function createContainer(
       config.MAIL_FROM,
     )
 
+  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = config
+  const webPush =
+    VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT
+      ? {
+          publicKey: VAPID_PUBLIC_KEY,
+          sender:
+            overrides.webPushSender ??
+            new WebPushLibrarySender({
+              subject: VAPID_SUBJECT,
+              publicKey: VAPID_PUBLIC_KEY,
+              privateKey: VAPID_PRIVATE_KEY,
+            }),
+        }
+      : undefined
+
   const identity = await createIdentityModule({ database, config, clock, ids })
   const profile = createProfileModule({
     database,
@@ -81,6 +100,7 @@ export async function createContainer(
       burst: config.MAIL_BURST,
       dailyQuota: config.MAIL_DAILY_QUOTA,
     },
+    webPush,
   })
 
   const realtime = createRealtimeModule({

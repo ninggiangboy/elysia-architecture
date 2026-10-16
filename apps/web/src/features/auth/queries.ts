@@ -1,4 +1,5 @@
 import { http, unwrap } from '@/lib/api'
+import { forgetPush } from '@/lib/push'
 import { queryClient } from '@/lib/query-client'
 import { applySession, clearSession } from '@/lib/session'
 
@@ -15,6 +16,7 @@ export async function logout() {
   try {
     await http.api.auth.logout.post()
   } finally {
+    void forgetPush()
     clearSession()
     queryClient.clear()
   }
