@@ -23,7 +23,8 @@ bun run dev          # api :3000 + web :5173
 | URL | Là gì |
 | --- | --- |
 | http://localhost:5173 | Web |
-| http://localhost:3000/api/openapi | API docs (OpenAPI) |
+| http://localhost:5173/docs | API docs (Scalar) trong web, đọc spec từ `/api/openapi/json`; chỉ có ở bản dev |
+| http://localhost:3000/api/openapi | API docs (OpenAPI, chỉ bật khi `NODE_ENV=development`, `bun run dev` đã set sẵn) |
 | http://localhost:8025 | Mailpit — xem mail magic link, chào mừng, xác nhận email |
 | http://localhost:8333 | S3 của SeaweedFS (key `app-access-key` / `app-secret-key`, bucket `avatars`) |
 | localhost:5433 | Postgres (`app`/`app`, db `app`) — cổng 5433 để không đụng Postgres có sẵn ở 5432 (đổi bằng `POSTGRES_PORT`) |

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AccountConfirmEmailRouteImport } from './routes/account.confirm-email'
@@ -17,6 +18,11 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -42,11 +48,13 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
+  '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
 }
 export interface FileRoutesByTo {
+  '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -55,6 +63,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
+  '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -62,12 +71,14 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/account/confirm-email' | '/auth/callback'
+  fullPaths:
+    '/' | '/docs' | '/login' | '/account/confirm-email' | '/auth/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/account/confirm-email' | '/auth/callback' | '/'
+  to: '/docs' | '/login' | '/account/confirm-email' | '/auth/callback' | '/'
   id:
     | '__root__'
     | '/_authed'
+    | '/docs'
     | '/login'
     | '/account/confirm-email'
     | '/auth/callback'
@@ -76,6 +87,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  DocsRoute: typeof DocsRoute
   LoginRoute: typeof LoginRoute
   AccountConfirmEmailRoute: typeof AccountConfirmEmailRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -88,6 +100,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -134,6 +153,7 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  DocsRoute: DocsRoute,
   LoginRoute: LoginRoute,
   AccountConfirmEmailRoute: AccountConfirmEmailRoute,
   AuthCallbackRoute: AuthCallbackRoute,
