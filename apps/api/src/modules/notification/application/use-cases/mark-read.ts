@@ -1,7 +1,7 @@
 import { NotFoundError } from '#/shared/application/errors'
 import type { Clock, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
 import type { NotificationRepository } from '../../domain/notification-repository'
-import { notificationRead } from '../notification-events'
+import { notificationRead, notificationsSeen } from '../notification-events'
 
 /**
  * Idempotent: marking an already-read notification succeeds and emits nothing.
@@ -47,5 +47,28 @@ export class MarkAllNotificationsRead {
       return n
     })
     return { updated }
+  }
+}
+
+/**
+ * The user opened the notification list: everything that made news so far no longer counts for the badge (the read
+ * state of each notification is untouched). Idempotent; the `notification.seen` event, sent only when the badge was
+ * showing something, lets the user's other open devices clear theirs.
+ */
+export class MarkNotificationsSeen {
+  constructor(
+    private notifications: NotificationRepository,
+    private outbox: OutboxWriter,
+    private uow: UnitOfWork,
+    private clock: Clock,
+  ) {}
+
+  async execute(cmd: { userId: string }): Promise<void> {
+    const now = this.clock.now()
+    await this.uow.run(async () => {
+      const unseen = await this.notifications.countUnseen(cmd.userId)
+      await this.notifications.markSeen(cmd.userId, now)
+      if (unseen > 0) await this.outbox.add([notificationsSeen({ userId: cmd.userId }, now)])
+    })
   }
 }

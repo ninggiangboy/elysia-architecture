@@ -18,8 +18,12 @@ import {
   newSignInNotification,
   suspiciousSessionNotification,
 } from './in-app-notifications'
-import { MarkAllNotificationsRead, MarkNotificationRead } from './use-cases/mark-read'
-import { GetUnreadCount, ListNotifications } from './use-cases/read-notifications'
+import {
+  MarkAllNotificationsRead,
+  MarkNotificationRead,
+  MarkNotificationsSeen,
+} from './use-cases/mark-read'
+import { GetUnreadCount, GetUnseenCount, ListNotifications } from './use-cases/read-notifications'
 
 class InMemoryNotifications implements NotificationRepository {
   rows: Notification[] = []
@@ -30,6 +34,7 @@ class InMemoryNotifications implements NotificationRepository {
     userId: string,
     groupKey: string,
     since: Date,
+    now: Date,
     latest: Pick<Notification['props'], 'title' | 'body' | 'data'>,
   ) {
     const target = this.rows
@@ -42,7 +47,7 @@ class InMemoryNotifications implements NotificationRepository {
       )
       .sort((a, b) => (a.id < b.id ? 1 : -1))[0]
     if (!target) return null
-    Object.assign(target.props, latest, { count: target.props.count + 1 })
+    Object.assign(target.props, latest, { count: target.props.count + 1, notifiedAt: now })
     return target
   }
   async createdAtBefore(userId: string, id: string) {
@@ -61,6 +66,16 @@ class InMemoryNotifications implements NotificationRepository {
   }
   async countUnread(userId: string) {
     return this.rows.filter((n) => n.userId === userId && n.props.readAt === null).length
+  }
+  seenAt = new Map<string, Date>()
+  async countUnseen(userId: string) {
+    const seen = this.seenAt.get(userId)
+    return this.rows.filter(
+      (n) => n.userId === userId && n.props.readAt === null && (!seen || n.props.notifiedAt > seen),
+    ).length
+  }
+  async markSeen(userId: string, now: Date) {
+    this.seenAt.set(userId, now)
   }
   async markRead(userId: string, id: string, now: Date) {
     const n = this.rows.find((r) => r.id === id && r.userId === userId)
@@ -211,6 +226,16 @@ describe('CreateNotificationHandler with a group', () => {
     expect(outbox.events.map((e) => e.payload.count)).toEqual([1, 2, 3])
   })
 
+  test('a repeat folded into a notification that was already seen makes news again', async () => {
+    await handler.handle(signIn(1))
+    await repo.markSeen(ALICE, clock.now())
+    expect(await repo.countUnseen(ALICE)).toBe(0)
+    clock.advance(1000)
+    await handler.handle(signIn(2))
+    expect(repo.rows).toHaveLength(1)
+    expect(await repo.countUnseen(ALICE)).toBe(1)
+  })
+
   test('a redelivered event is not counted twice', async () => {
     await handler.handle(signIn(1))
     await handler.handle(signIn(2))
@@ -293,6 +318,51 @@ describe('reading notifications', () => {
     await add(BOB)
     await repo.markRead(ALICE, mine.id, clock.now())
     expect(await new GetUnreadCount(repo).execute({ userId: ALICE })).toEqual({ count: 1 })
+  })
+
+  describe('unseen (the badge) vs unread', () => {
+    const seen = () => new MarkNotificationsSeen(repo, outbox, new PassthroughUnitOfWork(), clock)
+    const unseen = async (userId = ALICE) =>
+      (await new GetUnseenCount(repo).execute({ userId })).count
+
+    test('opening the list zeroes the badge but leaves every notification unread', async () => {
+      await add(ALICE)
+      await add(ALICE)
+      expect(await unseen()).toBe(2)
+      await seen().execute({ userId: ALICE })
+      expect(await unseen()).toBe(0)
+      expect(await new GetUnreadCount(repo).execute({ userId: ALICE })).toEqual({ count: 2 })
+    })
+
+    test('only what arrives after the list was opened counts again', async () => {
+      await add(ALICE)
+      await seen().execute({ userId: ALICE })
+      clock.advance(1000)
+      await add(ALICE)
+      expect(await unseen()).toBe(1)
+    })
+
+    test('a read notification never counts, even if it was never seen', async () => {
+      const n = await add(ALICE)
+      await repo.markRead(ALICE, n.id, clock.now())
+      expect(await unseen()).toBe(0)
+    })
+
+    test('is per user', async () => {
+      await add(ALICE)
+      await add(BOB)
+      await seen().execute({ userId: ALICE })
+      expect(await unseen(ALICE)).toBe(0)
+      expect(await unseen(BOB)).toBe(1)
+    })
+
+    test('tells the other devices only when the badge was showing something', async () => {
+      await add(ALICE)
+      await seen().execute({ userId: ALICE })
+      await seen().execute({ userId: ALICE })
+      expect(outbox.types()).toEqual([NotificationEvents.Seen])
+      expect(outbox.events[0]?.payload).toMatchObject({ userId: ALICE })
+    })
   })
 
   describe('MarkNotificationRead', () => {

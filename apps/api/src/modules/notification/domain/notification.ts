@@ -26,6 +26,8 @@ export interface NotificationProps {
   /** Free-form, JSON-serializable context for the client (e.g. a deep link). Not interpreted by the server. */
   data: Record<string, unknown>
   createdAt: Date
+  /** Last time this made news: `createdAt`, bumped when a repeat is folded into it. */
+  notifiedAt: Date
   readAt: Date | null
   /** Events sharing a key (per user) fold into one unread notification while it is still unread. `null` = never folded. */
   groupKey: string | null
@@ -38,7 +40,9 @@ export class Notification {
   private constructor(readonly props: NotificationProps) {}
 
   static create(
-    input: Omit<NotificationProps, 'readAt' | 'groupKey' | 'count'> & { groupKey?: string | null },
+    input: Omit<NotificationProps, 'readAt' | 'notifiedAt' | 'groupKey' | 'count'> & {
+      groupKey?: string | null
+    },
   ): Notification {
     const title = input.title.trim()
     const body = input.body.trim()
@@ -50,6 +54,7 @@ export class Notification {
       ...input,
       title,
       body,
+      notifiedAt: input.createdAt,
       readAt: null,
       groupKey: input.groupKey ?? null,
       count: 1,

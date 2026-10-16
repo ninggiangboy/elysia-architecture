@@ -3,6 +3,7 @@ import {
   type NotificationCreatedPayload,
   NotificationEvents,
   type NotificationReadPayload,
+  type NotificationSeenPayload,
 } from '#/modules/notification/contracts'
 import type { Clock, IntegrationEventHandler, Log } from '#/shared/application/ports'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
@@ -98,6 +99,16 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
             type: 'notification.read',
             data: { id: p.notificationId, readAt: p.readAt },
           },
+        }),
+        hub,
+        clock,
+      ),
+      new RealtimePushHandler<NotificationSeenPayload>(
+        'realtime.push-notification-seen',
+        NotificationEvents.Seen,
+        (p) => ({
+          userId: p.userId,
+          event: { type: 'notification.seen', data: { seenAt: p.seenAt } },
         }),
         hub,
         clock,

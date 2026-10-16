@@ -250,11 +250,11 @@ describe('WebPushHandler', () => {
     await handler.handle(created())
     expect(sender.sent).toHaveLength(0)
   })
-  test('only opens in-app links, defaulting to the notifications page', async () => {
+  test('only opens in-app links, defaulting to the home page', async () => {
     repo.rows.push(sub(ALICE, 1))
     await handler.handle(created({ data: { link: 'https://evil.example/phish' } }))
     await handler.handle(created({ data: {} }))
-    expect(sender.sent.map((s) => s.message.link)).toEqual(['/notifications', '/notifications'])
+    expect(sender.sent.map((s) => s.message.link)).toEqual(['/', '/'])
   })
   test('deletes a subscription the push service reports gone', async () => {
     repo.rows.push(sub(ALICE, 1), sub(ALICE, 2))

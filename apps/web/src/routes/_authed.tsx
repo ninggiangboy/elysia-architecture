@@ -4,7 +4,7 @@ import { Logo } from '@/components/layout/logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { UserMenu } from '@/components/layout/user-menu'
 import { NotificationBell } from '@/features/notifications/notification-bell'
-import { unreadCountQuery } from '@/features/notifications/queries'
+import { unseenCountQuery } from '@/features/notifications/queries'
 import { meQuery } from '@/features/profile/queries'
 import { useLiveSession } from '@/features/realtime/use-live-session'
 import { ensureSession } from '@/lib/session'
@@ -19,7 +19,7 @@ export const Route = createFileRoute('/_authed')({
   loader: async ({ context: { queryClient } }) => {
     await Promise.all([
       queryClient.prefetchQuery(meQuery),
-      queryClient.prefetchQuery(unreadCountQuery),
+      queryClient.prefetchQuery(unseenCountQuery),
     ])
     const avatarUrl = queryClient.getQueryData(meQuery.queryKey)?.avatarUrl
     if (avatarUrl) await preloadImage(avatarUrl)

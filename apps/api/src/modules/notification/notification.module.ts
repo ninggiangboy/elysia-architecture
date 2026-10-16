@@ -38,9 +38,17 @@ import {
   welcomeMail,
 } from './application/templates'
 import { ThrottledMailer } from './application/throttled-mailer'
-import { MarkAllNotificationsRead, MarkNotificationRead } from './application/use-cases/mark-read'
+import {
+  MarkAllNotificationsRead,
+  MarkNotificationRead,
+  MarkNotificationsSeen,
+} from './application/use-cases/mark-read'
 import { SubscribeToPush, UnsubscribeFromPush } from './application/use-cases/push-subscriptions'
-import { GetUnreadCount, ListNotifications } from './application/use-cases/read-notifications'
+import {
+  GetUnreadCount,
+  GetUnseenCount,
+  ListNotifications,
+} from './application/use-cases/read-notifications'
 import { DrizzleNotificationRepository } from './infrastructure/persistence/drizzle-notification-repository'
 import { DrizzlePushSubscriptionRepository } from './infrastructure/persistence/drizzle-push-subscription-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
@@ -119,6 +127,8 @@ export function createNotificationModule({
       useCases: {
         listNotifications: new ListNotifications(notifications),
         getUnreadCount: new GetUnreadCount(notifications),
+        getUnseenCount: new GetUnseenCount(notifications),
+        markSeen: new MarkNotificationsSeen(notifications, outboxWriter, database, clock),
         markRead: new MarkNotificationRead(notifications, outboxWriter, database, clock),
         markAllRead: new MarkAllNotificationsRead(notifications, outboxWriter, database, clock),
         subscribeToPush: new SubscribeToPush(pushSubscriptions, database, ids, clock),

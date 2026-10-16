@@ -114,7 +114,7 @@ Things worth trying:
 - **Change email** — the change only takes effect once confirmed from the new inbox.
 - **Profile** — view the account and profile in a single call, and edit the profile with an optimistic lock (`If-Match`) so concurrent edits never silently overwrite each other.
 - **Avatar upload** — the browser uploads straight to S3 through a presigned URL; the server then validates the file, and the old avatar is cleaned up asynchronously. The profile cover image works the same way. In the browser a picked photo opens in a crop dialog (drag to move, slider/wheel to zoom, framed exactly as it will show) and only the cropped result is uploaded.
-- **In-app notifications** — a bell with an unread count that opens the inbox in a popover, cursor-paged history and mark-as-read (one or all) that stays in sync across the user's open devices.
+- **In-app notifications** — a bell whose badge counts what is new since you last opened it (separate from unread) and opens the inbox in a popover, cursor-paged history and mark-as-read (one or all) that stays in sync across the user's open devices.
 - **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.
 - **Transactional mail** — magic-link, welcome and email-confirmation mails sent through the outbox, with provider-aware rate limiting and retries.

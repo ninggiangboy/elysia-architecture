@@ -116,6 +116,36 @@ describe('notifications', () => {
     }
   })
 
+  test('opening the list zeroes the badge without reading anything, and only newer news counts again', async () => {
+    const email = uniqueEmail('seen')
+    const first = await login(api, email)
+    await untilSignedUpNotifications(first.accessToken)
+    const phone = await login(api, email, 'Phone/1.0')
+    const unseen = async (token: string) =>
+      (await api('GET', '/api/notifications/unseen-count', { token })).json.count as number
+    // The welcome notification plus the sign-in from the phone's own login (created asynchronously) are news.
+    await eventually(async () => (await unseen(first.accessToken)) >= 2, 10_000, 'unseen')
+    const stream = await openSse(t.app, phone.accessToken)
+    try {
+      await stream.next('ready')
+      expect(
+        (await api('POST', '/api/notifications/seen', { token: first.accessToken })).status,
+      ).toBe(204)
+      // The phone is told, so it clears its badge too.
+      await stream.next('notification.seen')
+      expect(await unseen(first.accessToken)).toBe(0)
+      expect(await unseen(phone.accessToken)).toBe(0)
+      // Nothing was read.
+      expect(await unreadCount(first.accessToken)).toBeGreaterThanOrEqual(SIGN_UP_NOTIFICATIONS)
+      const items = (await api('GET', '/api/notifications', { token: first.accessToken })).json
+        .items as { read: boolean }[]
+      expect(items.every((i) => !i.read)).toBe(true)
+    } finally {
+      stream.close()
+    }
+    expect((await api('POST', '/api/notifications/seen')).status).toBe(401)
+  })
+
   test('marking one read is idempotent; unknown or foreign ids are 404', async () => {
     const me = await signUp('read-one')
     const other = await signUp('read-other')

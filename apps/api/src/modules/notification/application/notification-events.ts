@@ -3,6 +3,7 @@ import {
   type NotificationCreatedPayload,
   NotificationEvents,
   type NotificationReadPayload,
+  type NotificationSeenPayload,
 } from '../contracts'
 import type { Notification } from '../domain/notification'
 
@@ -33,6 +34,16 @@ export function notificationRead(
   const payload: NotificationReadPayload = { ...p, readAt: now.toISOString() }
   return {
     type: NotificationEvents.Read,
+    aggregateId: p.userId,
+    payload: { ...payload },
+    occurredAt: now,
+  }
+}
+
+export function notificationsSeen(p: { userId: string }, now: Date): DomainEvent {
+  const payload: NotificationSeenPayload = { ...p, seenAt: now.toISOString() }
+  return {
+    type: NotificationEvents.Seen,
     aggregateId: p.userId,
     payload: { ...payload },
     occurredAt: now,

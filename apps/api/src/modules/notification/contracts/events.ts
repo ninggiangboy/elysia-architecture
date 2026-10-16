@@ -5,6 +5,7 @@
 export const NotificationEvents = {
   Created: 'notification.created.v1',
   Read: 'notification.read.v1',
+  Seen: 'notification.seen.v1',
 } as const
 
 export interface NotificationCreatedPayload {
@@ -24,4 +25,9 @@ export interface NotificationReadPayload {
   /** The notification that was marked read; `null` = every unread notification of the user. */
   notificationId: string | null
   readAt: string
+}
+
+export interface NotificationSeenPayload {
+  userId: string
+  seenAt: string
 }

@@ -8,7 +8,7 @@ import type { WebPushSender } from '../ports'
 /** A push that arrives hours late (relay backlog) is noise; the in-app inbox still has the notification. */
 export const MAX_WEB_PUSH_AGE_MS = 15 * 60_000
 
-const DEFAULT_LINK = '/notifications'
+const DEFAULT_LINK = '/'
 
 /** Kinds that always get a push, however many notifications came just before (account security must not be muted). */
 const ALWAYS_PUSH_KINDS: ReadonlySet<string> = new Set(['security_alert'])

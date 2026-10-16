@@ -57,6 +57,14 @@ export class ListNotifications {
   }
 }
 
+export class GetUnseenCount {
+  constructor(private notifications: NotificationRepository) {}
+
+  async execute(query: { userId: string }): Promise<{ count: number }> {
+    return { count: await this.notifications.countUnseen(query.userId) }
+  }
+}
+
 export class GetUnreadCount {
   constructor(private notifications: NotificationRepository) {}
 

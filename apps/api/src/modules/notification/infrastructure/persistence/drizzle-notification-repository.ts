@@ -6,7 +6,7 @@ import {
   type NotificationProps,
 } from '../../domain/notification'
 import type { ListQuery, NotificationRepository } from '../../domain/notification-repository'
-import { notifications } from './schema'
+import { inboxState, notifications } from './schema'
 
 export class DrizzleNotificationRepository implements NotificationRepository {
   constructor(private database: Database) {}
@@ -21,6 +21,7 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       body: p.body,
       data: p.data,
       createdAt: p.createdAt,
+      notifiedAt: p.notifiedAt,
       readAt: p.readAt,
       groupKey: p.groupKey,
       count: p.count,
@@ -31,6 +32,7 @@ export class DrizzleNotificationRepository implements NotificationRepository {
     userId: string,
     groupKey: string,
     since: Date,
+    now: Date,
     latest: Pick<NotificationProps, 'title' | 'body' | 'data'>,
   ): Promise<Notification | null> {
     const target = this.database.executor
@@ -51,6 +53,7 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       .update(notifications)
       .set({
         count: sql`${notifications.count} + 1`,
+        notifiedAt: now,
         title: latest.title,
         body: latest.body,
         data: latest.data,
@@ -92,6 +95,34 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       .from(notifications)
       .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
     return row?.value ?? 0
+  }
+
+  async countUnseen(userId: string): Promise<number> {
+    const seenAt = this.database.executor
+      .select({ at: inboxState.seenAt })
+      .from(inboxState)
+      .where(eq(inboxState.userId, userId))
+    const [row] = await this.database.executor
+      .select({ value: count() })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          isNull(notifications.readAt),
+          sql`${notifications.notifiedAt} > coalesce((${seenAt}), '-infinity'::timestamptz)`,
+        ),
+      )
+    return row?.value ?? 0
+  }
+
+  async markSeen(userId: string, now: Date): Promise<void> {
+    await this.database.executor
+      .insert(inboxState)
+      .values({ userId, seenAt: now })
+      .onConflictDoUpdate({
+        target: inboxState.userId,
+        set: { seenAt: sql`greatest(${inboxState.seenAt}, excluded.seen_at)` },
+      })
   }
 
   async markRead(userId: string, id: string, now: Date) {

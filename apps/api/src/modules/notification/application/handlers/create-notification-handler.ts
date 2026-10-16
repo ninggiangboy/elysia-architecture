@@ -35,12 +35,19 @@ export class CreateNotificationHandler<TPayload> implements IntegrationEventHand
     if (!draft) return
     await this.inbox.transactional(message.id, this.name, async () => {
       if (draft.group) {
-        const since = new Date(this.clock.now().getTime() - draft.group.withinMs)
-        const folded = await this.notifications.coalesce(draft.userId, draft.group.key, since, {
-          title: draft.title,
-          body: draft.body,
-          data: draft.data ?? {},
-        })
+        const now = this.clock.now()
+        const since = new Date(now.getTime() - draft.group.withinMs)
+        const folded = await this.notifications.coalesce(
+          draft.userId,
+          draft.group.key,
+          since,
+          now,
+          {
+            title: draft.title,
+            body: draft.body,
+            data: draft.data ?? {},
+          },
+        )
         if (folded) {
           // Same id as before: realtime refreshes, and the Web Push `tag` makes the browser replace its notification.
           await this.outbox.add([notificationCreated(folded)])

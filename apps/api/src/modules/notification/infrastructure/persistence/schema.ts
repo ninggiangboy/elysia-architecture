@@ -49,6 +49,8 @@ export const notifications = notificationSchema.table(
     body: text('body').notNull(),
     data: jsonb('data').$type<Record<string, unknown>>().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    /** Last time this notification made news: `createdAt`, bumped when a repeat is folded into it. Drives the badge. */
+    notifiedAt: timestamp('notified_at', { withTimezone: true }).notNull(),
     readAt: timestamp('read_at', { withTimezone: true }),
     groupKey: text('group_key'),
     count: integer('count').notNull().default(1),
@@ -61,6 +63,12 @@ export const notifications = notificationSchema.table(
       .where(sql`${t.readAt} is null and ${t.groupKey} is not null`),
   ],
 )
+
+/** When the user last opened the notification list: what arrived after is "unseen" (the badge), whether read or not. */
+export const inboxState = notificationSchema.table('inbox_state', {
+  userId: uuid('user_id').primaryKey(),
+  seenAt: timestamp('seen_at', { withTimezone: true }).notNull(),
+})
 
 /** One browser of a user that agreed to Web Push. `endpoint` identifies the browser, so it is unique across users. */
 export const pushSubscriptions = notificationSchema.table(

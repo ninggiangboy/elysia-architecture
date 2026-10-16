@@ -6,6 +6,7 @@ import { errorResponse, validationError } from '#/shared/http/openapi'
 import type {
   MarkAllNotificationsRead,
   MarkNotificationRead,
+  MarkNotificationsSeen,
 } from '../application/use-cases/mark-read'
 import type {
   SubscribeToPush,
@@ -14,6 +15,7 @@ import type {
 import {
   DEFAULT_PAGE_SIZE,
   type GetUnreadCount,
+  type GetUnseenCount,
   type ListNotifications,
   MAX_PAGE_SIZE,
 } from '../application/use-cases/read-notifications'
@@ -23,6 +25,8 @@ export interface NotificationRouteDeps {
   useCases: {
     listNotifications: ListNotifications
     getUnreadCount: GetUnreadCount
+    getUnseenCount: GetUnseenCount
+    markSeen: MarkNotificationsSeen
     markRead: MarkNotificationRead
     markAllRead: MarkAllNotificationsRead
     subscribeToPush: SubscribeToPush
@@ -112,9 +116,38 @@ export const notificationRoutes = ({
     )
     .get('/unread-count', ({ auth }) => uc.getUnreadCount.execute({ userId: auth.userId }), {
       auth: true,
-      detail: { summary: 'Count my unread notifications', description: 'For the badge.' },
+      detail: {
+        summary: 'Count my unread notifications',
+        description:
+          'Not yet marked read, whether or not the list was opened since. See `/unseen-count` for the badge.',
+      },
       response: { 200: t.Object({ count: t.Integer({ minimum: 0 }) }) },
     })
+    .get('/unseen-count', ({ auth }) => uc.getUnseenCount.execute({ userId: auth.userId }), {
+      auth: true,
+      detail: {
+        summary: 'Count my unseen notifications',
+        description:
+          'For the badge: unread notifications that arrived (or repeated) since the list was last opened with `POST /seen`.',
+      },
+      response: { 200: t.Object({ count: t.Integer({ minimum: 0 }) }) },
+    })
+    .post(
+      '/seen',
+      async ({ auth, set }) => {
+        await uc.markSeen.execute({ userId: auth.userId })
+        set.status = 204
+      },
+      {
+        auth: true,
+        detail: {
+          summary: 'Mark the notification list as opened',
+          description:
+            'Resets the badge to zero without marking anything read. Idempotent; the next new notification counts again.',
+        },
+        response: { 204: t.Void({ description: 'Done' }) },
+      },
+    )
     .post('/read-all', ({ auth }) => uc.markAllRead.execute({ userId: auth.userId }), {
       auth: true,
       detail: { summary: 'Mark all my notifications read' },

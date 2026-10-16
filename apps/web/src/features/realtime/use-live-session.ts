@@ -60,6 +60,10 @@ export function useLiveSession() {
       'notification.read'() {
         void refreshNotifications()
       },
+      // The list was opened on another device: this one's badge is stale.
+      'notification.seen'() {
+        void refreshNotifications()
+      },
       'session.revoked'(data) {
         if (data?.sessionId === ownSessionId) signOutHere()
         else void refreshDevices()

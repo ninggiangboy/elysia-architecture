@@ -29,8 +29,20 @@ const usePopover = () => {
 }
 
 /** A panel anchored to its trigger that holds arbitrary content (unlike `Dropdown`, which is a menu). Closes on outside click and Escape. */
-export function Popover({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
+export function Popover({
+  children,
+  onOpenChange,
+}: {
+  children: ReactNode
+  onOpenChange?: (open: boolean) => void
+}) {
+  const [open, setOpenState] = useState(false)
+  const onOpenChangeRef = useRef(onOpenChange)
+  onOpenChangeRef.current = onOpenChange
+  const setOpen = useCallback((next: boolean) => {
+    setOpenState(next)
+    onOpenChangeRef.current?.(next)
+  }, [])
   const panelId = useId()
   const rootRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -38,7 +50,7 @@ export function Popover({ children }: { children: ReactNode }) {
   const close = useCallback(() => {
     setOpen(false)
     triggerRef.current?.focus()
-  }, [])
+  }, [setOpen])
 
   useEffect(() => {
     if (!open) return
@@ -54,7 +66,7 @@ export function Popover({ children }: { children: ReactNode }) {
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [open, close])
+  }, [open, close, setOpen])
 
   return (
     <Ctx.Provider value={{ open, setOpen, panelId, triggerRef, close }}>

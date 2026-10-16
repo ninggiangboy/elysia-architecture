@@ -1,26 +1,46 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { NotificationsPanel } from './notifications-panel'
-import { unreadCountQuery } from './queries'
+import { markNotificationsSeen, unseenCountQuery } from './queries'
 
-/** Header bell with the unread badge; opens the inbox in a popover. Kept fresh by `useLiveSession`. */
+/**
+ * Header bell; opens the inbox in a popover. The badge counts what is UNSEEN (arrived since the list was last opened),
+ * not what is unread: opening the popover zeroes it, while each notification keeps its own read state.
+ * Kept fresh by `useLiveSession`.
+ */
 export function NotificationBell() {
-  const { data: unread = 0 } = useQuery(unreadCountQuery)
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const { data: unseen = 0 } = useQuery(unseenCountQuery)
+
+  const markSeen = useMutation({
+    mutationFn: markNotificationsSeen,
+    onMutate: () => queryClient.setQueryData(unseenCountQuery.queryKey, 0),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: unseenCountQuery.queryKey }),
+  })
+
+  // Also covers a notification arriving while the popover is open: the user is looking at it, so it is seen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `markSeen` is a new object every render; only the two inputs matter
+  useEffect(() => {
+    if (open && unseen > 0) markSeen.mutate()
+  }, [open, unseen])
+
   return (
-    <Popover>
+    <Popover onOpenChange={setOpen}>
       <PopoverTrigger
-        aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
+        aria-label={unseen > 0 ? `Notifications, ${unseen} new` : 'Notifications'}
         title="Notifications"
         className="relative grid size-9 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 aria-expanded:bg-muted aria-expanded:text-foreground"
       >
         <Bell className="size-[18px]" aria-hidden />
-        {unread > 0 && (
+        {unseen > 0 && (
           <span
-            data-testid="unread-badge"
+            data-testid="unseen-badge"
             className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground ring-2 ring-background"
           >
-            {unread > 99 ? '99+' : unread}
+            {unseen > 99 ? '99+' : unseen}
           </span>
         )}
       </PopoverTrigger>
