@@ -26,12 +26,17 @@ test.describe('notifications', () => {
 
     // A second tab on the same account.
     const other = await context.newPage()
-    await other.goto('/notifications')
+    await other.goto('/')
+    await other.getByRole('button', { name: /^Notifications/ }).click()
     await expect(other.getByTestId('notifications').getByRole('listitem')).toHaveCount(1)
     await expect(other.getByText('Welcome aboard')).toBeVisible()
-    // Web Push is configured (VAPID keys in .env) and Chromium supports it: the opt-in is offered, not forced.
+
+    // Web Push is configured (VAPID keys in .env) and Chromium supports it: the opt-in lives on the settings page.
+    await other.getByRole('link', { name: 'Notification settings' }).click()
+    await expect(other).toHaveURL(/\/notifications\/settings$/)
     await expect(other.getByTestId('push-toggle')).toHaveText(/Turn on/)
 
+    await other.getByRole('button', { name: /^Notifications/ }).click()
     await other.getByRole('button', { name: 'Mark all as read' }).click()
     await expect(other.getByTestId('unread-badge')).toHaveCount(0)
     // The first tab hears about it through the stream.

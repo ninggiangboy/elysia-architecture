@@ -20,7 +20,7 @@ self.addEventListener('push', (event) => {
       tag: typeof message.id === 'string' ? message.id : undefined,
       // A folded notification keeps its tag: replace the old one, but still alert for the new event.
       renotify: typeof message.id === 'string',
-      data: { link: typeof message.link === 'string' ? message.link : '/notifications' },
+      data: { link: typeof message.link === 'string' ? message.link : '/' },
     }),
   )
 })
@@ -28,9 +28,9 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   // Only ever navigate inside this origin, whatever the payload says.
-  let target = new URL('/notifications', self.location.origin)
+  let target = new URL('/', self.location.origin)
   try {
-    const url = new URL(event.notification.data?.link ?? '/notifications', self.location.origin)
+    const url = new URL(event.notification.data?.link ?? '/', self.location.origin)
     if (url.origin === self.location.origin) target = url
   } catch {}
   event.waitUntil(

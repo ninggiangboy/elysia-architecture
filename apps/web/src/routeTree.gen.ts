@@ -13,10 +13,10 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
-import { Route as AuthedNotificationsRouteImport } from './routes/_authed/notifications'
 import { Route as AuthedRealtimeRouteImport } from './routes/_authed/realtime'
 import { Route as AccountConfirmEmailRouteImport } from './routes/account.confirm-email'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthedNotificationsSettingsRouteImport } from './routes/_authed/notifications.settings'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -37,11 +37,6 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedNotificationsRoute = AuthedNotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedRealtimeRoute = AuthedRealtimeRouteImport.update({
   id: '/realtime',
   path: '/realtime',
@@ -57,35 +52,41 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedNotificationsSettingsRoute =
+  AuthedNotificationsSettingsRouteImport.update({
+    id: '/notifications/settings',
+    path: '/notifications/settings',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
-  '/notifications': typeof AuthedNotificationsRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/notifications/settings': typeof AuthedNotificationsSettingsRoute
 }
 export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
-  '/notifications': typeof AuthedNotificationsRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/': typeof AuthedIndexRoute
+  '/notifications/settings': typeof AuthedNotificationsSettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
-  '/_authed/notifications': typeof AuthedNotificationsRoute
   '/_authed/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/_authed/notifications/settings': typeof AuthedNotificationsSettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -93,29 +94,29 @@ export interface FileRouteTypes {
     | '/'
     | '/docs'
     | '/login'
-    | '/notifications'
     | '/realtime'
     | '/account/confirm-email'
     | '/auth/callback'
+    | '/notifications/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/docs'
     | '/login'
-    | '/notifications'
     | '/realtime'
     | '/account/confirm-email'
     | '/auth/callback'
     | '/'
+    | '/notifications/settings'
   id:
     | '__root__'
     | '/_authed'
     | '/docs'
     | '/login'
-    | '/_authed/notifications'
     | '/_authed/realtime'
     | '/account/confirm-email'
     | '/auth/callback'
     | '/_authed/'
+    | '/_authed/notifications/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,13 +157,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/notifications': {
-      id: '/_authed/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof AuthedNotificationsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/realtime': {
       id: '/_authed/realtime'
       path: '/realtime'
@@ -184,19 +178,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/notifications/settings': {
+      id: '/_authed/notifications/settings'
+      path: '/notifications/settings'
+      fullPath: '/notifications/settings'
+      preLoaderRoute: typeof AuthedNotificationsSettingsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
-  AuthedNotificationsRoute: typeof AuthedNotificationsRoute
   AuthedRealtimeRoute: typeof AuthedRealtimeRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedNotificationsSettingsRoute: typeof AuthedNotificationsSettingsRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedNotificationsRoute: AuthedNotificationsRoute,
   AuthedRealtimeRoute: AuthedRealtimeRoute,
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedNotificationsSettingsRoute: AuthedNotificationsSettingsRoute,
 }
 
 const AuthedRouteWithChildren =
