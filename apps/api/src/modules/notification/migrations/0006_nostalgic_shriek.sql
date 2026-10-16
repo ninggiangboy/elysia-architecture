@@ -1,0 +1,1 @@
+ALTER TABLE "notification"."notifications" ADD COLUMN "template" text;

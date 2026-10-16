@@ -1,3 +1,4 @@
+import type { Locale } from '@app/shared-types'
 import { DomainError } from '#/shared/domain/errors'
 
 const conflict = (code: string, message: string) => new DomainError(code, message, 'conflict')
@@ -21,6 +22,8 @@ export interface AccountDeletionProps {
   userId: string
   /** Kept only to say goodbye; scrubbed as soon as the deletion completes (or is cancelled and later erased). */
   email: string | null
+  /** The account's language, so the goodbye mail is written in it after the account is gone. Not personal data: kept. */
+  locale: Locale
   status: DeletionStatus
   requestedAt: Date
   /** End of the grace period. */
@@ -47,6 +50,7 @@ export class AccountDeletion {
     id: string
     userId: string
     email: string
+    locale: Locale
     now: Date
     gracePeriodMs: number
   }): AccountDeletion {
@@ -54,6 +58,7 @@ export class AccountDeletion {
       id: input.id,
       userId: input.userId,
       email: input.email,
+      locale: input.locale,
       status: 'scheduled',
       requestedAt: input.now,
       scheduledFor: new Date(input.now.getTime() + input.gracePeriodMs),
@@ -81,6 +86,9 @@ export class AccountDeletion {
   }
   get email() {
     return this.props.email
+  }
+  get locale() {
+    return this.props.locale
   }
 
   progress(): { done: number; total: number } {

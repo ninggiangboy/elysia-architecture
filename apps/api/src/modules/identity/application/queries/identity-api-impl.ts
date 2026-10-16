@@ -8,6 +8,11 @@ export class IdentityApiImpl implements IdentityApi {
   async getAccount(userId: string): Promise<AccountDto | null> {
     const user = await this.users.findById(userId)
     if (!user) return null
-    return { id: user.id, email: user.email.value, createdAt: user.createdAt.toISOString() }
+    return {
+      id: user.id,
+      email: user.email.value,
+      locale: user.locale,
+      createdAt: user.createdAt.toISOString(),
+    }
   }
 }

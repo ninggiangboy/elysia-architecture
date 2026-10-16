@@ -81,6 +81,7 @@ describe('AccountDeletion', () => {
       id: 'd1',
       userId: 'u1',
       email: 'a@x.co',
+      locale: 'en',
       now: T0,
       gracePeriodMs: 14 * DAY,
     })

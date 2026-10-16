@@ -71,6 +71,8 @@ export const accountDeletions = privacySchema.table(
     userId: uuid('user_id').notNull(),
     /** Only to say goodbye; null once the deletion is over. */
     email: text('email'),
+    /** The account's language, for the goodbye mail. */
+    locale: text('locale').notNull().default('en'),
     status: text('status').notNull(),
     requestedAt: timestamp('requested_at', { withTimezone: true }).notNull(),
     scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),

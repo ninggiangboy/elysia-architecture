@@ -5,6 +5,8 @@ import type { Profile } from '../domain/profile'
 export interface MeView {
   id: string
   email: string
+  /** Language the account is addressed in (mail, notifications); the web app follows it when you sign in. */
+  locale: string
   displayName: string
   bio: string | null
   avatarUrl: string | null
@@ -20,6 +22,7 @@ export function toMeView(account: AccountDto, profile: Profile, storage: ObjectS
   return {
     id: account.id,
     email: account.email,
+    locale: account.locale,
     displayName: profile.displayName,
     bio: profile.bio,
     avatarUrl: profile.avatarKey

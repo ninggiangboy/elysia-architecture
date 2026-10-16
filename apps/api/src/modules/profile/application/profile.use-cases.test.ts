@@ -37,7 +37,9 @@ class MemProfiles implements ProfileRepository {
 
 const identity: IdentityApi = {
   getAccount: async (id) =>
-    id === 'ghost' ? null : { id, email: `${id}@x.co`, createdAt: '2026-01-01T00:00:00.000Z' },
+    id === 'ghost'
+      ? null
+      : { id, email: `${id}@x.co`, locale: 'en', createdAt: '2026-01-01T00:00:00.000Z' },
 }
 
 describe('profile use cases', () => {

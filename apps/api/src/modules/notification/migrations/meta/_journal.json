@@ -43,6 +43,13 @@
       "when": 1792155859019,
       "tag": "0005_nappy_sage",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792164648918,
+      "tag": "0006_nostalgic_shriek",
+      "breakpoints": true
     }
   ]
 }

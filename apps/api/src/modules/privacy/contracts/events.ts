@@ -67,6 +67,8 @@ export interface DataExportReadyPayload {
   exportId: string
   userId: string
   email: string
+  /** The account's language when the archive was built, for the mail. Absent on older messages = default. */
+  locale?: string
   /** Presigned link, valid until `expiresAt`. Lives in the outbox until it is cleaned up. */
   downloadUrl: string
   size: number
@@ -84,6 +86,8 @@ export interface AccountDeletionScheduledPayload {
   deletionId: string
   userId: string
   email: string
+  /** The account's language, for the mail. Absent on older messages = default. */
+  locale?: string
   /** End of the grace period: the account is erased from then on, unless the user cancels before. */
   scheduledFor: string
   requestedAt: string
@@ -93,6 +97,7 @@ export interface AccountDeletionCancelledPayload {
   deletionId: string
   userId: string
   email: string
+  locale?: string
   cancelledAt: string
 }
 
@@ -136,5 +141,7 @@ export interface AccountDeletedPayload {
   userId: string
   /** For the one goodbye mail; scrubbed from privacy's own tables as soon as this is emitted. */
   email: string
+  /** The account's language when the deletion was scheduled (the account itself is gone by now). */
+  locale?: string
   deletedAt: string
 }

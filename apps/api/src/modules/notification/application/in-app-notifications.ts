@@ -1,11 +1,21 @@
+import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
+import { formatDay } from '#/shared/i18n/format'
 import type { NotificationKind } from '../domain/notification'
+import { translate } from './messages'
 
 /** What to tell a user, before it gets an id and a timestamp. */
 export interface NotificationDraft {
   userId: string
   kind: NotificationKind
-  title: string
-  body: string
+  /**
+   * Which message the client writes from `data` in the reader's language (a key of `TEMPLATES`). Leave it out for a custom
+   * notification and give `title` and `body` instead. The text is NOT stored for a templated one, so it follows the reader
+   * when they change language.
+   */
+  template?: NotificationTemplate
+  title?: string
+  body?: string
+  /** What the template is filled from: raw values (an ISO date, a provider id, a user agent), never text in a language. */
   data?: Record<string, unknown>
   /**
    * Fold repeats into one notification (no draft uses it yet): while the user's latest notification with this `key` is unread and at most
@@ -13,33 +23,6 @@ export interface NotificationDraft {
    */
   group?: { key: string; withinMs: number }
 }
-
-export const welcomeNotification = (p: { userId: string }): NotificationDraft => ({
-  userId: p.userId,
-  kind: 'welcome',
-  title: 'Welcome aboard',
-  body: 'Your account is ready. Add a display name and an avatar to make it yours.',
-  data: { link: '/' },
-})
-
-export const emailChangedNotification = (p: {
-  userId: string
-  newEmail: string
-}): NotificationDraft => ({
-  userId: p.userId,
-  kind: 'email_changed',
-  title: 'Your email address was changed',
-  body: `Your account email is now ${p.newEmail}.`,
-  data: { link: '/' },
-})
-
-export const suspiciousSessionNotification = (p: { userId: string }): NotificationDraft => ({
-  userId: p.userId,
-  kind: 'security_alert',
-  title: 'A device was signed out for your safety',
-  body: 'We saw a sign-in token being reused, which can mean it was stolen, so we signed that device out. Review your signed-in devices.',
-  data: { link: '/' },
-})
 
 type Matchers = ReadonlyArray<readonly [RegExp, string]>
 
@@ -60,107 +43,122 @@ const SYSTEMS: Matchers = [
 const detect = (matchers: Matchers, ua: string) => matchers.find(([re]) => re.test(ua))?.[1] ?? null
 
 /** "Chrome on macOS" from a User-Agent; enough to recognise a device, not for anything security-relevant. */
-export function describeDevice(userAgent: string | null): string {
-  if (!userAgent) return 'an unknown device'
+export function describeDevice(userAgent: string | null, locale: Locale = DEFAULT_LOCALE): string {
+  const t = translate(locale)
+  if (!userAgent) return t('common.unknownDevice')
   const browser = detect(BROWSERS, userAgent)
   const os = detect(SYSTEMS, userAgent)
-  if (browser && os) return `${browser} on ${os}`
-  return browser ?? os ?? 'an unknown device'
+  if (browser && os) return t('common.deviceOn', { browser, os })
+  return browser ?? os ?? t('common.unknownDevice')
 }
+
+const PROVIDER_NAMES: Record<string, string> = { google: 'Google', github: 'GitHub' }
+const providerName = (provider: string) => PROVIDER_NAMES[provider] ?? provider
+
+const str = (value: unknown) => (typeof value === 'string' ? value : '')
+
+/**
+ * The templates and what each is filled with, from the notification's `data`. The web app has the same list in its
+ * catalog (`notifications.templates.<name>`) and writes the messages itself; this server copy exists for what leaves the
+ * app as text — Web Push — and is written at send time in the account's language.
+ */
+const TEMPLATES = {
+  welcome: () => ({}),
+  emailChanged: (d) => ({ email: str(d.email) }),
+  suspiciousSession: () => ({}),
+  newSignIn: (d, locale) => ({
+    device: describeDevice(typeof d.userAgent === 'string' ? d.userAgent : null, locale),
+    ip: typeof d.ip === 'string' && d.ip ? ` (${d.ip})` : '',
+  }),
+  passkeyAdded: (d) => ({ name: str(d.name) }),
+  passkeyRemoved: (d) => ({ name: str(d.name) }),
+  oauthLinked: (d) => ({ provider: providerName(str(d.provider)) }),
+  oauthUnlinked: (d) => ({ provider: providerName(str(d.provider)) }),
+  dataExportReady: (d, locale) => ({ date: formatDay(str(d.expiresAt), locale) }),
+  dataExportFailed: () => ({}),
+  deletionScheduled: (d, locale) => ({ date: formatDay(str(d.scheduledFor), locale) }),
+  deletionCancelled: () => ({}),
+} satisfies Record<
+  string,
+  (data: Record<string, unknown>, locale: Locale) => Record<string, string>
+>
+
+export type NotificationTemplate = keyof typeof TEMPLATES
+
+/** The title and body of a templated notification in `locale`; `null` for a template this build does not know. */
+export function renderNotification(
+  template: string,
+  data: Record<string, unknown>,
+  locale: Locale,
+): { title: string; body: string } | null {
+  if (!(template in TEMPLATES)) return null
+  const key = template as NotificationTemplate
+  const values = TEMPLATES[key](data, locale)
+  const t = translate(locale)
+  return { title: t(`inApp.${key}.title`, values), body: t(`inApp.${key}.body`, values) }
+}
+
+const templated = (
+  userId: string,
+  kind: NotificationKind,
+  template: NotificationTemplate,
+  data: Record<string, unknown> = {},
+): NotificationDraft => ({ userId, kind, template, data: { link: '/', ...data } })
+
+export const welcomeNotification = (p: { userId: string }) =>
+  templated(p.userId, 'welcome', 'welcome')
+
+export const emailChangedNotification = (p: { userId: string; newEmail: string }) =>
+  templated(p.userId, 'email_changed', 'emailChanged', { email: p.newEmail })
+
+export const suspiciousSessionNotification = (p: { userId: string }) =>
+  templated(p.userId, 'security_alert', 'suspiciousSession')
 
 export const newSignInNotification = (p: {
   userId: string
   sessionId: string
   ip: string | null
   userAgent: string | null
-}): NotificationDraft => ({
-  userId: p.userId,
-  kind: 'new_sign_in',
-  title: 'New sign-in to your account',
-  body: `${describeDevice(p.userAgent)}${p.ip ? ` (${p.ip})` : ''} signed in. If this was not you, sign that device out.`,
-  data: { sessionId: p.sessionId, ip: p.ip, userAgent: p.userAgent, link: '/' },
-})
-
-const PROVIDER_NAMES: Record<string, string> = { google: 'Google', github: 'GitHub' }
-const providerName = (provider: string) => PROVIDER_NAMES[provider] ?? provider
+}) =>
+  templated(p.userId, 'new_sign_in', 'newSignIn', {
+    sessionId: p.sessionId,
+    ip: p.ip,
+    userAgent: p.userAgent,
+  })
 
 const securityAlert = (
   userId: string,
-  title: string,
-  body: string,
+  template: NotificationTemplate,
   data: Record<string, unknown> = {},
-): NotificationDraft => ({
-  userId,
-  kind: 'security_alert',
-  title,
-  body,
-  data: { link: '/security', ...data },
-})
+) => templated(userId, 'security_alert', template, { link: '/security', ...data })
 
 export const passkeyAddedNotification = (p: { userId: string; name: string }) =>
-  securityAlert(
-    p.userId,
-    'A passkey was added',
-    `"${p.name}" can now sign in to your account. If this was not you, remove it and sign out your other devices.`,
-  )
+  securityAlert(p.userId, 'passkeyAdded', { name: p.name })
 
 export const passkeyRemovedNotification = (p: { userId: string; name: string }) =>
-  securityAlert(
-    p.userId,
-    'A passkey was removed',
-    `"${p.name}" can no longer sign in to your account.`,
-  )
+  securityAlert(p.userId, 'passkeyRemoved', { name: p.name })
 
 export const oauthLinkedNotification = (p: { userId: string; provider: string }) =>
-  securityAlert(
-    p.userId,
-    `${providerName(p.provider)} was connected`,
-    `Your ${providerName(p.provider)} account can now sign in to your account. If this was not you, disconnect it and sign out your other devices.`,
-  )
+  securityAlert(p.userId, 'oauthLinked', { provider: p.provider })
 
 export const oauthUnlinkedNotification = (p: { userId: string; provider: string }) =>
-  securityAlert(
-    p.userId,
-    `${providerName(p.provider)} was disconnected`,
-    `Your ${providerName(p.provider)} account can no longer sign in to your account.`,
-  )
+  securityAlert(p.userId, 'oauthUnlinked', { provider: p.provider })
 
-const day = (iso: string) => new Date(iso).toISOString().slice(0, 10)
+export const dataExportReadyNotification = (p: { userId: string; expiresAt: string }) =>
+  templated(p.userId, 'data_export', 'dataExportReady', {
+    link: '/privacy',
+    expiresAt: p.expiresAt,
+  })
 
-export const dataExportReadyNotification = (p: {
-  userId: string
-  expiresAt: string
-}): NotificationDraft => ({
-  userId: p.userId,
-  kind: 'data_export',
-  title: 'Your data export is ready',
-  body: `Your copy is ready to download until ${day(p.expiresAt)} (UTC). We also sent the link by email.`,
-  data: { link: '/privacy' },
-})
+export const dataExportFailedNotification = (p: { userId: string }) =>
+  templated(p.userId, 'data_export', 'dataExportFailed', { link: '/privacy' })
 
-export const dataExportFailedNotification = (p: { userId: string }): NotificationDraft => ({
-  userId: p.userId,
-  kind: 'data_export',
-  title: 'Your data export could not be prepared',
-  body: 'Something went wrong while collecting your data. Please try again.',
-  data: { link: '/privacy' },
-})
+export const accountDeletionScheduledNotification = (p: { userId: string; scheduledFor: string }) =>
+  securityAlert(p.userId, 'deletionScheduled', {
+    link: '/privacy',
+    scheduledFor: p.scheduledFor,
+    deletionScheduledFor: p.scheduledFor,
+  })
 
-export const accountDeletionScheduledNotification = (p: {
-  userId: string
-  scheduledFor: string
-}): NotificationDraft =>
-  securityAlert(
-    p.userId,
-    'Your account is scheduled for deletion',
-    `It will be erased on ${day(p.scheduledFor)} (UTC). If this was not you, cancel it now and sign out your other devices.`,
-    { link: '/privacy', deletionScheduledFor: p.scheduledFor },
-  )
-
-export const accountDeletionCancelledNotification = (p: { userId: string }): NotificationDraft =>
-  securityAlert(
-    p.userId,
-    'Account deletion cancelled',
-    'Your account will not be deleted. If this was not you, review your signed-in devices.',
-    { link: '/privacy' },
-  )
+export const accountDeletionCancelledNotification = (p: { userId: string }) =>
+  securityAlert(p.userId, 'deletionCancelled', { link: '/privacy' })

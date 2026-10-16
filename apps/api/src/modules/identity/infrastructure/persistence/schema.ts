@@ -17,6 +17,8 @@ export const identitySchema = pgSchema('identity')
 export const users = identitySchema.table('users', {
   id: uuid('id').primaryKey(),
   email: text('email').notNull().unique(),
+  /** Language the account is addressed in (a `Locale` of `@app/shared-types`). */
+  locale: text('locale').notNull().default('en'),
   version: integer('version').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),

@@ -91,6 +91,7 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
             data: {
               id: p.notificationId,
               kind: p.kind,
+              template: p.template,
               title: p.title,
               body: p.body,
               data: p.data,

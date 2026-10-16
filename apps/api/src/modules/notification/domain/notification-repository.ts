@@ -19,7 +19,7 @@ export interface NotificationRepository {
     groupKey: string,
     since: Date,
     now: Date,
-    latest: Pick<NotificationProps, 'title' | 'body' | 'data'>,
+    latest: Pick<NotificationProps, 'template' | 'title' | 'body' | 'data'>,
   ): Promise<Notification | null>
   /** `createdAt` of the user's newest notification older than `id` (ids are time-ordered), `null` if there is none. */
   createdAtBefore(userId: string, id: string): Promise<Date | null>

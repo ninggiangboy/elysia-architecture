@@ -143,7 +143,7 @@ describe('data export', () => {
       const list = await api('GET', '/api/notifications', { token: me.accessToken })
       return list.json.items.find((n: { kind: string }) => n.kind === 'data_export')
     })
-    expect(notice.data).toEqual({ link: '/privacy' })
+    expect(notice).toMatchObject({ template: 'dataExportReady', data: { link: '/privacy' } })
     expect(JSON.stringify(notice)).not.toContain('http')
 
     // A fresh link on demand — also behind step-up, and only for the owner.
@@ -227,9 +227,7 @@ describe('account deletion', () => {
     expect(mail.text).toContain('/privacy')
     await eventually(async () => {
       const list = await api('GET', '/api/notifications', { token: me.accessToken })
-      return list.json.items.some((n: { title: string }) =>
-        n.title.includes('scheduled for deletion'),
-      )
+      return list.json.items.some((n: { template: string }) => n.template === 'deletionScheduled')
     })
     // Nothing erased yet.
     expect(
@@ -329,6 +327,7 @@ describe('jobs on the real tables', () => {
       id: crypto.randomUUID(),
       userId,
       email: 'nobody@example.test',
+      locale: 'en',
       now: new Date(Date.now() - 3600_000),
       gracePeriodMs: 1000,
     })
@@ -415,9 +414,7 @@ describe('jobs on the real tables', () => {
     expect((await exports.findById(stuck.id))?.props.failureReason).toContain('did not deliver')
     await eventually(async () => {
       const list = await api('GET', '/api/notifications', { token: me.accessToken })
-      return list.json.items.some((n: { title: string }) =>
-        n.title.includes('could not be prepared'),
-      )
+      return list.json.items.some((n: { template: string }) => n.template === 'dataExportFailed')
     })
     const retry = await api('POST', '/api/privacy/exports', { token: me.accessToken })
     expect(retry.status).toBe(202)

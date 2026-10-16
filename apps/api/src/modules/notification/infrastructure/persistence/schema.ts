@@ -45,6 +45,8 @@ export const notifications = notificationSchema.table(
     id: uuid('id').primaryKey(),
     userId: uuid('user_id').notNull(),
     kind: text('kind').notNull(),
+    /** The client's message template for this notification; `null` = custom, `title`/`body` hold the text. */
+    template: text('template'),
     title: text('title').notNull(),
     body: text('body').notNull(),
     data: jsonb('data').$type<Record<string, unknown>>().notNull(),

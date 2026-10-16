@@ -15,6 +15,9 @@ export interface NotificationCreatedPayload {
   notificationId: string
   userId: string
   kind: string
+  /** The message template the client writes in the reader's language from `data`; absent/`null` = custom (`title`/`body`). */
+  template?: string | null
+  /** The text of a custom notification; empty when `template` is set. */
   title: string
   body: string
   data: Record<string, unknown>

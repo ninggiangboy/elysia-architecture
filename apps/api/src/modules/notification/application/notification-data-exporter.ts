@@ -28,6 +28,7 @@ export class NotificationDataExporter implements DataExporter {
       data: {
         notifications: items.map((n) => ({
           kind: n.props.kind,
+          template: n.props.template,
           title: n.props.title,
           body: n.props.body,
           data: n.props.data,

@@ -7,6 +7,8 @@ export const MAX_PAGE_SIZE = 50
 export interface NotificationView {
   id: string
   kind: string
+  /** Message template the client writes from `data`; `null` = custom, `title`/`body` are the text. */
+  template: string | null
   title: string
   body: string
   data: Record<string, unknown>
@@ -20,6 +22,7 @@ export interface NotificationView {
 export const toView = (n: Notification): NotificationView => ({
   id: n.id,
   kind: n.props.kind,
+  template: n.props.template,
   title: n.props.title,
   body: n.props.body,
   data: n.props.data,

@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
 import { ConflictError, ValidationError } from '#/shared/application/errors'
 import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
 import type { MagicLinkRepository, UserRepository } from '../../domain/repositories'
@@ -23,7 +24,12 @@ export class VerifyMagicLink {
     private clock: Clock,
   ) {}
 
-  async execute(cmd: { token: string; meta: SessionMeta }): Promise<VerifyMagicLinkResult> {
+  async execute(cmd: {
+    token: string
+    meta: SessionMeta
+    /** Language of the browser, for an account this sign-in creates. */
+    locale?: Locale
+  }): Promise<VerifyMagicLinkResult> {
     try {
       return await this.attempt(cmd)
     } catch (err) {
@@ -34,7 +40,11 @@ export class VerifyMagicLink {
     }
   }
 
-  private async attempt(cmd: { token: string; meta: SessionMeta }): Promise<VerifyMagicLinkResult> {
+  private async attempt(cmd: {
+    token: string
+    meta: SessionMeta
+    locale?: Locale
+  }): Promise<VerifyMagicLinkResult> {
     const now = this.clock.now()
     const hash = this.tokens.hashOpaqueToken(cmd.token)
 
@@ -45,7 +55,12 @@ export class VerifyMagicLink {
       let user = await this.users.findByEmail(link.email)
       const newUser = !user
       if (!user) {
-        user = User.register({ id: this.ids.next(), email: link.email, now })
+        user = User.register({
+          id: this.ids.next(),
+          email: link.email,
+          locale: cmd.locale ?? DEFAULT_LOCALE,
+          now,
+        })
         await this.users.save(user)
         await this.outbox.add(user.pullEvents())
       }

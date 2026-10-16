@@ -1,3 +1,4 @@
+import type { Locale } from '@app/shared-types'
 import { MailPermanentError } from '#/shared/application/mail-errors'
 import type {
   Clock,
@@ -7,6 +8,8 @@ import type {
   Mailer,
 } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
+import { payloadLocale } from '../payload-locale'
+import type { LocaleResolver, Recipient } from '../ports'
 import type { MailContent } from '../templates'
 
 export interface MailRequest {
@@ -26,15 +29,18 @@ export class MailEventHandler<TPayload> implements IntegrationEventHandler {
   constructor(
     readonly name: string,
     readonly eventType: string,
-    private build: (payload: TPayload) => MailRequest,
+    private build: (payload: TPayload, locale: Locale) => MailRequest,
     private mailer: Mailer,
     private inbox: InboxGuard,
     private clock: Clock,
     private log: Log,
+    private locales: LocaleResolver = payloadLocale,
   ) {}
 
   async handle(message: Envelope): Promise<void> {
-    const { to, content, expiresAt } = this.build(message.payload as unknown as TPayload)
+    const payload = message.payload as unknown as TPayload
+    const locale = await this.locales.resolve(payload as Recipient)
+    const { to, content, expiresAt } = this.build(payload, locale)
     await this.inbox.afterSideEffect(message.id, this.name, async () => {
       if (expiresAt && this.clock.now() > new Date(expiresAt)) {
         this.log.info(

@@ -84,7 +84,9 @@ describe('notifications', () => {
       'notice for the second sign-in',
     )
     expect(notice).toMatchObject({ kind: 'new_sign_in', read: false })
-    expect(notice.body).toContain('Safari on iOS')
+    // Stored as what the text is made from: the client writes it, in the reader's language.
+    expect(notice).toMatchObject({ template: 'newSignIn', title: '', body: '' })
+    expect(notice.data.userAgent).toContain('iPhone')
     expect(notice.data).toMatchObject({ userAgent: expect.stringContaining('iPhone') })
 
     // Events are relayed in order, so the laptop's own (first) sign-in has been handled by now: only the welcome is there.
@@ -211,8 +213,8 @@ describe('notifications', () => {
 
       const live = await stream.next('notification.created', (m) => m.data.kind === 'email_changed')
       expect(live.data).toMatchObject({
-        title: expect.any(String),
-        body: expect.stringContaining(newEmail),
+        template: 'emailChanged',
+        data: { email: newEmail },
         count: 1,
       })
 

@@ -35,7 +35,7 @@ export class RecordErasure implements IntegrationEventHandler {
       // Locked: two modules confirming at once must not both conclude that the other one is still missing.
       const deletion = await this.deletions.findById(answer.deletionId, { lock: true })
       if (!deletion || deletion.userId !== answer.userId) return
-      const email = deletion.email
+      const { email, locale } = deletion
       // `module` comes from the wiring, not the payload: a module can only confirm for itself.
       if (deletion.confirm(this.module, now) !== 'recorded') return
       const { done, total } = deletion.progress()
@@ -49,7 +49,10 @@ export class RecordErasure implements IntegrationEventHandler {
         deletion.complete(now)
         if (email)
           events.push(
-            accountDeleted({ deletionId: deletion.id, userId: deletion.userId, email }, now),
+            accountDeleted(
+              { deletionId: deletion.id, userId: deletion.userId, email, locale },
+              now,
+            ),
           )
       }
       await this.deletions.save(deletion)

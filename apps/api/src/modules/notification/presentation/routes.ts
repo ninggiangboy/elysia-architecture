@@ -49,7 +49,13 @@ const notificationBody = t.Object({
   kind: t.String({
     description: 'Machine-readable category, e.g. `welcome`, `email_changed`, `security_alert`',
   }),
-  title: t.String(),
+  template: t.Nullable(
+    t.String({
+      description:
+        "Message template the client writes from `data` in the reader's language; `null` = custom, then `title` and `body` are the text",
+    }),
+  ),
+  title: t.String({ description: 'Text of a custom notification; empty when `template` is set' }),
   body: t.String(),
   data: t.Record(t.String(), t.Unknown(), {
     description: 'Extra context for the client, e.g. `{ "link": "/" }`',

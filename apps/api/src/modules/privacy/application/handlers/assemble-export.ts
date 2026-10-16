@@ -82,6 +82,7 @@ export class AssembleExport implements IntegrationEventHandler {
             exportId,
             userId: current.userId,
             email: account.email,
+            locale: account.locale,
             downloadUrl,
             size: bytes.byteLength,
             expiresAt: expiresAt.toISOString(),

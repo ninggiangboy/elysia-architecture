@@ -25,6 +25,7 @@ const meBody = t.Object(
   {
     id: t.String(),
     email: t.String({ format: 'email' }),
+    locale: t.String({ description: 'Language the account is addressed in: `en` or `vi`' }),
     displayName: t.String(),
     bio: t.Nullable(t.String()),
     avatarUrl: t.Nullable(t.String({ description: 'Presigned GET URL, expires after 1 hour' })),

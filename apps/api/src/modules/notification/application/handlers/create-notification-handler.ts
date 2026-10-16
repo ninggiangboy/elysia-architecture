@@ -43,8 +43,9 @@ export class CreateNotificationHandler<TPayload> implements IntegrationEventHand
           since,
           now,
           {
-            title: draft.title,
-            body: draft.body,
+            template: draft.template ?? null,
+            title: draft.title ?? '',
+            body: draft.body ?? '',
             data: draft.data ?? {},
           },
         )
@@ -58,8 +59,9 @@ export class CreateNotificationHandler<TPayload> implements IntegrationEventHand
         id: this.ids.next(),
         userId: draft.userId,
         kind: draft.kind,
-        title: draft.title,
-        body: draft.body,
+        template: draft.template,
+        title: draft.title ?? '',
+        body: draft.body ?? '',
         data: draft.data ?? {},
         createdAt: this.clock.now(),
         groupKey: draft.group?.key,

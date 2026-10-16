@@ -1,3 +1,4 @@
+import type { Locale } from '@app/shared-types'
 import { AggregateRoot } from '#/shared/domain/aggregate-root'
 import { DomainError } from '#/shared/domain/errors'
 import { IdentityEvents } from '../contracts/events'
@@ -8,6 +9,7 @@ export class User extends AggregateRoot {
     id: string,
     version: number,
     private _email: Email,
+    private _locale: Locale,
     readonly createdAt: Date,
     private _updatedAt: Date,
   ) {
@@ -18,15 +20,24 @@ export class User extends AggregateRoot {
     return this._email
   }
 
+  get locale(): Locale {
+    return this._locale
+  }
+
   get updatedAt(): Date {
     return this._updatedAt
   }
 
-  static register(params: { id: string; email: Email; now: Date }): User {
-    const user = new User(params.id, 0, params.email, params.now, params.now)
+  static register(params: { id: string; email: Email; locale: Locale; now: Date }): User {
+    const user = new User(params.id, 0, params.email, params.locale, params.now, params.now)
     user.record(
       IdentityEvents.UserRegistered,
-      { userId: user.id, email: params.email.value, registeredAt: params.now.toISOString() },
+      {
+        userId: user.id,
+        email: params.email.value,
+        locale: params.locale,
+        registeredAt: params.now.toISOString(),
+      },
       params.now,
     )
     return user
@@ -36,10 +47,24 @@ export class User extends AggregateRoot {
     id: string
     version: number
     email: Email
+    locale: Locale
     createdAt: Date
     updatedAt: Date
   }): User {
-    return new User(params.id, params.version, params.email, params.createdAt, params.updatedAt)
+    return new User(
+      params.id,
+      params.version,
+      params.email,
+      params.locale,
+      params.createdAt,
+      params.updatedAt,
+    )
+  }
+
+  changeLocale(locale: Locale, now: Date): void {
+    if (this._locale === locale) return
+    this._locale = locale
+    this._updatedAt = now
   }
 
   changeEmail(newEmail: Email, now: Date): void {

@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
 import { TooManyRequestsError } from '#/shared/application/errors'
 import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
 import { Email } from '../../domain/email'
@@ -16,7 +17,7 @@ export class RequestMagicLink {
     private clock: Clock,
   ) {}
 
-  async execute(cmd: { email: string; ip: string }): Promise<void> {
+  async execute(cmd: { email: string; ip: string; locale?: Locale }): Promise<void> {
     const email = Email.create(cmd.email)
     const now = this.clock.now()
 
@@ -34,6 +35,7 @@ export class RequestMagicLink {
       rawToken: token,
       tokenHash: hash,
       requestedIp: cmd.ip,
+      locale: cmd.locale ?? DEFAULT_LOCALE,
       now,
     })
 

@@ -21,6 +21,8 @@ export const IdentityEvents = {
 
 export interface MagicLinkRequestedPayload {
   email: string
+  /** Language of the page that asked for the link; the mail is written in it. Absent on older messages = default. */
+  locale?: string
   /** Raw token — lives in the outbox only until it is cleaned up. */
   token: string
   expiresAt: string
@@ -29,6 +31,8 @@ export interface MagicLinkRequestedPayload {
 export interface UserRegisteredPayload {
   userId: string
   email: string
+  /** The account's language at sign-up. Absent on older messages = default. */
+  locale?: string
   registeredAt: string
 }
 

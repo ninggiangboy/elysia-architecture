@@ -1,10 +1,13 @@
+import { LOCALES } from '@app/shared-types'
 import { Elysia, t } from 'elysia'
 import { UnauthorizedError } from '#/shared/application/errors'
 import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
 import { clientIp, userAgent } from '#/shared/http/client-info'
 import { API_PREFIX } from '#/shared/http/constants'
+import { localePlugin } from '#/shared/http/locale.plugin'
 import { errorResponse, validationError } from '#/shared/http/openapi'
 import type { WebAuthnResponse } from '../application/ports'
+import type { ChangeLocale } from '../application/use-cases/change-locale'
 import type { ConfirmEmailChange } from '../application/use-cases/confirm-email-change'
 import type { Logout } from '../application/use-cases/logout'
 import type { ListPasskeys, RemovePasskey } from '../application/use-cases/manage-passkeys'
@@ -52,6 +55,7 @@ export interface IdentityRouteDeps {
     revokeSession: RevokeSession
     revokeOtherSessions: RevokeOtherSessions
     requestEmailChange: RequestEmailChange
+    changeLocale: ChangeLocale
     confirmEmailChange: ConfirmEmailChange
     listOAuthProviders: ListOAuthProviders
     beginOAuth: BeginOAuth
@@ -108,6 +112,7 @@ const deviceSessionBody = t.Object({
 })
 
 const sentBody = t.Object({ status: t.Literal('sent') })
+const localeBody = t.UnionEnum([...LOCALES], { description: 'A language the product speaks' })
 
 /** What the browser's WebAuthn API returned. Only `id` is read by us; the library validates the rest. */
 const webauthnResponse = t.Object(
@@ -179,10 +184,15 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
 
   const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     .use(authPlugin(deps.verifier))
+    .use(localePlugin)
     .post(
       '/magic-link',
-      async ({ body, request, server, set }) => {
-        await uc.requestMagicLink.execute({ email: body.email, ip: clientIp(request, server) })
+      async ({ body, request, server, set, locale }) => {
+        await uc.requestMagicLink.execute({
+          email: body.email,
+          ip: clientIp(request, server),
+          locale,
+        })
         set.status = 202
         return { status: 'sent' as const }
       },
@@ -207,9 +217,10 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
     )
     .post(
       '/magic-link/verify',
-      async ({ body, request, server, cookie }) => {
+      async ({ body, request, server, cookie, locale }) => {
         const result = await uc.verifyMagicLink.execute({
           token: body.token,
+          locale,
           meta: { ip: clientIp(request, server), userAgent: userAgent(request) },
         })
         setRefreshCookie(cookie, result, deps.secureCookies)
@@ -306,10 +317,11 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
     )
     .post(
       '/oauth/callback',
-      async ({ body, maybeAuth, request, server, cookie }) => {
+      async ({ body, maybeAuth, request, server, cookie, locale }) => {
         const result = await uc.completeOAuth.execute({
           state: body.state,
           code: body.code,
+          locale,
           authUserId: maybeAuth?.userId,
           meta: { ip: clientIp(request, server), userAgent: userAgent(request) },
         })
@@ -420,6 +432,23 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           404: errorResponse(404, 'user_not_found'),
           409: errorResponse(409, 'email_taken'),
         },
+      },
+    )
+    .put(
+      '/locale',
+      async ({ auth, body, set }) => {
+        await uc.changeLocale.execute({ userId: auth.userId, locale: body.locale })
+        set.status = 204
+      },
+      {
+        auth: true,
+        body: t.Object({ locale: localeBody }),
+        detail: {
+          summary: 'Change language',
+          description:
+            'The language mail and notifications are written in. The web app calls it when the user picks a language.',
+        },
+        response: { 204: t.Void({ description: 'Saved' }), 400: validationError() },
       },
     )
     .get(

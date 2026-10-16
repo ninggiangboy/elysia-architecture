@@ -113,6 +113,7 @@ export async function createContainer(
     log: logger,
     storage,
     verifier: identity.verifier,
+    identity: identity.api,
     sending: {
       ratePerSecond: config.MAIL_RATE_PER_SECOND,
       burst: config.MAIL_BURST,

@@ -235,7 +235,7 @@ describe('passkeys', () => {
     // The account is told about the new way in.
     const notification = await eventually(async () => {
       const res = await api('GET', '/api/notifications', { token: session.accessToken })
-      return res.json.items?.find((n: { title: string }) => n.title === 'A passkey was added')
+      return res.json.items?.find((n: { template: string }) => n.template === 'passkeyAdded')
     })
     expect(notification.kind).toBe('security_alert')
   })
@@ -433,7 +433,10 @@ describe('OAuth', () => {
     expect(accounts.json.accounts.map((a: { provider: string }) => a.provider)).toEqual(['github'])
     await eventually(async () => {
       const res = await api('GET', '/api/notifications', { token: existing.accessToken })
-      return res.json.items?.find((n: { title: string }) => n.title === 'GitHub was connected')
+      return res.json.items?.find(
+        (n: { template: string; data: { provider?: string } }) =>
+          n.template === 'oauthLinked' && n.data.provider === 'github',
+      )
     })
   })
 

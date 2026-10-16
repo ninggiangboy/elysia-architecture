@@ -235,6 +235,17 @@ POST /privacy/deletion ─► scheduled (grace period PRIVACY_DELETION_GRACE_PER
 
 **Progress in the browser.** The steps are replayable realtime events (`privacy.export.progress`, `privacy.export.ready/failed`, `privacy.deletion.progress`), the case the replay buffer was designed for: a tab that was away reconnects with `Last-Event-ID` and still gets how the job went. They carry counts and module names — never the download link, because the buffer is stored. `done` is a count, not a step number: delivery is not ordered across relay instances, so a client keeps the highest value (the web app simply refetches).
 
+## Languages (i18n)
+
+Supported languages live in one place, `packages/shared-types/src/i18n.ts` (`LOCALES`, default `en`). Adding one = a locale there, a catalog next to each of the two catalogs below, and the registration line in each `index`.
+
+- **Web** (`apps/web/src/i18n`): i18next + react-i18next, catalogs in `locales/<lang>.ts` with typed keys (`t('profile.title')` fails to compile when mistyped). The language is the saved choice, else the browser's, else English; the header switcher changes it, and every API request carries it as `Accept-Language`. The API's error `code` is translated by the web (`errors.<code>`), falling back to the server's English message for a code it does not know.
+- **Account language** (`identity.users.locale`, `PUT /api/account/locale`, returned by `GET /api/me`): what mail and notifications are written in. A new account starts with the language of the browser that created it; signing in adopts the account's language in the app. Picking a language while signed in saves it on the account.
+- **In-app notifications** store what their text is made from, not the text: a `template` (e.g. `passkeyAdded`) plus raw `data` (a name, a provider id, an ISO date, a user agent). The web app writes the message from `notifications.templates.<name>` in its catalog, so changing language also changes notifications that already exist. A custom notification has no template and keeps its text in `title`/`body`; so does a row from before templates, or a template this web build does not know. Adding a template = a key in `in-app-notifications.ts` (`TEMPLATES`, which also fills it for Web Push), its entry in both web catalogs, and a line in `features/notifications/text.ts`.
+- **Web Push** leaves the app as text, so the server writes it at send time from the same template and data, in the account's language at that moment (`renderNotification`).
+- **Mail** (`notification/application/messages`): written server-side in the recipient's language, because it leaves the request. Which language: the event's own `locale` when it carries one (a magic link follows the page that asked for it; the privacy events carry the account's language, and the deletion ledger keeps it for the goodbye mail sent after the account is gone), else the account's, looked up through `IdentityApi` (`IdentityLocaleResolver`), else English.
+- **Catalog parity**: `diffCatalogs` (shared-types) is run by a unit test on each side, so a missing key or a dropped `{{placeholder}}` fails CI.
+
 ## Sending mail and rate limiting
 
 Mail goes through the outbox, so it never slows down or breaks a request. "Sending in a way the provider will not reject" has four layers:

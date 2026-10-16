@@ -13,6 +13,7 @@ export function notificationCreated(n: Notification): DomainEvent {
     notificationId: p.id,
     userId: p.userId,
     kind: p.kind,
+    template: p.template,
     title: p.title,
     body: p.body,
     data: p.data,

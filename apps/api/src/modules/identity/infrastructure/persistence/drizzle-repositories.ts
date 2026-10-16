@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types'
 import { and, desc, eq, gt, isNull, min, ne } from 'drizzle-orm'
 import { ConflictError, VersionConflictError } from '#/shared/application/errors'
 import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
@@ -47,6 +48,7 @@ export class DrizzleUserRepository implements UserRepository {
         await ex.insert(users).values({
           id: user.id,
           email: user.email.value,
+          locale: user.locale,
           version: 1,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -54,7 +56,12 @@ export class DrizzleUserRepository implements UserRepository {
       } else {
         const updated = await ex
           .update(users)
-          .set({ email: user.email.value, updatedAt: user.updatedAt, version: user.version + 1 })
+          .set({
+            email: user.email.value,
+            locale: user.locale,
+            updatedAt: user.updatedAt,
+            version: user.version + 1,
+          })
           .where(and(eq(users.id, user.id), eq(users.version, user.version)))
           .returning({ id: users.id })
         if (updated.length === 0) throw new VersionConflictError()
@@ -73,6 +80,7 @@ function toUser(row: typeof users.$inferSelect): User {
     id: row.id,
     version: row.version,
     email: Email.create(row.email),
+    locale: matchLocale(row.locale) ?? DEFAULT_LOCALE,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })

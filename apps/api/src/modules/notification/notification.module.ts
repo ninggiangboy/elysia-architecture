@@ -1,6 +1,7 @@
 import {
   type EmailChangedPayload,
   type EmailChangeRequestedPayload,
+  type IdentityApi,
   IdentityEvents,
   type MagicLinkRequestedPayload,
   type OAuthAccountLinkedPayload,
@@ -81,6 +82,7 @@ import {
   ListNotifications,
 } from './application/use-cases/read-notifications'
 import { NotificationEvents } from './contracts/events'
+import { IdentityLocaleResolver } from './infrastructure/identity-locale-resolver'
 import { DrizzleNotificationDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
 import { DrizzleNotificationRepository } from './infrastructure/persistence/drizzle-notification-repository'
 import { DrizzlePushSubscriptionRepository } from './infrastructure/persistence/drizzle-push-subscription-repository'
@@ -99,6 +101,8 @@ export interface NotificationModuleDeps {
   /** Where the data export is written. */
   storage: ObjectStorage
   verifier: TokenVerifier
+  /** Whose language a message is written in, when the event itself does not say. */
+  identity: IdentityApi
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
   /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
   webPush?: { sender: WebPushSender; publicKey: string; quietWindowMs?: number }
@@ -123,10 +127,12 @@ export function createNotificationModule({
   log,
   storage,
   verifier,
+  identity,
   sending,
   webPush,
 }: NotificationModuleDeps): NotificationModule {
   const guard = new DrizzleInboxGuard(database, inbox)
+  const locales = new IdentityLocaleResolver(identity)
   const mailer = new ThrottledMailer(
     providerMailer,
     new PostgresSendRateLimiter(database, {
@@ -184,6 +190,7 @@ export function createNotificationModule({
               clock,
               log,
               webPush.quietWindowMs,
+              locales,
             ),
             new DropPushSubscriptionsHandler(pushSubscriptions),
           ]
@@ -253,9 +260,9 @@ export function createNotificationModule({
       new MailEventHandler<DataExportReadyPayload>(
         'notification.send-export-ready',
         PrivacyEvents.DataExportReady,
-        (p) => ({
+        (p, locale) => ({
           to: p.email,
-          content: dataExportReadyMail({ url: p.downloadUrl, expiresAt: p.expiresAt }),
+          content: dataExportReadyMail({ url: p.downloadUrl, expiresAt: p.expiresAt }, locale),
           // A link that no longer works is not worth sending late.
           expiresAt: p.expiresAt,
         }),
@@ -263,16 +270,20 @@ export function createNotificationModule({
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<AccountDeletionScheduledPayload>(
         'notification.send-deletion-scheduled',
         PrivacyEvents.AccountDeletionScheduled,
-        (p) => ({
+        (p, locale) => ({
           to: p.email,
-          content: accountDeletionScheduledMail({
-            scheduledFor: p.scheduledFor,
-            cancelUrl: `${webAppUrl.replace(/\/$/, '')}/privacy`,
-          }),
+          content: accountDeletionScheduledMail(
+            {
+              scheduledFor: p.scheduledFor,
+              cancelUrl: `${webAppUrl.replace(/\/$/, '')}/privacy`,
+            },
+            locale,
+          ),
           // The grace period is the whole point of this mail: after it, the account is gone.
           expiresAt: p.scheduledFor,
         }),
@@ -280,24 +291,27 @@ export function createNotificationModule({
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<AccountDeletionCancelledPayload>(
         'notification.send-deletion-cancelled',
         PrivacyEvents.AccountDeletionCancelled,
-        (p) => ({ to: p.email, content: accountDeletionCancelledMail() }),
+        (p, locale) => ({ to: p.email, content: accountDeletionCancelledMail(locale) }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<AccountDeletedPayload>(
         'notification.send-account-deleted',
         PrivacyEvents.AccountDeleted,
-        (p) => ({ to: p.email, content: accountDeletedMail({ email: p.email }) }),
+        (p, locale) => ({ to: p.email, content: accountDeletedMail({ email: p.email }, locale) }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
       new ExportUserDataHandler<DataExportRequestedPayload>(
         {
@@ -327,68 +341,85 @@ export function createNotificationModule({
       new MailEventHandler<StepUpCodeRequestedPayload>(
         'notification.send-step-up-code',
         IdentityEvents.StepUpCodeRequested,
-        (p) => ({
+        (p, locale) => ({
           to: p.email,
-          content: stepUpCodeMail({ code: p.code, expiresInMinutes: minutesUntil(p.expiresAt) }),
+          content: stepUpCodeMail(
+            { code: p.code, expiresInMinutes: minutesUntil(p.expiresAt) },
+            locale,
+          ),
           expiresAt: p.expiresAt,
         }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<MagicLinkRequestedPayload>(
         'notification.send-magic-link',
         IdentityEvents.MagicLinkRequested,
-        (p) => ({
+        (p, locale) => ({
           to: p.email,
-          content: magicLinkMail({
-            url: link('/auth/callback', p.token),
-            expiresInMinutes: minutesUntil(p.expiresAt),
-          }),
+          content: magicLinkMail(
+            {
+              url: link('/auth/callback', p.token),
+              expiresInMinutes: minutesUntil(p.expiresAt),
+            },
+            locale,
+          ),
           expiresAt: p.expiresAt,
         }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<UserRegisteredPayload>(
         'notification.send-welcome',
         IdentityEvents.UserRegistered,
-        (p) => ({ to: p.email, content: welcomeMail({ email: p.email, appUrl: webAppUrl }) }),
+        (p, locale) => ({
+          to: p.email,
+          content: welcomeMail({ email: p.email, appUrl: webAppUrl }, locale),
+        }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<EmailChangeRequestedPayload>(
         'notification.send-email-change-confirmation',
         IdentityEvents.EmailChangeRequested,
-        (p) => ({
+        (p, locale) => ({
           to: p.newEmail,
-          content: confirmEmailChangeMail({
-            url: link('/account/confirm-email', p.token),
-            expiresInMinutes: minutesUntil(p.expiresAt),
-          }),
+          content: confirmEmailChangeMail(
+            {
+              url: link('/account/confirm-email', p.token),
+              expiresInMinutes: minutesUntil(p.expiresAt),
+            },
+            locale,
+          ),
           expiresAt: p.expiresAt,
         }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
       new MailEventHandler<EmailChangedPayload>(
         'notification.send-email-changed-notice',
         IdentityEvents.EmailChanged,
-        (p) => ({
+        (p, locale) => ({
           to: p.oldEmail,
-          content: emailChangedNoticeMail({ oldEmail: p.oldEmail, newEmail: p.newEmail }),
+          content: emailChangedNoticeMail({ oldEmail: p.oldEmail, newEmail: p.newEmail }, locale),
         }),
         mailer,
         guard,
         clock,
         log,
+        locales,
       ),
     ],
   }

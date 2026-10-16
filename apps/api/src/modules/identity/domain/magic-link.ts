@@ -1,3 +1,4 @@
+import type { Locale } from '@app/shared-types'
 import { AggregateRoot } from '#/shared/domain/aggregate-root'
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from './email'
@@ -25,6 +26,8 @@ export class MagicLink extends AggregateRoot {
     rawToken: string
     tokenHash: string
     requestedIp: string
+    /** Language of the mail; it goes only into the event. */
+    locale: Locale
     now: Date
   }): MagicLink {
     const expiresAt = new Date(params.now.getTime() + MAGIC_LINK_TTL_MS)
@@ -40,7 +43,12 @@ export class MagicLink extends AggregateRoot {
     )
     link.record(
       IdentityEvents.MagicLinkRequested,
-      { email: params.email.value, token: params.rawToken, expiresAt: expiresAt.toISOString() },
+      {
+        email: params.email.value,
+        token: params.rawToken,
+        locale: params.locale,
+        expiresAt: expiresAt.toISOString(),
+      },
       params.now,
     )
     return link

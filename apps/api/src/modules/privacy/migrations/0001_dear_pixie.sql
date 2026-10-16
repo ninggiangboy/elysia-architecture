@@ -1,0 +1,1 @@
+ALTER TABLE "privacy"."account_deletions" ADD COLUMN "locale" text DEFAULT 'en' NOT NULL;

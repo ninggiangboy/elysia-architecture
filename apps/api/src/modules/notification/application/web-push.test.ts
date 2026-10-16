@@ -246,6 +246,34 @@ describe('WebPushHandler', () => {
       link: '/profile',
     })
   })
+  test('writes a templated notification in the language the account uses now', async () => {
+    repo.rows.push(sub(ALICE, 1))
+    const vi = new WebPushHandler(
+      repo,
+      notifications,
+      sender,
+      new OncePerMessageInbox(),
+      clock,
+      log,
+      0,
+      {
+        resolve: async () => 'vi',
+      },
+    )
+    await vi.handle(
+      created({
+        template: 'passkeyAdded',
+        title: '',
+        body: '',
+        data: { link: '/security', name: 'Mac' },
+      }),
+    )
+    expect(sender.sent[0]?.message).toMatchObject({
+      title: 'Đã thêm một passkey',
+      link: '/security',
+    })
+    expect(sender.sent[0]?.message.body).toContain('"Mac"')
+  })
   test('does nothing for a user without subscriptions', async () => {
     await handler.handle(created())
     expect(sender.sent).toHaveLength(0)

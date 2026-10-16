@@ -1,0 +1,1 @@
+ALTER TABLE "identity"."users" ADD COLUMN "locale" text DEFAULT 'en' NOT NULL;

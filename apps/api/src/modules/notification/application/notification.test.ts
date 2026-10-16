@@ -16,6 +16,7 @@ import {
   describeDevice,
   type NotificationDraft,
   newSignInNotification,
+  renderNotification,
   suspiciousSessionNotification,
 } from './in-app-notifications'
 import {
@@ -35,7 +36,7 @@ class InMemoryNotifications implements NotificationRepository {
     groupKey: string,
     since: Date,
     now: Date,
-    latest: Pick<Notification['props'], 'title' | 'body' | 'data'>,
+    latest: Pick<Notification['props'], 'template' | 'title' | 'body' | 'data'>,
   ) {
     const target = this.rows
       .filter(
@@ -421,27 +422,45 @@ describe('new sign-in notification', () => {
   const chromeMac =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
-  test('describes the device and keeps the session for the client', () => {
+  test('stores what the text is made from, not the text', () => {
     const draft = newSignInNotification({
       userId: ALICE,
       sessionId: 's1',
       ip: '203.0.113.9',
       userAgent: chromeMac,
     })
-    expect(draft).toMatchObject({ userId: ALICE, kind: 'new_sign_in' })
-    expect(draft.body).toContain('Chrome on macOS')
-    expect(draft.body).toContain('203.0.113.9')
-    expect(draft.data).toMatchObject({ sessionId: 's1' })
+    expect(draft).toMatchObject({ userId: ALICE, kind: 'new_sign_in', template: 'newSignIn' })
+    expect(draft.title).toBeUndefined()
+    expect(draft.body).toBeUndefined()
+    expect(draft.data).toMatchObject({ sessionId: 's1', ip: '203.0.113.9', userAgent: chromeMac })
+  })
+
+  test('is written in the reader language when it has to leave as text (a push)', () => {
+    const { template, data } = newSignInNotification({
+      userId: ALICE,
+      sessionId: 's1',
+      ip: '203.0.113.9',
+      userAgent: chromeMac,
+    })
+    const en = renderNotification(template as string, data ?? {}, 'en')
+    expect(en?.body).toContain('Chrome on macOS')
+    expect(en?.body).toContain('203.0.113.9')
+    expect(renderNotification(template as string, data ?? {}, 'vi')?.title).toBe(
+      'Đăng nhập mới vào tài khoản của bạn',
+    )
+    expect(renderNotification('somethingNew', {}, 'en')).toBeNull()
   })
 
   test('copes with a missing user agent and ip', () => {
     expect(describeDevice(null)).toBe('an unknown device')
-    const draft = newSignInNotification({
+    const { template, data } = newSignInNotification({
       userId: ALICE,
       sessionId: 's1',
       ip: null,
       userAgent: null,
     })
-    expect(draft.body).toStartWith('an unknown device signed in')
+    expect(renderNotification(template as string, data ?? {}, 'en')?.body).toStartWith(
+      'an unknown device signed in',
+    )
   })
 })

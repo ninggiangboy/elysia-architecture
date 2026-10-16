@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types'
 import { and, eq, inArray, lte, sql } from 'drizzle-orm'
 import { ConflictError } from '#/shared/application/errors'
 import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
@@ -113,6 +114,7 @@ export class DrizzleAccountDeletionRepository implements AccountDeletionReposito
         id: r.id,
         userId: r.userId,
         email: r.email,
+        locale: matchLocale(r.locale) ?? DEFAULT_LOCALE,
         status: r.status as DeletionStatus,
         requestedAt: r.requestedAt,
         scheduledFor: r.scheduledFor,
@@ -135,6 +137,7 @@ function toRow(d: AccountDeletion): typeof accountDeletions.$inferInsert {
     id: p.id,
     userId: p.userId,
     email: p.email,
+    locale: p.locale,
     status: p.status,
     requestedAt: p.requestedAt,
     scheduledFor: p.scheduledFor,

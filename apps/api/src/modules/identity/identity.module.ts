@@ -22,6 +22,7 @@ import type { OAuthGateway, WebAuthnService } from './application/ports'
 import { IdentityApiImpl } from './application/queries/identity-api-impl'
 import { SessionIssuer } from './application/session-issuer'
 import { SessionStarter } from './application/session-starter'
+import { ChangeLocale } from './application/use-cases/change-locale'
 import { ConfirmEmailChange } from './application/use-cases/confirm-email-change'
 import { Logout } from './application/use-cases/logout'
 import { ListPasskeys, RemovePasskey } from './application/use-cases/manage-passkeys'
@@ -207,6 +208,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         clock,
         stepUp,
       ),
+      changeLocale: new ChangeLocale(users, clock),
       confirmEmailChange: new ConfirmEmailChange(
         users,
         emailChanges,

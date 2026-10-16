@@ -1,5 +1,8 @@
 /** Constants shared by web ↔ api (no logic). */
 
+export * from './i18n'
+export * from './i18n-catalog'
+
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 
 export const AVATAR_CONTENT_TYPES = {

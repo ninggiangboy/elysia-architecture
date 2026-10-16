@@ -1,6 +1,8 @@
 export interface AccountDto {
   id: string
   email: string
+  /** Language the account is addressed in (mail, notifications): a `Locale` of `@app/shared-types`. */
+  locale: string
   /** ISO-8601 */
   createdAt: string
 }

@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import { ConflictError, NotFoundError } from '#/shared/application/errors'
 import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
@@ -38,6 +39,7 @@ export class ScheduleAccountDeletion {
       id: this.ids.next(),
       userId: cmd.userId,
       email: account.email,
+      locale: matchLocale(account.locale) ?? DEFAULT_LOCALE,
       now,
       gracePeriodMs: this.policy.deletionGraceMs,
     })
@@ -49,6 +51,7 @@ export class ScheduleAccountDeletion {
             deletionId: deletion.id,
             userId: cmd.userId,
             email: account.email,
+            locale: deletion.locale,
             scheduledFor: deletion.props.scheduledFor.toISOString(),
           },
           now,
@@ -75,12 +78,15 @@ export class CancelAccountDeletion {
       const deletion = await this.deletions.findActiveByUser(cmd.userId, { lock: true })
       if (!deletion)
         throw new NotFoundError('no_deletion_scheduled', 'No account deletion is scheduled')
-      const email = deletion.email
+      const { email, locale } = deletion
       deletion.cancel(now)
       await this.deletions.save(deletion)
       if (email)
         await this.outbox.add([
-          accountDeletionCancelled({ deletionId: deletion.id, userId: cmd.userId, email }, now),
+          accountDeletionCancelled(
+            { deletionId: deletion.id, userId: cmd.userId, email, locale },
+            now,
+          ),
         ])
     })
   }

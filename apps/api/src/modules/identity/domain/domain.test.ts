@@ -21,13 +21,14 @@ describe('Email', () => {
 
 describe('User', () => {
   test('register records a UserRegistered event carrying all data consumers need', () => {
-    const user = User.register({ id: 'u1', email: Email.create('a@b.co'), now })
+    const user = User.register({ id: 'u1', email: Email.create('a@b.co'), locale: 'vi', now })
     expect(user.version).toBe(0)
     const [event] = user.pullEvents()
     expect(event?.type).toBe(IdentityEvents.UserRegistered)
     expect(event?.payload).toEqual({
       userId: 'u1',
       email: 'a@b.co',
+      locale: 'vi',
       registeredAt: now.toISOString(),
     })
     expect(user.pullEvents()).toEqual([]) // once pulled, they are gone
@@ -38,6 +39,7 @@ describe('User', () => {
       id: 'u1',
       version: 3,
       email: Email.create('old@b.co'),
+      locale: 'en',
       createdAt: now,
       updatedAt: now,
     })

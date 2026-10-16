@@ -22,6 +22,11 @@ export interface NotificationProps {
   id: string
   userId: string
   kind: NotificationKind
+  /**
+   * Which message the client writes from `data` in the reader's language (e.g. `passkeyAdded`). `null` = a custom
+   * notification: `title` and `body` are its text. A templated one stores them as empty strings.
+   */
+  template: string | null
   title: string
   body: string
   /** Free-form, JSON-serializable context for the client (e.g. a deep link). Not interpreted by the server. */
@@ -41,18 +46,20 @@ export class Notification {
   private constructor(readonly props: NotificationProps) {}
 
   static create(
-    input: Omit<NotificationProps, 'readAt' | 'notifiedAt' | 'groupKey' | 'count'> & {
+    input: Omit<NotificationProps, 'readAt' | 'notifiedAt' | 'groupKey' | 'count' | 'template'> & {
+      template?: string | null
       groupKey?: string | null
     },
   ): Notification {
     const title = input.title.trim()
     const body = input.body.trim()
-    if (!title || title.length > MAX_TITLE_LENGTH)
+    if ((!title && !input.template) || title.length > MAX_TITLE_LENGTH)
       throw new InvalidNotificationError(`Title must be 1-${MAX_TITLE_LENGTH} characters`)
     if (body.length > MAX_BODY_LENGTH)
       throw new InvalidNotificationError(`Body must be at most ${MAX_BODY_LENGTH} characters`)
     return new Notification({
       ...input,
+      template: input.template ?? null,
       title,
       body,
       notifiedAt: input.createdAt,

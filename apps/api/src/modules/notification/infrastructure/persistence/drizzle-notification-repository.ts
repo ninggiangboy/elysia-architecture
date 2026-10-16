@@ -17,6 +17,7 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       id: p.id,
       userId: p.userId,
       kind: p.kind,
+      template: p.template,
       title: p.title,
       body: p.body,
       data: p.data,
@@ -33,7 +34,7 @@ export class DrizzleNotificationRepository implements NotificationRepository {
     groupKey: string,
     since: Date,
     now: Date,
-    latest: Pick<NotificationProps, 'title' | 'body' | 'data'>,
+    latest: Pick<NotificationProps, 'template' | 'title' | 'body' | 'data'>,
   ): Promise<Notification | null> {
     const target = this.database.executor
       .select({ id: notifications.id })
@@ -54,6 +55,7 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       .set({
         count: sql`${notifications.count} + 1`,
         notifiedAt: now,
+        template: latest.template,
         title: latest.title,
         body: latest.body,
         data: latest.data,

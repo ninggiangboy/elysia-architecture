@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
 import {
   ConflictError,
   ForbiddenError,
@@ -101,6 +102,8 @@ export class CompleteOAuth {
     state: string
     code: string
     meta: SessionMeta
+    /** Language of the browser, for an account this sign-in creates. */
+    locale?: Locale
     /** The user making the request, if it carried an access token. */
     authUserId?: string
   }): Promise<CompleteOAuthResult> {
@@ -127,7 +130,7 @@ export class CompleteOAuth {
       throw new ValidationError('oauth_exchange_failed', 'The provider rejected this sign-in')
 
     if (state.purpose === 'link' && state.userId) return this.link(state.userId, provider, profile)
-    return this.login(provider, profile, cmd.meta)
+    return this.login(provider, profile, cmd.meta, cmd.locale ?? DEFAULT_LOCALE)
   }
 
   private async link(
@@ -171,13 +174,14 @@ export class CompleteOAuth {
     provider: OAuthProviderId,
     profile: OAuthProfile,
     meta: SessionMeta,
+    locale: Locale,
   ): Promise<CompleteOAuthResult> {
     try {
-      return await this.attemptLogin(provider, profile, meta)
+      return await this.attemptLogin(provider, profile, meta, locale)
     } catch (err) {
       // Two first-time sign-ins racing on the same new account: the loser hit a unique constraint and rolled back,
       // so a retry finds what the winner created.
-      if (err instanceof ConflictError) return this.attemptLogin(provider, profile, meta)
+      if (err instanceof ConflictError) return this.attemptLogin(provider, profile, meta, locale)
       throw err
     }
   }
@@ -186,9 +190,10 @@ export class CompleteOAuth {
     provider: OAuthProviderId,
     profile: OAuthProfile,
     meta: SessionMeta,
+    locale: Locale,
   ): Promise<CompleteOAuthResult> {
     return this.uow.run(async () => {
-      const { user, newUser } = await this.resolveUser(provider, profile)
+      const { user, newUser } = await this.resolveUser(provider, profile, locale)
       const session = await this.starter.start({
         userId: user.id,
         meta,
@@ -203,6 +208,7 @@ export class CompleteOAuth {
   private async resolveUser(
     provider: OAuthProviderId,
     profile: OAuthProfile,
+    locale: Locale,
   ): Promise<{ user: User; newUser: boolean }> {
     const linked = await this.accounts.findByProviderUser(provider, profile.providerUserId)
     if (linked) {
@@ -224,7 +230,7 @@ export class CompleteOAuth {
     let user = await this.users.findByEmail(email)
     const newUser = !user
     if (!user) {
-      user = User.register({ id: this.ids.next(), email, now })
+      user = User.register({ id: this.ids.next(), email, locale, now })
       await this.users.save(user)
       await this.outbox.add(user.pullEvents())
     }
