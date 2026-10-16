@@ -16,7 +16,7 @@
         └───────────────┬─────────────────────────────────────────────────┘
                         │ /api  (same origin: Vite proxy / nginx)
 ┌───────────────────────▼───────────────────────────────────────────────────┐
-│ apps/api  (stateless · N instances · APP_ROLES=api,relay)                 │
+│ apps/api  (stateless · N instances · APP_ROLES=api,worker)                │
 │                                                                           │
 │  presentation ─► application ─► domain             (per module)           │
 │                       │  ▲                                                │
@@ -89,7 +89,7 @@ Goal: run N instances, and split any module into its own service **without rewri
    - Optimistic locking via a `version` column (409 `version_conflict`).
    - "Consuming" a token (magic link, refresh, email change) is one atomic `UPDATE … WHERE unused AND not expired RETURNING`.
    - Jobs that should run in only one place (outbox cleanup) take `pg_try_advisory_xact_lock`.
-7. **Process roles.** `APP_ROLES=api,relay` (default). To split out a worker: run the same image with `APP_ROLES=relay`.
+7. **Process roles.** `APP_ROLES=api,worker` (default). To split out a worker: run the same image with `APP_ROLES=worker`.
    **Cluster mode.** `APP_WORKERS=N` (or `auto` = 3/4 of the CPUs, at least 2) makes `main.ts` act as a supervisor that forks N workers (`node:cluster`). Each worker is a full instance — own container, DB pool, SSE sockets and `LISTEN` connection — and binds the same `PORT` with `reusePort`, so the kernel spreads connections (Linux; macOS delivers to one worker, which is fine for development). Nothing else changes because instances were already stateless. Rules: the relay runs only in slot 0 (more would be safe but wasteful); a crashed worker is restarted in its slot, and a crash loop (>5 in 60 s) stops the supervisor so the orchestrator can react; SIGTERM is forwarded and every worker shuts down gracefully. `DB_POOL_MAX` is per worker, so size Postgres for `APP_WORKERS × DB_POOL_MAX` per container.
 8. **Verify tokens anywhere.** The ES256 access token carries a `kid`; the public key is at `/api/.well-known/jwks.json`. Other services verify without a shared secret, and keys can be rotated.
 9. **Observable.** `x-request-id`/`x-correlation-id` live in AsyncLocalStorage, are attached to every log line (pino JSON) and written into the outbox message `headers`, so logs of async handlers can be traced back to the original request.
@@ -208,5 +208,5 @@ For example splitting out `notification` (the simplest) or `profile`:
 2. **Transport**: write a `MessagePublisher` + consumer for a real broker (NATS/Kafka/…): the emitting module's relay publishes to the broker; the new service subscribes per `(module, handler.name)`. Handlers stay unchanged because they are already idempotent.
 3. **Synchronous calls**: for a contract other modules call (e.g. `IdentityApi`), write `HttpIdentityApi implements IdentityApi` and change the wiring in the composition root. Add timeouts, retries and a circuit breaker.
 4. **Auth**: the new service verifies JWTs with identity's JWKS (`createRemoteJWKSet`) instead of the in-process `AccessTokenVerifier`.
-5. **Deployment**: reuse the image, set a suitable `APP_ROLES` (`api`, `relay`) and mount only that module's routes/handlers in the new composition root.
+5. **Deployment**: reuse the image, set a suitable `APP_ROLES` (`api`, `worker`) and mount only that module's routes/handlers in the new composition root.
 6. **Verify**: `check:arch` must stay clean (no module imports another module's internals); rerun e2e over the network.

@@ -36,16 +36,12 @@ const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('production'),
     PORT: z.coerce.number().int().default(3000),
-    /** `worker` is another name for `relay`: the process that runs the outbox handlers, including the heavy ones (avatar thumbnails). */
+    /** `api` serves HTTP; `worker` runs the outbox relay and with it every event handler, including the heavy ones (avatar thumbnails). */
     APP_ROLES: z
       .string()
-      .default('api,relay')
+      .default('api,worker')
       .transform(csv)
-      .pipe(z.array(z.enum(['api', 'relay', 'worker'])).min(1))
-      .transform(
-        (roles) =>
-          [...new Set(roles.map((r) => (r === 'worker' ? 'relay' : r)))] as ('api' | 'relay')[],
-      ),
+      .pipe(z.array(z.enum(['api', 'worker'])).min(1)),
     /** Cluster mode: number of worker processes sharing `PORT` (`auto` = 3/4 of the CPUs, min 2 so a crash never takes the whole instance down). 1 = single process, no supervisor. */
     APP_WORKERS: z
       .string()

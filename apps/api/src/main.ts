@@ -34,8 +34,8 @@ const app = config.APP_ROLES.includes('api')
   : null
 if (app) logger.info({ port: config.PORT, slot: config.WORKER_SLOT }, 'api listening')
 
-// Any number of relays is safe (SKIP LOCKED), but one per node is enough: in a cluster only slot 0 runs it.
-if (config.APP_ROLES.includes('relay') && (!clustered || config.WORKER_SLOT === 0)) {
+// Any number of workers is safe (SKIP LOCKED), but one per node is enough: in a cluster only slot 0 runs it.
+if (config.APP_ROLES.includes('worker') && (!clustered || config.WORKER_SLOT === 0)) {
   container.relay.start()
   logger.info({ intervalMs: config.OUTBOX_POLL_INTERVAL_MS }, 'outbox relay started')
 }
