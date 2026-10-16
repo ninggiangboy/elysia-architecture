@@ -27,7 +27,8 @@ export class StripePaymentGateway implements PaymentGateway {
       {
         amount: input.amount,
         currency: input.currency,
-        automatic_payment_methods: { enabled: true },
+        // Our own card form pays it: cards only. (3-D Secure then comes back through the `return_url` redirect.)
+        allowed_payment_method_types: ['card'],
         metadata: { topUpId: input.topUpId, userId: input.userId },
       },
       // The same top-up never creates a second payment, whatever retries the caller does.

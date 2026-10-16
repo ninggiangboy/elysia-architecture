@@ -79,7 +79,7 @@ re-asked (only it), then the job stalls for an operator instead of lying about b
 *replayable* realtime events, and the whole thing works unchanged when a module becomes a service (it only needs the two events).
 
 ### 10. Money that is credited exactly once
-Topping up a wallet with Stripe: the browser pays with Stripe's Payment Element, and only the signed webhook moves money. The top-up settles
+Topping up a wallet with Stripe: the browser pays with our own card form, calling Stripe's API directly (no Stripe.js), and only the signed webhook moves money. The top-up settles
 with a conditional update in the same transaction as the ledger entry and the balance, so a redelivered or reordered webhook can neither
 pay twice nor take money back. Wallets hold one balance per currency (integer minor units), and erasing an account anonymises the
 financial records instead of deleting them.
@@ -134,7 +134,7 @@ Things worth trying:
 - **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
 - **Export your data** — one zip with what every module holds about you (profile, avatar, notifications, sign-in methods…), mailed as a link, with live progress. Asking for it needs a recent confirmation.
 - **Delete your account** — scheduled, with a grace period to cancel; then every module erases and confirms, and you get a last mail. Try both at `/privacy`.
-- **Top up your wallet** — pay with a card (or another method Stripe offers) at `/topup`, in USD, EUR or VND; the balance and the history at `/transactions` update live when Stripe confirms. Needs Stripe test keys (see below); without them the page says top-ups are off.
+- **Top up your wallet** — pay with a card at `/topup`, in USD, EUR or VND; the balance and the history at `/transactions` update live when Stripe confirms. Needs Stripe test keys (see below); without them the page says top-ups are off.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.
 - **Transactional mail** — magic-link, welcome and email-confirmation mails sent through the outbox, with provider-aware rate limiting and retries.
 - **Token verification for other services** — a public JWKS endpoint (`/.well-known/jwks.json`).

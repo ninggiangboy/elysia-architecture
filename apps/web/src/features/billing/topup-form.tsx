@@ -1,9 +1,7 @@
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
-import { loadStripe, type Stripe } from '@stripe/stripe-js'
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Lock } from 'lucide-react'
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -11,23 +9,20 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/lib/api'
+import {
+  cardDigits,
+  cvcLength,
+  formatCardNumber,
+  formatExpiry,
+  isCardNumberValid,
+  isCvcValid,
+  parseExpiry,
+} from '@/lib/card'
 import { formatMoney } from '@/lib/format'
 import { currencyDigits, parseMoney } from '@/lib/money'
+import { confirmCardPayment } from '@/lib/stripe'
 import { cn } from '@/lib/utils'
 import { billingConfigQuery, createTopUp } from './queries'
-
-// One Stripe.js per key, however many times the form mounts.
-const stripes = new Map<string, Promise<Stripe | null>>()
-const stripeFor = (publishableKey: string) => {
-  let stripe = stripes.get(publishableKey)
-  if (!stripe) {
-    stripe = loadStripe(publishableKey)
-    stripes.set(publishableKey, stripe)
-  }
-  return stripe
-}
-
-const isDark = () => document.documentElement.classList.contains('dark')
 
 interface Started {
   topUpId: string
@@ -36,28 +31,57 @@ interface Started {
   amount: number
 }
 
-/** Step two: the card (or other method) form Stripe draws, for the amount chosen in step one. */
-function PaymentStep({ started, onBack }: { started: Started; onBack: () => void }) {
+/** Step two: our own card form, paid straight to Stripe for the amount chosen in step one. */
+function PaymentStep({
+  started,
+  publishableKey,
+  onBack,
+}: {
+  started: Started
+  publishableKey: string
+  onBack: () => void
+}) {
   const { t } = useTranslation()
-  const stripe = useStripe()
-  const elements = useElements()
   const navigate = useNavigate()
+  const [name, setName] = useState('')
+  const [number, setNumber] = useState('')
+  const [expiry, setExpiry] = useState('')
+  const [cvc, setCvc] = useState('')
+  const [touched, setTouched] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const exp = parseExpiry(expiry)
+  const problems = {
+    name: name.trim() === '',
+    number: !isCardNumberValid(number),
+    expiry: exp === null,
+    cvc: !isCvcValid(cvc, number),
+  }
+  const invalid = (field: keyof typeof problems) => touched && problems[field]
 
   const pay = useMutation({
     mutationFn: async () => {
-      if (!stripe || !elements) return
-      const result = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          // Where a method that leaves the page (a bank redirect, 3-D Secure) brings the buyer back.
-          return_url: `${window.location.origin}/topup/return?topUp=${started.topUpId}`,
+      if (!exp) return
+      const returnUrl = `${window.location.origin}/topup/return?topUp=${started.topUpId}`
+      const outcome = await confirmCardPayment({
+        publishableKey,
+        clientSecret: started.clientSecret,
+        returnUrl,
+        card: {
+          name: name.trim(),
+          number,
+          expMonth: exp.month,
+          expYear: exp.year,
+          cvc,
         },
-        // A card that needs nothing more is settled right here, without a round trip through Stripe's page.
-        redirect: 'if_required',
       })
-      // Only a decline or a validation problem comes back as an error; the buyer fixes it and tries again.
-      if (result.error) throw new Error(result.error.message ?? t('common.unknownError'))
+      // Only a decline or a validation problem is an error; the buyer fixes it and tries again.
+      if (outcome.kind === 'error') throw new Error(outcome.message)
+      // 3-D Secure: the bank's page, then back to `returnUrl`.
+      if (outcome.kind === 'redirect') {
+        window.location.assign(outcome.url)
+        return
+      }
       await navigate({ to: '/topup/return', search: { topUp: started.topUpId } })
     },
     onError: (err) => setError(err instanceof Error ? err.message : t('common.unknownError')),
@@ -65,17 +89,75 @@ function PaymentStep({ started, onBack }: { started: Started; onBack: () => void
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    setTouched(true)
     setError(null)
+    if (Object.values(problems).some(Boolean)) return
     pay.mutate()
   }
 
   return (
-    <form onSubmit={submit}>
+    <form onSubmit={submit} noValidate>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
           {t('billing.topup.paying', { amount: formatMoney(started.amount, started.currency) })}
         </p>
-        <PaymentElement />
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="card-name">{t('billing.card.name')}</Label>
+          <Input
+            id="card-name"
+            autoComplete="cc-name"
+            value={name}
+            aria-invalid={invalid('name')}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="card-number">{t('billing.card.number')}</Label>
+          <Input
+            id="card-number"
+            inputMode="numeric"
+            autoComplete="cc-number"
+            placeholder="1234 1234 1234 1234"
+            value={number}
+            aria-invalid={invalid('number')}
+            onChange={(e) => setNumber(formatCardNumber(e.target.value))}
+          />
+          {invalid('number') && (
+            <p className="text-xs text-destructive">{t('billing.card.numberInvalid')}</p>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="card-expiry">{t('billing.card.expiry')}</Label>
+            <Input
+              id="card-expiry"
+              inputMode="numeric"
+              autoComplete="cc-exp"
+              placeholder="MM / YY"
+              value={expiry}
+              aria-invalid={invalid('expiry')}
+              onChange={(e) => setExpiry(formatExpiry(e.target.value))}
+            />
+            {invalid('expiry') && (
+              <p className="text-xs text-destructive">{t('billing.card.expiryInvalid')}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="card-cvc">{t('billing.card.cvc')}</Label>
+            <Input
+              id="card-cvc"
+              inputMode="numeric"
+              autoComplete="cc-csc"
+              placeholder={'•'.repeat(cvcLength(number))}
+              value={cvc}
+              aria-invalid={invalid('cvc')}
+              onChange={(e) => setCvc(cardDigits(e.target.value).slice(0, 4))}
+            />
+            {invalid('cvc') && (
+              <p className="text-xs text-destructive">{t('billing.card.cvcInvalid')}</p>
+            )}
+          </div>
+        </div>
         {error && (
           <p role="alert" className="text-sm text-destructive" data-testid="payment-error">
             {error}
@@ -86,12 +168,7 @@ function PaymentStep({ started, onBack }: { started: Started; onBack: () => void
         <Button type="button" variant="ghost" size="sm" onClick={onBack} disabled={pay.isPending}>
           {t('billing.topup.changeAmount')}
         </Button>
-        <Button
-          type="submit"
-          className="ml-auto"
-          disabled={!stripe || !elements}
-          loading={pay.isPending}
-        >
+        <Button type="submit" className="ml-auto" loading={pay.isPending}>
           <Lock aria-hidden />
           {t('billing.topup.pay', { amount: formatMoney(started.amount, started.currency) })}
         </Button>
@@ -216,12 +293,8 @@ export function TopUpForm() {
   const { t } = useTranslation()
   const { data: config } = useSuspenseQuery(billingConfigQuery)
   const [started, setStarted] = useState<Started | null>(null)
-  const stripe = useMemo(
-    () => (config.publishableKey ? stripeFor(config.publishableKey) : null),
-    [config.publishableKey],
-  )
 
-  if (!config.enabled || !stripe)
+  if (!config.enabled || !config.publishableKey)
     return (
       <Card>
         <p className="px-5 py-6 text-sm text-muted-foreground sm:px-6" data-testid="topup-disabled">
@@ -233,17 +306,13 @@ export function TopUpForm() {
   return (
     <Card>
       {started ? (
-        <Elements
-          // A new payment is a new Elements: the client secret cannot change under a mounted one.
+        <PaymentStep
+          // A new payment is a new form: nothing typed for one amount carries over to the next.
           key={started.clientSecret}
-          stripe={stripe}
-          options={{
-            clientSecret: started.clientSecret,
-            appearance: { theme: isDark() ? 'night' : 'stripe' },
-          }}
-        >
-          <PaymentStep started={started} onBack={() => setStarted(null)} />
-        </Elements>
+          started={started}
+          publishableKey={config.publishableKey}
+          onBack={() => setStarted(null)}
+        />
       ) : (
         <AmountStep onStarted={setStarted} />
       )}
