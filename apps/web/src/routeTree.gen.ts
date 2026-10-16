@@ -23,15 +23,18 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as NotificationsSettingsRouteImport } from './routes/notifications.settings'
 import { Route as TopupIndexRouteImport } from './routes/topup.index'
 import { Route as TopupReturnRouteImport } from './routes/topup.return'
+import { Route as WalletIndexRouteImport } from './routes/wallet.index'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsAccountRouteImport } from './routes/_authed/settings/account'
 import { Route as AuthedSettingsNotificationsRouteImport } from './routes/_authed/settings/notifications'
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsSecurityRouteImport } from './routes/_authed/settings/security'
-import { Route as AuthedWalletIndexRouteImport } from './routes/_authed/wallet/index'
 import { Route as AuthOauthCallbackRouteImport } from './routes/auth.oauth.callback'
-import { Route as AuthedWalletTopupIndexRouteImport } from './routes/_authed/wallet/topup/index'
-import { Route as AuthedWalletTopupReturnRouteImport } from './routes/_authed/wallet/topup/return'
+import { Route as WalletTopupIndexRouteImport } from './routes/wallet.topup.index'
+import { Route as WalletTopupReturnRouteImport } from './routes/wallet.topup.return'
+import { Route as AuthedSettingsWalletIndexRouteImport } from './routes/_authed/settings/wallet/index'
+import { Route as AuthedSettingsWalletTopupIndexRouteImport } from './routes/_authed/settings/wallet/topup/index'
+import { Route as AuthedSettingsWalletTopupReturnRouteImport } from './routes/_authed/settings/wallet/topup/return'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -102,6 +105,11 @@ const TopupReturnRoute = TopupReturnRouteImport.update({
   path: '/topup/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletIndexRoute = WalletIndexRouteImport.update({
+  id: '/wallet/',
+  path: '/wallet/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -128,26 +136,39 @@ const AuthedSettingsSecurityRoute = AuthedSettingsSecurityRouteImport.update({
   path: '/security',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
-const AuthedWalletIndexRoute = AuthedWalletIndexRouteImport.update({
-  id: '/wallet/',
-  path: '/wallet/',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthOauthCallbackRoute = AuthOauthCallbackRouteImport.update({
   id: '/auth/oauth/callback',
   path: '/auth/oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedWalletTopupIndexRoute = AuthedWalletTopupIndexRouteImport.update({
+const WalletTopupIndexRoute = WalletTopupIndexRouteImport.update({
   id: '/wallet/topup/',
   path: '/wallet/topup/',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedWalletTopupReturnRoute = AuthedWalletTopupReturnRouteImport.update({
+const WalletTopupReturnRoute = WalletTopupReturnRouteImport.update({
   id: '/wallet/topup/return',
   path: '/wallet/topup/return',
-  getParentRoute: () => AuthedRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedSettingsWalletIndexRoute =
+  AuthedSettingsWalletIndexRouteImport.update({
+    id: '/wallet/',
+    path: '/wallet/',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
+const AuthedSettingsWalletTopupIndexRoute =
+  AuthedSettingsWalletTopupIndexRouteImport.update({
+    id: '/wallet/topup/',
+    path: '/wallet/topup/',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
+const AuthedSettingsWalletTopupReturnRoute =
+  AuthedSettingsWalletTopupReturnRouteImport.update({
+    id: '/wallet/topup/return',
+    path: '/wallet/topup/return',
+    getParentRoute: () => AuthedSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -163,15 +184,18 @@ export interface FileRoutesByFullPath {
   '/notifications/settings': typeof NotificationsSettingsRoute
   '/topup/return': typeof TopupReturnRoute
   '/topup/': typeof TopupIndexRoute
+  '/wallet/': typeof WalletIndexRoute
   '/settings/account': typeof AuthedSettingsAccountRoute
   '/settings/notifications': typeof AuthedSettingsNotificationsRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/security': typeof AuthedSettingsSecurityRoute
   '/auth/oauth/callback': typeof AuthOauthCallbackRoute
+  '/wallet/topup/return': typeof WalletTopupReturnRoute
   '/settings/': typeof AuthedSettingsIndexRoute
-  '/wallet/': typeof AuthedWalletIndexRoute
-  '/wallet/topup/return': typeof AuthedWalletTopupReturnRoute
-  '/wallet/topup/': typeof AuthedWalletTopupIndexRoute
+  '/wallet/topup/': typeof WalletTopupIndexRoute
+  '/settings/wallet/': typeof AuthedSettingsWalletIndexRoute
+  '/settings/wallet/topup/return': typeof AuthedSettingsWalletTopupReturnRoute
+  '/settings/wallet/topup/': typeof AuthedSettingsWalletTopupIndexRoute
 }
 export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
@@ -186,15 +210,18 @@ export interface FileRoutesByTo {
   '/topup/return': typeof TopupReturnRoute
   '/': typeof AuthedIndexRoute
   '/topup': typeof TopupIndexRoute
+  '/wallet': typeof WalletIndexRoute
   '/settings/account': typeof AuthedSettingsAccountRoute
   '/settings/notifications': typeof AuthedSettingsNotificationsRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/security': typeof AuthedSettingsSecurityRoute
   '/auth/oauth/callback': typeof AuthOauthCallbackRoute
+  '/wallet/topup/return': typeof WalletTopupReturnRoute
   '/settings': typeof AuthedSettingsIndexRoute
-  '/wallet': typeof AuthedWalletIndexRoute
-  '/wallet/topup/return': typeof AuthedWalletTopupReturnRoute
-  '/wallet/topup': typeof AuthedWalletTopupIndexRoute
+  '/wallet/topup': typeof WalletTopupIndexRoute
+  '/settings/wallet': typeof AuthedSettingsWalletIndexRoute
+  '/settings/wallet/topup/return': typeof AuthedSettingsWalletTopupReturnRoute
+  '/settings/wallet/topup': typeof AuthedSettingsWalletTopupIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -212,15 +239,18 @@ export interface FileRoutesById {
   '/topup/return': typeof TopupReturnRoute
   '/_authed/': typeof AuthedIndexRoute
   '/topup/': typeof TopupIndexRoute
+  '/wallet/': typeof WalletIndexRoute
   '/_authed/settings/account': typeof AuthedSettingsAccountRoute
   '/_authed/settings/notifications': typeof AuthedSettingsNotificationsRoute
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/security': typeof AuthedSettingsSecurityRoute
   '/auth/oauth/callback': typeof AuthOauthCallbackRoute
+  '/wallet/topup/return': typeof WalletTopupReturnRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
-  '/_authed/wallet/': typeof AuthedWalletIndexRoute
-  '/_authed/wallet/topup/return': typeof AuthedWalletTopupReturnRoute
-  '/_authed/wallet/topup/': typeof AuthedWalletTopupIndexRoute
+  '/wallet/topup/': typeof WalletTopupIndexRoute
+  '/_authed/settings/wallet/': typeof AuthedSettingsWalletIndexRoute
+  '/_authed/settings/wallet/topup/return': typeof AuthedSettingsWalletTopupReturnRoute
+  '/_authed/settings/wallet/topup/': typeof AuthedSettingsWalletTopupIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -238,15 +268,18 @@ export interface FileRouteTypes {
     | '/notifications/settings'
     | '/topup/return'
     | '/topup/'
+    | '/wallet/'
     | '/settings/account'
     | '/settings/notifications'
     | '/settings/profile'
     | '/settings/security'
     | '/auth/oauth/callback'
-    | '/settings/'
-    | '/wallet/'
     | '/wallet/topup/return'
+    | '/settings/'
     | '/wallet/topup/'
+    | '/settings/wallet/'
+    | '/settings/wallet/topup/return'
+    | '/settings/wallet/topup/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/docs'
@@ -261,15 +294,18 @@ export interface FileRouteTypes {
     | '/topup/return'
     | '/'
     | '/topup'
+    | '/wallet'
     | '/settings/account'
     | '/settings/notifications'
     | '/settings/profile'
     | '/settings/security'
     | '/auth/oauth/callback'
-    | '/settings'
-    | '/wallet'
     | '/wallet/topup/return'
+    | '/settings'
     | '/wallet/topup'
+    | '/settings/wallet'
+    | '/settings/wallet/topup/return'
+    | '/settings/wallet/topup'
   id:
     | '__root__'
     | '/_authed'
@@ -286,15 +322,18 @@ export interface FileRouteTypes {
     | '/topup/return'
     | '/_authed/'
     | '/topup/'
+    | '/wallet/'
     | '/_authed/settings/account'
     | '/_authed/settings/notifications'
     | '/_authed/settings/profile'
     | '/_authed/settings/security'
     | '/auth/oauth/callback'
+    | '/wallet/topup/return'
     | '/_authed/settings/'
-    | '/_authed/wallet/'
-    | '/_authed/wallet/topup/return'
-    | '/_authed/wallet/topup/'
+    | '/wallet/topup/'
+    | '/_authed/settings/wallet/'
+    | '/_authed/settings/wallet/topup/return'
+    | '/_authed/settings/wallet/topup/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -309,7 +348,10 @@ export interface RootRouteChildren {
   NotificationsSettingsRoute: typeof NotificationsSettingsRoute
   TopupReturnRoute: typeof TopupReturnRoute
   TopupIndexRoute: typeof TopupIndexRoute
+  WalletIndexRoute: typeof WalletIndexRoute
   AuthOauthCallbackRoute: typeof AuthOauthCallbackRoute
+  WalletTopupReturnRoute: typeof WalletTopupReturnRoute
+  WalletTopupIndexRoute: typeof WalletTopupIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -412,6 +454,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TopupReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/': {
+      id: '/wallet/'
+      path: '/wallet'
+      fullPath: '/wallet/'
+      preLoaderRoute: typeof WalletIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/settings/': {
       id: '/_authed/settings/'
       path: '/'
@@ -447,13 +496,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsSecurityRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
-    '/_authed/wallet/': {
-      id: '/_authed/wallet/'
-      path: '/wallet'
-      fullPath: '/wallet/'
-      preLoaderRoute: typeof AuthedWalletIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/auth/oauth/callback': {
       id: '/auth/oauth/callback'
       path: '/auth/oauth/callback'
@@ -461,19 +503,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/wallet/topup/': {
-      id: '/_authed/wallet/topup/'
+    '/wallet/topup/': {
+      id: '/wallet/topup/'
       path: '/wallet/topup'
       fullPath: '/wallet/topup/'
-      preLoaderRoute: typeof AuthedWalletTopupIndexRouteImport
-      parentRoute: typeof AuthedRoute
+      preLoaderRoute: typeof WalletTopupIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authed/wallet/topup/return': {
-      id: '/_authed/wallet/topup/return'
+    '/wallet/topup/return': {
+      id: '/wallet/topup/return'
       path: '/wallet/topup/return'
       fullPath: '/wallet/topup/return'
-      preLoaderRoute: typeof AuthedWalletTopupReturnRouteImport
-      parentRoute: typeof AuthedRoute
+      preLoaderRoute: typeof WalletTopupReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authed/settings/wallet/': {
+      id: '/_authed/settings/wallet/'
+      path: '/wallet'
+      fullPath: '/settings/wallet/'
+      preLoaderRoute: typeof AuthedSettingsWalletIndexRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/wallet/topup/': {
+      id: '/_authed/settings/wallet/topup/'
+      path: '/wallet/topup'
+      fullPath: '/settings/wallet/topup/'
+      preLoaderRoute: typeof AuthedSettingsWalletTopupIndexRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/wallet/topup/return': {
+      id: '/_authed/settings/wallet/topup/return'
+      path: '/wallet/topup/return'
+      fullPath: '/settings/wallet/topup/return'
+      preLoaderRoute: typeof AuthedSettingsWalletTopupReturnRouteImport
+      parentRoute: typeof AuthedSettingsRoute
     }
   }
 }
@@ -484,6 +547,9 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsSecurityRoute: typeof AuthedSettingsSecurityRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
+  AuthedSettingsWalletIndexRoute: typeof AuthedSettingsWalletIndexRoute
+  AuthedSettingsWalletTopupReturnRoute: typeof AuthedSettingsWalletTopupReturnRoute
+  AuthedSettingsWalletTopupIndexRoute: typeof AuthedSettingsWalletTopupIndexRoute
 }
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
@@ -492,6 +558,9 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsSecurityRoute: AuthedSettingsSecurityRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
+  AuthedSettingsWalletIndexRoute: AuthedSettingsWalletIndexRoute,
+  AuthedSettingsWalletTopupReturnRoute: AuthedSettingsWalletTopupReturnRoute,
+  AuthedSettingsWalletTopupIndexRoute: AuthedSettingsWalletTopupIndexRoute,
 }
 
 const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
@@ -502,18 +571,12 @@ interface AuthedRouteChildren {
   AuthedRealtimeRoute: typeof AuthedRealtimeRoute
   AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
   AuthedIndexRoute: typeof AuthedIndexRoute
-  AuthedWalletIndexRoute: typeof AuthedWalletIndexRoute
-  AuthedWalletTopupReturnRoute: typeof AuthedWalletTopupReturnRoute
-  AuthedWalletTopupIndexRoute: typeof AuthedWalletTopupIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedRealtimeRoute: AuthedRealtimeRoute,
   AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
   AuthedIndexRoute: AuthedIndexRoute,
-  AuthedWalletIndexRoute: AuthedWalletIndexRoute,
-  AuthedWalletTopupReturnRoute: AuthedWalletTopupReturnRoute,
-  AuthedWalletTopupIndexRoute: AuthedWalletTopupIndexRoute,
 }
 
 const AuthedRouteWithChildren =
@@ -531,7 +594,10 @@ const rootRouteChildren: RootRouteChildren = {
   NotificationsSettingsRoute: NotificationsSettingsRoute,
   TopupReturnRoute: TopupReturnRoute,
   TopupIndexRoute: TopupIndexRoute,
+  WalletIndexRoute: WalletIndexRoute,
   AuthOauthCallbackRoute: AuthOauthCallbackRoute,
+  WalletTopupReturnRoute: WalletTopupReturnRoute,
+  WalletTopupIndexRoute: WalletTopupIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
-import { LayoutDashboard, Radio, Settings, Wallet } from 'lucide-react'
+import { LayoutDashboard, Radio, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/layout/language-switcher'
 import { Logo } from '@/components/layout/logo'
@@ -36,7 +36,6 @@ export const Route = createFileRoute('/_authed')({
 // `exact` keeps Overview from lighting up on every page; the other sections own everything below them.
 const NAV = [
   { to: '/', label: 'nav.overview', icon: LayoutDashboard, exact: true },
-  { to: '/wallet', label: 'nav.wallet', icon: Wallet, exact: false },
   { to: '/realtime', label: 'nav.realtime', icon: Radio, exact: false },
 ] as const
 
@@ -91,7 +90,7 @@ function AuthedLayout() {
 
       <nav
         aria-label={t('nav.main')}
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-border bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-3 border-t border-border bg-background/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden"
       >
         {TABS.map(({ to, label, icon: Icon, exact }) => (
           <Link

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
-import { Bell, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-react'
+import { Bell, ShieldCheck, SlidersHorizontal, UserRound, Wallet } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/page-header'
 
@@ -12,6 +12,7 @@ const TABS = [
   { to: '/settings/account', label: 'settings.nav.account', icon: SlidersHorizontal },
   { to: '/settings/security', label: 'settings.nav.security', icon: ShieldCheck },
   { to: '/settings/notifications', label: 'settings.nav.notifications', icon: Bell },
+  { to: '/settings/wallet', label: 'settings.nav.wallet', icon: Wallet },
 ] as const
 
 /** Every setting lives under here: a sidebar on wide screens, a row of tabs on phones. */

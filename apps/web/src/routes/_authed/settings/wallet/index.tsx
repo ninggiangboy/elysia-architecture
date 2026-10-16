@@ -1,14 +1,14 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { PageHeader, Section } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/page-header'
 import { PageSkeleton } from '@/components/layout/page-skeleton'
 import { Button } from '@/components/ui/button'
 import { BalanceCard } from '@/features/billing/balance-card'
 import { billingConfigQuery, transactionsQuery, walletQuery } from '@/features/billing/queries'
 import { TransactionsList } from '@/features/billing/transactions-list'
 
-export const Route = createFileRoute('/_authed/wallet/')({
+export const Route = createFileRoute('/_authed/settings/wallet/')({
   loader: ({ context: { queryClient } }) =>
     Promise.all([
       queryClient.ensureQueryData(walletQuery),
@@ -23,21 +23,23 @@ function WalletPage() {
   const { t } = useTranslation()
   return (
     <>
-      <PageHeader
-        title={t('billing.wallet.title')}
-        description={t('billing.wallet.description')}
-        actions={
-          <Button asChild>
-            <Link to="/wallet/topup">
-              <Plus aria-hidden /> {t('billing.wallet.topUp')}
-            </Link>
-          </Button>
-        }
-      />
-      <Section title={t('billing.balance.title')} description={t('billing.balance.description')}>
-        <BalanceCard />
+      <Section
+        stacked
+        title={t('billing.balance.title')}
+        description={t('billing.balance.description')}
+      >
+        <BalanceCard
+          action={
+            <Button asChild size="sm">
+              <Link to="/settings/wallet/topup">
+                <Plus aria-hidden /> {t('billing.wallet.topUp')}
+              </Link>
+            </Button>
+          }
+        />
       </Section>
       <Section
+        stacked
         title={t('billing.transactions.historyTitle')}
         description={t('billing.transactions.historyDescription')}
       >

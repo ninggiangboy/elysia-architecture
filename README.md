@@ -119,7 +119,7 @@ Sign in: enter any email at `/login` → open Mailpit → click the link in the 
 Things worth trying:
 - **Realtime:** open `/realtime`, then sign in on a second browser and sign it out from the profile page — it drops immediately.
 - **Web Push:** enable the toggle in the notification settings (bell → gear), close the tab, trigger an event (e.g. sign in elsewhere).
-- **Top-ups (Stripe test mode):** put your test keys in `.env` (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`), run `bun run stripe:secret` and set the printed `whsec_…` as `STRIPE_WEBHOOK_SECRET`, then `bun run dev` — it also starts the Stripe CLI that forwards webhooks to the API (the `stripe` binary, or Docker). Pay at `/wallet/topup` with `4242 4242 4242 4242` (any future date and CVC); `4000 0000 0000 0002` is declined. `bun run test:stripe` does both against the running stack.
+- **Top-ups (Stripe test mode):** put your test keys in `.env` (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`), run `bun run stripe:secret` and set the printed `whsec_…` as `STRIPE_WEBHOOK_SECRET`, then `bun run dev` — it also starts the Stripe CLI that forwards webhooks to the API (the `stripe` binary, or Docker). Pay at `Settings → Wallet` with `4242 4242 4242 4242` (any future date and CVC); `4000 0000 0000 0002` is declined. `bun run test:stripe` does both against the running stack.
 - **Multi-instance:** `bun run keys:generate && docker compose --profile app up -d --build`, then http://localhost:8080 (2 replicas behind nginx, both running the relay).
 
 ## Built-in use cases
@@ -134,7 +134,7 @@ Things worth trying:
 - **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
 - **Export your data** — one zip with what every module holds about you (profile, avatar, notifications, sign-in methods…), mailed as a link, with live progress. Asking for it needs a recent confirmation.
 - **Delete your account** — scheduled, with a grace period to cancel; then every module erases and confirms, and you get a last mail. Try both at `/settings/account`.
-- **Top up your wallet** — pay with a card at `/wallet/topup`, in USD, EUR or VND; the balance and the history at `/wallet` update live when Stripe confirms. Needs Stripe test keys (see below); without them the page says top-ups are off.
+- **Top up your wallet** — pay with a card under Settings → Wallet, in USD, EUR or VND; the balance and the history there update live when Stripe confirms. Needs Stripe test keys (see below); without them the page says top-ups are off.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.
 - **Transactional mail** — magic-link, welcome and email-confirmation mails sent through the outbox, with provider-aware rate limiting and retries.
 - **Token verification for other services** — a public JWKS endpoint (`/.well-known/jwks.json`).

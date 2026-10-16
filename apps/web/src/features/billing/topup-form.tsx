@@ -62,7 +62,7 @@ function PaymentStep({
   const pay = useMutation({
     mutationFn: async () => {
       if (!exp) return
-      const returnUrl = `${window.location.origin}/wallet/topup/return?topUp=${started.topUpId}`
+      const returnUrl = `${window.location.origin}/settings/wallet/topup/return?topUp=${started.topUpId}`
       const outcome = await confirmCardPayment({
         publishableKey,
         clientSecret: started.clientSecret,
@@ -82,7 +82,7 @@ function PaymentStep({
         window.location.assign(outcome.url)
         return
       }
-      await navigate({ to: '/wallet/topup/return', search: { topUp: started.topUpId } })
+      await navigate({ to: '/settings/wallet/topup/return', search: { topUp: started.topUpId } })
     },
     onError: (err) => setError(err instanceof Error ? err.message : t('common.unknownError')),
   })

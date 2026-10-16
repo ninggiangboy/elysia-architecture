@@ -13,7 +13,6 @@ export const vi = {
   nav: {
     main: 'Chính',
     overview: 'Tổng quan',
-    wallet: 'Ví',
     settings: 'Cài đặt',
     realtime: 'Thời gian thực',
   },
@@ -75,13 +74,14 @@ export const vi = {
   },
   settings: {
     title: 'Cài đặt',
-    description: 'Hồ sơ, tài khoản, bảo mật và thông báo của bạn, gom về một chỗ.',
+    description: 'Hồ sơ, tài khoản, bảo mật, thông báo và ví của bạn, gom về một chỗ.',
     loading: 'Đang tải cài đặt',
     nav: {
       profile: 'Hồ sơ',
       account: 'Tài khoản',
       security: 'Bảo mật',
       notifications: 'Thông báo',
+      wallet: 'Ví',
     },
     preferences: {
       title: 'Ngôn ngữ và giao diện',
@@ -93,8 +93,6 @@ export const vi = {
     loading: 'Đang tải tổng quan',
     welcome: 'Chào mừng trở lại, {{name}}',
     editProfile: 'Sửa hồ sơ',
-    walletTitle: 'Ví',
-    recentTitle: 'Hoạt động gần đây',
     checklistTitle: 'Hoàn tất thiết lập',
     checklistDescription: 'Vài việc giúp tài khoản an toàn và dễ dùng hơn.',
     stepProfile: 'Thêm giới thiệu và ảnh đại diện',
@@ -354,10 +352,7 @@ export const vi = {
   billing: {
     loading: 'Đang tải ví',
     wallet: {
-      title: 'Ví',
-      description: 'Số dư của bạn và mọi biến động tiền trong đó.',
       topUp: 'Nạp tiền',
-      viewAll: 'Xem tất cả',
     },
     balance: {
       title: 'Số dư của bạn',
@@ -366,8 +361,6 @@ export const vi = {
       none: 'Ví của bạn đang trống. Hãy nạp tiền để bắt đầu.',
     },
     topup: {
-      title: 'Nạp tiền',
-      description: 'Nạp tiền vào ví bằng thẻ.',
       formTitle: 'Thêm tiền',
       formDescription: 'Chọn loại tiền và số tiền, rồi thanh toán an toàn bằng thẻ.',
       currency: 'Loại tiền',

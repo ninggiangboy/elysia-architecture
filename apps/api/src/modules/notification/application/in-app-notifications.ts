@@ -176,7 +176,7 @@ export const topUpSucceededNotification = (p: {
   currency: string
 }) =>
   templated(p.userId, 'payment', 'topUpSucceeded', {
-    link: '/wallet',
+    link: '/settings/wallet',
     amount: p.amount,
     currency: p.currency,
   })

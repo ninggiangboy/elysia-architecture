@@ -104,7 +104,7 @@ describe('top-up', () => {
     })
     expect(inbox).toMatchObject({
       kind: 'payment',
-      data: { amount: 2000, currency: 'usd', link: '/transactions' },
+      data: { amount: 2000, currency: 'usd', link: '/settings/wallet' },
     })
     sse.close()
   })

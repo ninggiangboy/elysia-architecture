@@ -1,33 +1,23 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Section } from '@/components/layout/page-header'
 import { PageSkeleton } from '@/components/layout/page-skeleton'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { passkeysQuery } from '@/features/account/queries'
 import { SetupChecklist } from '@/features/account/setup-checklist'
-import { BalanceCard } from '@/features/billing/balance-card'
-import { transactionsQuery, walletQuery } from '@/features/billing/queries'
-import { TransactionsList } from '@/features/billing/transactions-list'
 import { meQuery } from '@/features/profile/queries'
 import { formatDate } from '@/lib/format'
 
 export const Route = createFileRoute('/_authed/')({
   loader: ({ context: { queryClient } }) =>
-    Promise.all([
-      queryClient.ensureQueryData(meQuery),
-      queryClient.ensureQueryData(walletQuery),
-      queryClient.ensureInfiniteQueryData(transactionsQuery),
-      queryClient.ensureQueryData(passkeysQuery),
-    ]),
+    Promise.all([queryClient.ensureQueryData(meQuery), queryClient.ensureQueryData(passkeysQuery)]),
   pendingComponent: OverviewSkeleton,
   component: OverviewPage,
 })
 
-/** Home: who you are, where your money stands, and what to do next. Everything editable lives in Settings. */
+/** Home: who you are and what to do next. Everything editable, the wallet included, lives in Settings. */
 function OverviewPage() {
   const { t } = useTranslation()
   const { data: me } = useSuspenseQuery(meQuery)
@@ -62,24 +52,6 @@ function OverviewPage() {
       </Card>
 
       <SetupChecklist />
-
-      <Section title={t('overview.walletTitle')} description={t('billing.balance.description')}>
-        <BalanceCard
-          action={
-            <Button asChild size="sm">
-              <Link to="/wallet/topup">
-                <Plus aria-hidden /> {t('billing.wallet.topUp')}
-              </Link>
-            </Button>
-          }
-        />
-      </Section>
-      <Section
-        title={t('overview.recentTitle')}
-        description={t('billing.transactions.historyDescription')}
-      >
-        <TransactionsList limit={5} />
-      </Section>
     </>
   )
 }

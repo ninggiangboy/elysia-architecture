@@ -29,18 +29,22 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
   browser,
 }) => {
   const { context, page } = await signUp(browser, 'wallet')
-  const nav = page.getByRole('navigation', { name: 'Main' }).first()
 
-  // Balance and history are one page; the top-up form is a step off it.
-  await nav.getByRole('link', { name: 'Wallet' }).click()
-  await expect(page).toHaveURL(/\/wallet$/)
-  await expect(page.getByRole('heading', { name: 'Wallet', level: 1 })).toBeVisible()
+  // The wallet is a part of Settings, not of the main navigation. Balance and history are one page; the top-up form is a step off it.
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Wallet' }),
+  ).toHaveCount(0)
+  await page.goto('/settings')
+  await page
+    .getByRole('navigation', { name: 'Settings' })
+    .getByRole('link', { name: 'Wallet' })
+    .click()
+  await expect(page).toHaveURL(/\/settings\/wallet$/)
   await expect(page.getByTestId('no-balance')).toBeVisible()
   await expect(page.getByTestId('no-transactions')).toBeVisible()
 
   await page.getByRole('main').getByRole('link', { name: 'Top up' }).click()
-  await expect(page).toHaveURL(/\/wallet\/topup$/)
-  await expect(page.getByRole('heading', { name: 'Top up', level: 1 })).toBeVisible()
+  await expect(page).toHaveURL(/\/settings\/wallet\/topup$/)
   await expect(page.getByTestId('no-balance')).toBeVisible()
   // Either the form (keys set) or the notice (no keys): never a broken page.
   await expect(
@@ -49,7 +53,9 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
 
   // The old addresses (bookmarks, notifications already sent) lead to the new ones.
   await page.goto('/transactions')
-  await expect(page).toHaveURL(/\/wallet$/)
+  await expect(page).toHaveURL(/\/settings\/wallet$/)
+  await page.goto('/wallet')
+  await expect(page).toHaveURL(/\/settings\/wallet$/)
 
   // Stripe appends its own parameters; ours is the only one the page reads.
   await page.goto(
@@ -57,8 +63,8 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
   )
   await expect(page.getByTestId('return-unknown')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Try again' })).toBeVisible()
-  await expect(page).toHaveURL(/\/wallet\/topup\/return\?topUp=/)
+  await expect(page).toHaveURL(/\/settings\/wallet\/topup\/return\?topUp=/)
   await page.getByRole('link', { name: 'Back to wallet' }).click()
-  await expect(page).toHaveURL(/\/wallet$/)
+  await expect(page).toHaveURL(/\/settings\/wallet$/)
   await context.close()
 })

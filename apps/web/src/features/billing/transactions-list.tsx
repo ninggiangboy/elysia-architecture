@@ -1,5 +1,4 @@
 import { useSuspenseInfiniteQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
 import { ArrowDownLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
@@ -47,14 +46,12 @@ function Row({ item }: { item: Transaction }) {
   )
 }
 
-/** The history, newest first. With `limit` it is a preview: that many rows and a link to the whole list. */
-export function TransactionsList({ limit }: { limit?: number }) {
+/** The history, newest first. */
+export function TransactionsList() {
   const { t } = useTranslation()
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useSuspenseInfiniteQuery(transactionsQuery)
-  const all = data.pages.flatMap((page) => page.items)
-  const items = limit === undefined ? all : all.slice(0, limit)
-  const more = limit !== undefined && (all.length > limit || hasNextPage)
+  const items = data.pages.flatMap((page) => page.items)
 
   return (
     <Card>
@@ -72,14 +69,7 @@ export function TransactionsList({ limit }: { limit?: number }) {
           ))}
         </ul>
       )}
-      {more && (
-        <CardFooter className="justify-center">
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/wallet">{t('billing.wallet.viewAll')}</Link>
-          </Button>
-        </CardFooter>
-      )}
-      {limit === undefined && hasNextPage && (
+      {hasNextPage && (
         <CardFooter className="justify-center">
           <Button
             size="sm"

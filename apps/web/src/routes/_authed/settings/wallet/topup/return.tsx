@@ -3,14 +3,14 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { CircleCheck, CircleX, LoaderCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PageHeader } from '@/components/layout/page-header'
+import { Section } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { topUpQuery } from '@/features/billing/queries'
 import { formatMoney } from '@/lib/format'
 
 /** Where Stripe sends the buyer back to (and where a card payment that settled in place ends up). */
-export const Route = createFileRoute('/_authed/wallet/topup/return')({
+export const Route = createFileRoute('/_authed/settings/wallet/topup/return')({
   // Stripe adds its own parameters (`payment_intent`, `redirect_status`…); only ours matters.
   validateSearch: (search: Record<string, unknown>): { topUp: string } => ({
     topUp: typeof search.topUp === 'string' ? search.topUp : '',
@@ -101,31 +101,32 @@ function TopUpReturn() {
 
   return (
     <>
-      <PageHeader title={t('billing.return.title')} />
-      <Card>
-        <CardContent
-          className="flex flex-col items-center gap-3 py-10 text-center"
-          role="status"
-          data-testid={`return-${view}`}
-        >
-          <Outcome
-            view={view}
-            slow={slow}
-            amount={data ? formatMoney(data.amount, data.currency) : ''}
-            reason={data?.failureReason ?? null}
-          />
-        </CardContent>
-        <CardFooter className="justify-end">
-          {retry && (
-            <Button asChild variant="outline" size="sm">
-              <Link to="/wallet/topup">{t('billing.return.tryAgain')}</Link>
+      <Section stacked title={t('billing.return.title')}>
+        <Card>
+          <CardContent
+            className="flex flex-col items-center gap-3 py-10 text-center"
+            role="status"
+            data-testid={`return-${view}`}
+          >
+            <Outcome
+              view={view}
+              slow={slow}
+              amount={data ? formatMoney(data.amount, data.currency) : ''}
+              reason={data?.failureReason ?? null}
+            />
+          </CardContent>
+          <CardFooter className="justify-end">
+            {retry && (
+              <Button asChild variant="outline" size="sm">
+                <Link to="/settings/wallet/topup">{t('billing.return.tryAgain')}</Link>
+              </Button>
+            )}
+            <Button asChild size="sm">
+              <Link to="/settings/wallet">{t('billing.return.toWallet')}</Link>
             </Button>
-          )}
-          <Button asChild size="sm">
-            <Link to="/wallet">{t('billing.return.toWallet')}</Link>
-          </Button>
-        </CardFooter>
-      </Card>
+          </CardFooter>
+        </Card>
+      </Section>
     </>
   )
 }

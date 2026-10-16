@@ -15,7 +15,6 @@ export const en = {
   nav: {
     main: 'Main',
     overview: 'Overview',
-    wallet: 'Wallet',
     settings: 'Settings',
     realtime: 'Realtime',
   },
@@ -77,13 +76,14 @@ export const en = {
   },
   settings: {
     title: 'Settings',
-    description: 'Your profile, account, security and notifications, all in one place.',
+    description: 'Your profile, account, security, notifications and wallet, all in one place.',
     loading: 'Loading settings',
     nav: {
       profile: 'Profile',
       account: 'Account',
       security: 'Security',
       notifications: 'Notifications',
+      wallet: 'Wallet',
     },
     preferences: {
       title: 'Language and appearance',
@@ -95,8 +95,6 @@ export const en = {
     loading: 'Loading overview',
     welcome: 'Welcome back, {{name}}',
     editProfile: 'Edit profile',
-    walletTitle: 'Wallet',
-    recentTitle: 'Recent activity',
     checklistTitle: 'Finish setting up',
     checklistDescription: 'A few things that make your account safer and easier to use.',
     stepProfile: 'Add a bio and a profile picture',
@@ -357,10 +355,7 @@ export const en = {
   billing: {
     loading: 'Loading wallet',
     wallet: {
-      title: 'Wallet',
-      description: 'Your balance and everything that moved money in it.',
       topUp: 'Top up',
-      viewAll: 'View all',
     },
     balance: {
       title: 'Your balance',
@@ -369,8 +364,6 @@ export const en = {
       none: 'Your wallet is empty. Top up to add money.',
     },
     topup: {
-      title: 'Top up',
-      description: 'Add money to your wallet with a card.',
       formTitle: 'Add money',
       formDescription: 'Pick a currency and an amount, then pay securely by card.',
       currency: 'Currency',
