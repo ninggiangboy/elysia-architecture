@@ -1,86 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { decodeJwt } from 'jose'
-import { client, createTestApp, login, type TestApp, uniqueEmail } from './helpers'
-
-interface Message {
-  id: string
-  type: string
-  data: Record<string, unknown>
-  at: string
-}
-
-const WAIT_MS = 5_000
-
-/** Minimal SSE client over `app.handle`: buffers parsed events, lets a test await the next matching one. */
-async function openSse(app: TestApp['app'], token: string) {
-  const controller = new AbortController()
-  const res = await app.handle(
-    new Request('http://localhost/api/realtime/events', {
-      headers: { authorization: `Bearer ${token}` },
-      signal: controller.signal,
-    }),
-  )
-  const received: Message[] = []
-  const waiters: (() => void)[] = []
-  let ended = false
-  void (async () => {
-    const reader = res.body?.getReader()
-    if (!reader) return
-    const decoder = new TextDecoder()
-    let buffer = ''
-    try {
-      for (;;) {
-        const { value, done } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        let sep = buffer.indexOf('\n\n')
-        while (sep !== -1) {
-          const block = buffer.slice(0, sep)
-          buffer = buffer.slice(sep + 2)
-          const data = block
-            .split('\n')
-            .find((l) => l.startsWith('data: '))
-            ?.slice(6)
-          const event = block
-            .split('\n')
-            .find((l) => l.startsWith('event: '))
-            ?.slice(7)
-          if (data && event === 'ready')
-            received.push({ id: '', type: 'ready', data: JSON.parse(data), at: '' })
-          else if (data) received.push(JSON.parse(data))
-          for (const w of waiters.splice(0)) w()
-          sep = buffer.indexOf('\n\n')
-        }
-      }
-    } catch {
-      // aborted
-    }
-    ended = true
-    for (const w of waiters.splice(0)) w()
-  })()
-
-  return {
-    status: res.status,
-    contentType: res.headers.get('content-type'),
-    received,
-    isClosed: () => ended,
-    async next(type: string, match: (m: Message) => boolean = () => true): Promise<Message> {
-      const deadline = Date.now() + WAIT_MS
-      for (;;) {
-        const found = received.find((m) => m.type === type && match(m))
-        if (found) return found
-        if (ended) throw new Error(`stream ended while waiting for ${type}`)
-        const left = deadline - Date.now()
-        if (left <= 0) throw new Error(`timed out waiting for ${type}`)
-        await new Promise<void>((resolve) => {
-          waiters.push(resolve)
-          setTimeout(resolve, left)
-        })
-      }
-    },
-    close: () => controller.abort(),
-  }
-}
+import {
+  client,
+  createTestApp,
+  login,
+  openSse,
+  type TestApp,
+  uniqueEmail,
+  WAIT_MS,
+} from './helpers'
 
 let a: TestApp
 let b: TestApp // a second API instance on the same database

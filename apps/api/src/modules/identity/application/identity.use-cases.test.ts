@@ -357,7 +357,9 @@ describe('identity use cases', () => {
         userId: first.user.id,
         ip: '1.1.1.1',
         userAgent: 'test',
+        newUser: true,
       })
+      expect(started.slice(1).map((e) => e.payload.newUser)).toEqual([false, false])
 
       const revoked = () =>
         outbox.events

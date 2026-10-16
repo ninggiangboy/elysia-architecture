@@ -101,6 +101,11 @@ A family **is** one signed-in device (its id is the `sid` claim), and each refre
 - Best-effort by design: no replay, events older than 60 s are dropped, and a notification sent while an instance reconnects its LISTEN is lost — clients refetch their state whenever a stream (re)opens. Authentication is checked when the stream opens.
 - Deployment: the reverse proxy must not buffer responses and must allow long reads (see `docker/nginx/default.conf`); LISTEN needs a direct Postgres connection, not PgBouncer in transaction mode. On shutdown `realtime.stop()` runs before the HTTP server stops, otherwise open streams would hold it up.
 
+**In-app notifications**: the `notification` module keeps a per-user inbox (`notification.notifications`) next to its mail handlers.
+- Flow: identity event (`user_registered`, `email_changed`, `session_started` unless it is the account's first session, `session_revoked` with reason `token_reuse`) → `CreateNotificationHandler` → [tx: insert notification + `notification.created.v1` in the module's outbox + inbox row] → relay → `RealtimePushHandler` → SSE `notification.created`. Realtime only knows the notification *contract*, never its tables.
+- API: `GET /notifications` (newest first, cursor = last id since ids are UUIDv7), `GET /notifications/unread-count`, `POST /notifications/{id}/read` (idempotent; another user's id is a 404), `POST /notifications/read-all`. Reading emits `notification.read.v1` only when something changed, so the user's other open devices clear their badge.
+- Adding a notification: write a draft function in `application/in-app-notifications.ts` and register one `inApp(...)` handler in `notification.module.ts`; return `null` from the builder to skip events that are not worth one. Retention/cleanup of old notifications is not implemented yet.
+
 **Avatar**: `POST upload-url` issues a presigned PUT (5 minutes) → the browser PUTs straight to SeaweedFS → `PUT /me/avatar {key}` checks the key belongs to the user and `stat`s size/type
 (a presigned PUT cannot enforce them, so a bad file is deleted) → emits `profile.avatar_changed.v1` → a handler deletes the old file.
 

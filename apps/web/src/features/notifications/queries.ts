@@ -1,0 +1,21 @@
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
+import { http, unwrap } from '@/lib/api'
+
+export const unreadCountQuery = queryOptions({
+  queryKey: ['notifications', 'unread-count'],
+  queryFn: async () => unwrap(await http.api.notifications['unread-count'].get()).count,
+})
+
+export const notificationsQuery = infiniteQueryOptions({
+  queryKey: ['notifications', 'list'],
+  initialPageParam: undefined as string | undefined,
+  queryFn: async ({ pageParam }) =>
+    unwrap(await http.api.notifications.get({ query: { before: pageParam } })),
+  getNextPageParam: (page) => page.nextCursor ?? undefined,
+})
+
+export const markNotificationRead = async (id: string) =>
+  unwrap(await http.api.notifications({ id }).read.post())
+
+export const markAllNotificationsRead = async () =>
+  unwrap(await http.api.notifications['read-all'].post())

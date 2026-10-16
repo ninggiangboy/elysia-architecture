@@ -1,4 +1,9 @@
 import { IdentityEvents, type SessionRevokedPayload } from '#/modules/identity/contracts'
+import {
+  type NotificationCreatedPayload,
+  NotificationEvents,
+  type NotificationReadPayload,
+} from '#/modules/notification/contracts'
 import type { Clock, IdGenerator, IntegrationEventHandler, Log } from '#/shared/application/ports'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
@@ -45,6 +50,39 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
           event: {
             type: 'session.revoked',
             data: { sessionId: p.sessionId, reason: p.reason, revokedAt: p.revokedAt },
+          },
+        }),
+        hub,
+        clock,
+      ),
+      new RealtimePushHandler<NotificationCreatedPayload>(
+        'realtime.push-notification-created',
+        NotificationEvents.Created,
+        (p) => ({
+          userId: p.userId,
+          event: {
+            type: 'notification.created',
+            data: {
+              id: p.notificationId,
+              kind: p.kind,
+              title: p.title,
+              body: p.body,
+              data: p.data,
+              createdAt: p.createdAt,
+            },
+          },
+        }),
+        hub,
+        clock,
+      ),
+      new RealtimePushHandler<NotificationReadPayload>(
+        'realtime.push-notification-read',
+        NotificationEvents.Read,
+        (p) => ({
+          userId: p.userId,
+          event: {
+            type: 'notification.read',
+            data: { id: p.notificationId, readAt: p.readAt },
           },
         }),
         hub,

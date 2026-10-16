@@ -3,12 +3,31 @@ import {
   type EmailChangeRequestedPayload,
   IdentityEvents,
   type MagicLinkRequestedPayload,
+  type SessionRevokedPayload,
+  type SessionStartedPayload,
   type UserRegisteredPayload,
 } from '#/modules/identity/contracts'
-import type { Clock, IntegrationEventHandler, Log, Mailer } from '#/shared/application/ports'
+import type {
+  Clock,
+  IdGenerator,
+  IntegrationEventHandler,
+  Log,
+  Mailer,
+} from '#/shared/application/ports'
+import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
+import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
+import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import { CreateNotificationHandler } from './application/handlers/create-notification-handler'
 import { MailEventHandler } from './application/handlers/mail-event-handler'
+import {
+  emailChangedNotification,
+  type NotificationDraft,
+  newSignInNotification,
+  suspiciousSessionNotification,
+  welcomeNotification,
+} from './application/in-app-notifications'
 import {
   confirmEmailChangeMail,
   emailChangedNoticeMail,
@@ -16,8 +35,12 @@ import {
   welcomeMail,
 } from './application/templates'
 import { ThrottledMailer } from './application/throttled-mailer'
-import { inbox } from './infrastructure/persistence/schema'
+import { MarkAllNotificationsRead, MarkNotificationRead } from './application/use-cases/mark-read'
+import { GetUnreadCount, ListNotifications } from './application/use-cases/read-notifications'
+import { DrizzleNotificationRepository } from './infrastructure/persistence/drizzle-notification-repository'
+import { inbox, outbox } from './infrastructure/persistence/schema'
 import { PostgresSendRateLimiter } from './infrastructure/postgres-send-rate-limiter'
+import { notificationRoutes } from './presentation/routes'
 
 export interface NotificationModuleDeps {
   database: Database
@@ -25,13 +48,17 @@ export interface NotificationModuleDeps {
   mailer: Mailer
   webAppUrl: string
   clock: Clock
+  ids: IdGenerator
   log: Log
+  verifier: TokenVerifier
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
 }
 
 export interface NotificationModule {
   name: 'notification'
+  routes: ReturnType<typeof notificationRoutes>
   handlers: IntegrationEventHandler[]
+  outbox: OutboxSource
 }
 
 const minutesUntil = (iso: string) =>
@@ -42,7 +69,9 @@ export function createNotificationModule({
   mailer: providerMailer,
   webAppUrl,
   clock,
+  ids,
   log,
+  verifier,
   sending,
 }: NotificationModuleDeps): NotificationModule {
   const guard = new DrizzleInboxGuard(database, inbox)
@@ -54,12 +83,61 @@ export function createNotificationModule({
       dailyQuota: sending.dailyQuota,
     }),
   )
+  const notifications = new DrizzleNotificationRepository(database)
+  const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
+  const inApp = <TPayload>(
+    name: string,
+    eventType: string,
+    build: (payload: TPayload) => NotificationDraft | null,
+  ) =>
+    new CreateNotificationHandler<TPayload>(
+      name,
+      eventType,
+      build,
+      notifications,
+      outboxWriter,
+      guard,
+      ids,
+      clock,
+    )
   const link = (path: string, token: string) =>
     `${webAppUrl.replace(/\/$/, '')}${path}?token=${encodeURIComponent(token)}`
 
   return {
     name: 'notification',
+    routes: notificationRoutes({
+      verifier,
+      useCases: {
+        listNotifications: new ListNotifications(notifications),
+        getUnreadCount: new GetUnreadCount(notifications),
+        markRead: new MarkNotificationRead(notifications, outboxWriter, database, clock),
+        markAllRead: new MarkAllNotificationsRead(notifications, outboxWriter, database, clock),
+      },
+    }),
+    outbox: { name: 'notification', table: outbox },
     handlers: [
+      inApp<UserRegisteredPayload>(
+        'notification.in-app-welcome',
+        IdentityEvents.UserRegistered,
+        welcomeNotification,
+      ),
+      inApp<EmailChangedPayload>(
+        'notification.in-app-email-changed',
+        IdentityEvents.EmailChanged,
+        emailChangedNotification,
+      ),
+      inApp<SessionStartedPayload>(
+        'notification.in-app-new-sign-in',
+        IdentityEvents.SessionStarted,
+        // The first session of a new account is the sign-up itself — the welcome notification covers it.
+        (p) => (p.newUser ? null : newSignInNotification(p)),
+      ),
+      inApp<SessionRevokedPayload>(
+        'notification.in-app-suspicious-session',
+        IdentityEvents.SessionRevoked,
+        // Logouts and "sign out that device" are the user's own doing — only token theft is news.
+        (p) => (p.reason === 'token_reuse' ? suspiciousSessionNotification(p) : null),
+      ),
       new MailEventHandler<MagicLinkRequestedPayload>(
         'notification.send-magic-link',
         IdentityEvents.MagicLinkRequested,

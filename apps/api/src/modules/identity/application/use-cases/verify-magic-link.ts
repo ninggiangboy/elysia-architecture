@@ -43,6 +43,7 @@ export class VerifyMagicLink {
       if (!link) return null
 
       let user = await this.users.findByEmail(link.email)
+      const newUser = !user
       if (!user) {
         user = User.register({ id: this.ids.next(), email: link.email, now })
         await this.users.save(user)
@@ -56,6 +57,7 @@ export class VerifyMagicLink {
             sessionId: session.sessionId,
             ip: cmd.meta.ip,
             userAgent: cmd.meta.userAgent,
+            newUser,
           },
           now,
         ),

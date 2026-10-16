@@ -73,7 +73,9 @@ export async function createContainer(
     mailer,
     webAppUrl: config.WEB_APP_URL,
     clock,
+    ids,
     log: logger,
+    verifier: identity.verifier,
     sending: {
       ratePerSecond: config.MAIL_RATE_PER_SECOND,
       burst: config.MAIL_BURST,
@@ -97,10 +99,16 @@ export async function createContainer(
   ]
   for (const handler of handlers) bus.subscribe(handler)
 
-  const relay = new OutboxRelay(database, [identity.outbox, profile.outbox], bus, logger, {
-    pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
-    deferBudgetMs: config.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
-  })
+  const relay = new OutboxRelay(
+    database,
+    [identity.outbox, profile.outbox, notification.outbox],
+    bus,
+    logger,
+    {
+      pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
+      deferBudgetMs: config.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
+    },
+  )
 
   return {
     config,

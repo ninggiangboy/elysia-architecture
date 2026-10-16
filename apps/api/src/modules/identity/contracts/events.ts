@@ -44,6 +44,8 @@ export interface SessionStartedPayload {
   sessionId: string
   ip: string | null
   userAgent: string | null
+  /** True when this sign-in just created the account (the very first session). Absent on older messages = false. */
+  newUser?: boolean
   startedAt: string
 }
 

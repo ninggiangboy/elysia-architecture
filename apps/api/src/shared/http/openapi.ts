@@ -60,6 +60,10 @@ export const openapiDocumentation = {
     { name: 'auth', description: 'Passwordless sign-in, sessions and JWKS' },
     { name: 'account', description: "Operations on the current user's account" },
     { name: 'profile', description: 'Profile and avatar of the current user' },
+    {
+      name: 'notifications',
+      description: "The current user's in-app notifications (also pushed live over SSE)",
+    },
   ],
   components: {
     securitySchemes: {

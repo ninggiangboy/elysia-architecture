@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate } from '@tanstack/
 import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/features/auth/queries'
+import { NotificationBell } from '@/features/notifications/notification-bell'
 import { useLiveSession } from '@/features/realtime/use-live-session'
 import { useAuth } from '@/lib/auth-store'
 import { ensureSession } from '@/lib/session'
@@ -35,6 +36,7 @@ function AuthedLayout() {
             </Link>
           </nav>
           <div className="flex items-center gap-3 text-sm">
+            <NotificationBell />
             <span className="hidden text-muted-foreground sm:inline">{user?.email}</span>
             <Button
               variant="outline"
