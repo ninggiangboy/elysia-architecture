@@ -1,0 +1,41 @@
+{
+  "name": "@app/api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "bun --env-file=../../.env --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "build": "bun build src/main.ts --target=bun --outdir=dist",
+    "keys:generate": "bun scripts/generate-keys.ts",
+    "db:generate": "bun --env-file=../../.env scripts/db.ts generate",
+    "db:migrate": "bun --env-file=../../.env scripts/db.ts migrate",
+    "db:studio": "MODULE=${MODULE:-identity} bunx --bun drizzle-kit studio",
+    "test": "bun --env-file=../../.env test src",
+    "test:e2e": "bun --env-file=../../.env test tests/e2e --timeout 30000",
+    "typecheck": "tsc --noEmit",
+    "check:arch": "depcruise src --config .dependency-cruiser.cjs",
+    "outbox:list": "bun --env-file=../../.env scripts/outbox.ts list",
+    "outbox:requeue": "bun --env-file=../../.env scripts/outbox.ts requeue"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.0",
+    "@elysiajs/openapi": "^1.4.0",
+    "drizzle-orm": "^0.44.0",
+    "elysia": "^1.4.0",
+    "jose": "^6.1.0",
+    "nodemailer": "^7.0.0",
+    "pino": "^9.9.0",
+    "postgres": "^3.4.7",
+    "zod": "^4.1.0",
+    "@app/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/nodemailer": "^7.0.0",
+    "dependency-cruiser": "^17.0.0",
+    "drizzle-kit": "^0.31.0"
+  }
+}
