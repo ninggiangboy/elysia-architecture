@@ -79,7 +79,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
       - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: elysia-architecture-${{ matrix.app }}:ci
           severity: CRITICAL,HIGH
