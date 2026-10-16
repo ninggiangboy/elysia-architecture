@@ -12,23 +12,23 @@ const base = {
   S3_SECRET_ACCESS_KEY: 's',
 }
 
-describe('APP_WORKERS', () => {
+describe('APP_PROCESSES', () => {
   test('defaults to a single process', () => {
     const config = loadConfig(base)
-    expect(config.APP_WORKERS).toBe(1)
-    expect(config.WORKER_SLOT).toBeUndefined()
+    expect(config.APP_PROCESSES).toBe(1)
+    expect(config.PROCESS_SLOT).toBeUndefined()
   })
 
   test('accepts a number or auto', () => {
-    expect(loadConfig({ ...base, APP_WORKERS: '4' }).APP_WORKERS).toBe(4)
-    expect(loadConfig({ ...base, APP_WORKERS: 'auto' }).APP_WORKERS).toBe(
+    expect(loadConfig({ ...base, APP_PROCESSES: '4' }).APP_PROCESSES).toBe(4)
+    expect(loadConfig({ ...base, APP_PROCESSES: 'auto' }).APP_PROCESSES).toBe(
       Math.max(2, Math.floor((availableParallelism() * 3) / 4)),
     )
   })
 
   test('rejects zero and garbage', () => {
-    expect(() => loadConfig({ ...base, APP_WORKERS: '0' })).toThrow('APP_WORKERS')
-    expect(() => loadConfig({ ...base, APP_WORKERS: 'many' })).toThrow('APP_WORKERS')
+    expect(() => loadConfig({ ...base, APP_PROCESSES: '0' })).toThrow('APP_PROCESSES')
+    expect(() => loadConfig({ ...base, APP_PROCESSES: 'many' })).toThrow('APP_PROCESSES')
   })
 })
 

@@ -42,8 +42,8 @@ const schema = z
       .default('api,worker')
       .transform(csv)
       .pipe(z.array(z.enum(['api', 'worker'])).min(1)),
-    /** Cluster mode: number of worker processes sharing `PORT` (`auto` = 3/4 of the CPUs, min 2 so a crash never takes the whole instance down). 1 = single process, no supervisor. */
-    APP_WORKERS: z
+    /** Cluster mode: number of processes sharing `PORT` (`auto` = 3/4 of the CPUs, min 2 so a crash never takes the whole instance down). 1 = single process, no supervisor. */
+    APP_PROCESSES: z
       .string()
       .default('1')
       .transform((v, ctx) => {
@@ -54,7 +54,7 @@ const schema = z
         return z.NEVER
       }),
     /** Set by the cluster supervisor (0-based). The outbox relay only runs in slot 0. Do not set by hand. */
-    WORKER_SLOT: z.coerce.number().int().nonnegative().optional(),
+    PROCESS_SLOT: z.coerce.number().int().nonnegative().optional(),
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
