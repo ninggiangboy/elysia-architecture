@@ -134,3 +134,10 @@ body {
     animation: none;
   }
 }
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}

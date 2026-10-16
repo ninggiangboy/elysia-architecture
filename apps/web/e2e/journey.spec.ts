@@ -148,7 +148,8 @@ test.describe
     })
 
     test('sign out ends the session', async () => {
-      await page.getByRole('button', { name: 'Sign out' }).click()
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await page.getByRole('menuitem', { name: 'Sign out' }).click()
       await expect(page).toHaveURL(/\/login$/)
       await page.goto('/')
       await expect(page).toHaveURL(/\/login$/)

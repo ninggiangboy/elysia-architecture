@@ -1,17 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link, Outlet, redirect, useNavigate } from '@tanstack/react-router'
-import { LogOut, Radio, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router'
+import { Radio, UserRound } from 'lucide-react'
 import { Logo } from '@/components/layout/logo'
 import { ThemeToggle } from '@/components/layout/theme-toggle'
-import { Avatar } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
-import { logout } from '@/features/auth/queries'
+import { UserMenu } from '@/components/layout/user-menu'
 import { NotificationBell } from '@/features/notifications/notification-bell'
 import { unreadCountQuery } from '@/features/notifications/queries'
 import { meQuery } from '@/features/profile/queries'
 import { useLiveSession } from '@/features/realtime/use-live-session'
-import { useAuth } from '@/lib/auth-store'
 import { ensureSession } from '@/lib/session'
 import { preloadImage } from '@/lib/utils'
 
@@ -38,21 +33,7 @@ const NAV = [
 ] as const
 
 function AuthedLayout() {
-  const { user } = useAuth()
-  const { data: me } = useQuery(meQuery)
-  const navigate = useNavigate()
-  const [signingOut, setSigningOut] = useState(false)
   useLiveSession()
-
-  const signOut = async () => {
-    setSigningOut(true)
-    try {
-      await logout()
-      await navigate({ to: '/login' })
-    } finally {
-      setSigningOut(false)
-    }
-  }
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -85,31 +66,8 @@ function AuthedLayout() {
           <div className="ml-auto flex h-14 items-center gap-1.5">
             <ThemeToggle />
             <NotificationBell />
-            <div className="mx-1.5 hidden h-6 w-px bg-border sm:block" />
-            <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
-              <Avatar
-                decorative
-                src={me?.avatarUrl ?? null}
-                name={me?.displayName ?? user?.email ?? ''}
-                className="size-7 text-[11px]"
-              />
-              <div className="hidden max-w-48 flex-col leading-tight lg:flex">
-                <span className="truncate text-sm font-medium">{me?.displayName}</span>
-                <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Sign out"
-              title="Sign out"
-              className="ml-1"
-              loading={signingOut}
-              onClick={signOut}
-            >
-              {!signingOut && <LogOut aria-hidden />}
-              <span className="hidden sm:inline">Sign out</span>
-            </Button>
+            <div className="mx-1 h-6 w-px bg-border" />
+            <UserMenu />
           </div>
         </div>
       </header>
