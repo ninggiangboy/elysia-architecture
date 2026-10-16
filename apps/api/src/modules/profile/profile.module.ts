@@ -26,7 +26,7 @@ export interface ProfileModuleDeps {
   clock: Clock
   ids: IdGenerator
   storage: ObjectStorage
-  /** Chỉ phụ thuộc vào HỢP ĐỒNG của identity, không biết cài đặt bên trong. */
+  /** Depends only on identity's CONTRACT, not on its internal implementation. */
   identity: IdentityApi
   verifier: TokenVerifier
 }

@@ -38,7 +38,7 @@ export class TooManyRequestsError extends DomainError {
   }
 }
 
-/** Optimistic lock thất bại: aggregate đã bị thay đổi bởi request khác. */
+/** Optimistic lock failed: the aggregate was changed by another request. */
 export class VersionConflictError extends ConflictError {
   constructor() {
     super('version_conflict', 'The resource was modified by someone else, please reload')

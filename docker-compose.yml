@@ -35,7 +35,7 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     environment:
-      # Không reverse-DNS client của kết nối SMTP (mặc định chậm ~12s trên Docker Desktop/OrbStack).
+      # Do not reverse-DNS the SMTP client connection (slow by default, ~12s on Docker Desktop/OrbStack).
       MP_SMTP_DISABLE_RDNS: "true"
     ports: ["1025:1025", "8025:8025"]
     healthcheck:
@@ -57,7 +57,7 @@ services:
       timeout: 3s
       retries: 30
 
-  # Tạo bucket + CORS cho presigned PUT từ trình duyệt. Chạy một lần rồi thoát.
+  # Create the bucket + CORS for presigned PUT from the browser. Runs once, then exits.
   seaweedfs-init:
     image: amazon/aws-cli:latest
     profiles: ["init"]
@@ -77,7 +77,7 @@ services:
           || echo "warn: put-bucket-cors not supported by this SeaweedFS build"
         echo "bucket ready"
 
-  # ---- profile `app`: chạy nhiều replica API sau nginx để thử multi-instance ----
+  # ---- profile `app`: run multiple API replicas behind nginx to try multi-instance ----
   api:
     profiles: ["app"]
     build: { context: ., dockerfile: apps/api/Dockerfile }

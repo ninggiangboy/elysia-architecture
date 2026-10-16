@@ -9,7 +9,7 @@ export function Avatar({ src, name, className }: { src: string | null; name: str
         className,
       )}
     >
-      {src ? <img src={src} alt={`Ảnh đại diện của ${name}`} className="size-full object-cover" /> : initials}
+      {src ? <img src={src} alt={`Profile picture of ${name}`} className="size-full object-cover" /> : initials}
     </span>
   )
 }

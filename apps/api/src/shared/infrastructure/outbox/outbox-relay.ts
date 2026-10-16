@@ -8,7 +8,7 @@ import { RetryLaterError } from '#/shared/messaging/errors'
 import type { OutboxTable } from './tables'
 
 export interface OutboxSource {
-  /** Tên module phát event (ghi vào envelope.source). */
+  /** Name of the module emitting the event (written to envelope.source). */
   name: string
   table: OutboxTable
 }
@@ -19,17 +19,17 @@ export interface OutboxRelayOptions {
   leaseSeconds?: number
   maxAttempts?: number
   retentionDays?: number
-  /** Thời gian tối đa một message được hoãn vì RetryLaterError (rate limit) trước khi bị coi là dead. */
+  /** Maximum time a message may be deferred by RetryLaterError (rate limit) before it is considered dead. */
   deferBudgetMs?: number
-  /** Độ trễ mặc định khi RetryLaterError không kèm retryAfterMs. */
+  /** Default delay when RetryLaterError carries no retryAfterMs. */
   defaultDeferMs?: number
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 /**
- * Đọc outbox của từng module và đẩy qua MessagePublisher. An toàn khi chạy nhiều instance:
- * claim bằng `FOR UPDATE SKIP LOCKED` + lease nên mỗi message chỉ do một instance xử lý tại một thời điểm.
+ * Reads each module's outbox and pushes through the MessagePublisher. Safe to run on multiple instances:
+ * claims with `FOR UPDATE SKIP LOCKED` + a lease, so each message is handled by one instance at a time.
  */
 export class OutboxRelay {
   private running = false
@@ -64,7 +64,7 @@ export class OutboxRelay {
     this.loop = this.run()
   }
 
-  /** Dừng nhận batch mới và đợi batch đang xử lý hoàn tất. */
+  /** Stops taking new batches and waits for the in-flight batch to finish. */
   async stop(): Promise<void> {
     this.running = false
     await this.loop
@@ -79,12 +79,12 @@ export class OutboxRelay {
       } catch (err) {
         this.logger.error({ err }, 'outbox relay tick failed')
       }
-      // Còn việc thì chạy tiếp ngay, hết việc mới ngủ.
+      // Keep going immediately while there is work, sleep only when idle.
       if (processed === 0) await sleep(this.options.pollIntervalMs)
     }
   }
 
-  /** Xử lý một batch của một nguồn; trả về số message đã claim. */
+  /** Processes one batch of one source; returns the number of messages claimed. */
   async drain(source: OutboxSource): Promise<number> {
     const { table } = source
     const now = new Date()
@@ -144,7 +144,7 @@ export class OutboxRelay {
     err: unknown,
   ) {
     const errors = flattenErrors(err)
-    // Mọi lỗi đều là "thử lại sau" (vd. bị rate limit) → hoãn đúng thời điểm, không tính số lần thử.
+    // Every error here means "retry later" (e.g. rate limited) → defer to the right time, without counting an attempt.
     if (
       errors.length > 0 &&
       errors.every((e): e is RetryLaterError => e instanceof RetryLaterError)
@@ -155,7 +155,7 @@ export class OutboxRelay {
     const { table } = source
     const message = err instanceof Error ? err.message : String(err)
     const dead = row.attempts >= this.maxAttempts
-    // Backoff mũ: 2s, 4s, 8s … tối đa 5 phút.
+    // Exponential backoff: 2s, 4s, 8s … up to 5 minutes.
     const delaySeconds = Math.min(2 ** row.attempts, 300)
     this.logger.warn(
       { messageId: row.id, attempts: row.attempts, dead, err: message },
@@ -173,8 +173,8 @@ export class OutboxRelay {
   }
 
   /**
-   * Hoãn message tới thời điểm nhà cung cấp/bộ giới hạn cho phép. `attempts` được hoàn lại (relay đã tăng khi claim)
-   * để một đợt rate limit dài không đẩy message vào dead; chặn bởi ngân sách thời gian tính từ lúc event phát sinh.
+   * Defers the message until the provider/limiter allows it. `attempts` is given back (the relay incremented it on claim)
+   * so a long rate-limit spell does not push the message to dead; bounded by a time budget counted from when the event occurred.
    */
   private async defer(
     source: OutboxSource,
@@ -186,7 +186,7 @@ export class OutboxRelay {
     const ageMs = Date.now() - row.occurredAt.getTime()
     const exhausted = ageMs > this.deferBudgetMs
     const hinted = Math.max(0, ...errors.map((e) => e.retryAfterMs ?? 0))
-    // Jitter 0–10% để các message bị hoãn cùng lúc không đồng loạt quay lại cùng một khoảnh khắc.
+    // 0–10% jitter so messages deferred together do not all return at the same instant.
     const baseMs = hinted > 0 ? hinted : this.defaultDeferMs
     const delayMs = Math.ceil(baseMs * (1 + Math.random() * 0.1))
     this.logger.info(
@@ -205,7 +205,7 @@ export class OutboxRelay {
       .where(inArrayId(table, row.id))
   }
 
-  /** Xoá message đã publish quá hạn (payload có thể chứa token dùng một lần). Chỉ một instance chạy. */
+  /** Deletes published messages past retention (the payload may contain one-time tokens). Runs on one instance only. */
   private async maybeCleanup(): Promise<void> {
     if (Date.now() - this.lastCleanup < 10 * 60_000) return
     this.lastCleanup = Date.now()
@@ -224,7 +224,7 @@ export class OutboxRelay {
   }
 }
 
-/** Bus gom lỗi của nhiều handler vào AggregateError. */
+/** Bus that collects errors from several handlers into an AggregateError. */
 function flattenErrors(err: unknown): unknown[] {
   return err instanceof AggregateError ? err.errors.flatMap(flattenErrors) : [err]
 }

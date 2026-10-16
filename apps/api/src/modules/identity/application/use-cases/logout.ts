@@ -7,7 +7,7 @@ export class Logout {
     private clock: Clock,
   ) {}
 
-  /** Thu hồi cả family → mọi refresh token của phiên này vô hiệu. Access token tự hết hạn sau ≤ TTL. */
+  /** Revokes the whole family → every refresh token of this session is invalidated. The access token expires on its own within ≤ TTL. */
   async execute(cmd: { sessionId: string }): Promise<void> {
     await this.refreshTokens.revokeFamily(cmd.sessionId, this.clock.now())
   }

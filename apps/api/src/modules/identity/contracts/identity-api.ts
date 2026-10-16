@@ -6,8 +6,8 @@ export interface AccountDto {
 }
 
 /**
- * API đồng bộ identity cung cấp cho module khác. DTO thuần (serialize được) — hiện chạy in-process,
- * khi tách service chỉ cần thay bằng HTTP client cùng interface. Caller phải chịu được lỗi/timeout.
+ * Synchronous API identity offers to other modules. Plain DTOs (serializable) — currently in-process,
+ * when split into a service just swap in an HTTP client with the same interface. Callers must tolerate errors/timeouts.
  */
 export interface IdentityApi {
   getAccount(userId: string): Promise<AccountDto | null>

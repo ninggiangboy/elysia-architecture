@@ -1,11 +1,11 @@
 /**
- * Handler báo "chưa làm được lúc này, thử lại sau" (vd. bị rate limit của nhà cung cấp).
- * Relay lên lịch lại đúng thời điểm và KHÔNG tính vào số lần thử tối đa; chỉ bỏ cuộc khi quá ngân sách thời gian.
+ * A handler signals "can't do this right now, retry later" (e.g. the provider's rate limit).
+ * The relay reschedules at the right time and does NOT count it toward the max attempts; it gives up only when the time budget is exceeded.
  */
 export class RetryLaterError extends Error {
   constructor(
     message: string,
-    /** Gợi ý của nhà cung cấp (Retry-After) hoặc của bộ giới hạn tốc độ; bỏ trống = dùng mặc định. */
+    /** Hint from the provider (Retry-After) or the rate limiter; leave empty to use the default. */
     readonly retryAfterMs?: number,
   ) {
     super(message)

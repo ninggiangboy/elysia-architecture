@@ -7,8 +7,8 @@ import { magicLinks } from './persistence/schema'
 const WINDOW_MS = 15 * 60_000
 
 /**
- * Rate limit dựa trên chính bảng magic_links (không cần Redis, đúng khi chạy nhiều instance).
- * Không chặn tuyệt đối khi có race — chấp nhận vượt vài request, mục tiêu là chống spam.
+ * Rate limit based on the magic_links table itself (no Redis needed, correct with multiple instances).
+ * Not strictly enforced under races — a few extra requests may slip through; the goal is anti-spam.
  */
 export class DrizzleMagicLinkThrottle implements MagicLinkThrottle {
   constructor(

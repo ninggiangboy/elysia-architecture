@@ -3,7 +3,7 @@ import '@scalar/api-reference-react/style.css'
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { apiOrigin } from '@/lib/config'
 
-/** Spec chỉ được API phục vụ khi NODE_ENV=development, nên trang này cũng chỉ có ở bản dev. */
+/** The spec is served by the API only when NODE_ENV=development, so this page exists only in dev builds. */
 export const Route = createFileRoute('/docs')({
   beforeLoad: () => {
     if (!import.meta.env.DEV) throw notFound()
@@ -16,7 +16,7 @@ function DocsPage() {
     <ApiReferenceReact
       configuration={{
         url: `${apiOrigin()}/api/openapi/json`,
-        // Gọi thẳng API cùng origin (Vite proxy) nên không cần proxy của Scalar.
+        // Call the same-origin API directly (Vite proxy), so Scalar's proxy is not needed.
         hideClientButton: true,
         showDeveloperTools: 'never',
         telemetry: false,

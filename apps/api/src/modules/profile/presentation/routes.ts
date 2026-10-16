@@ -23,13 +23,13 @@ const meBody = t.Object(
     email: t.String({ format: 'email' }),
     displayName: t.String(),
     bio: t.Nullable(t.String()),
-    avatarUrl: t.Nullable(t.String({ description: 'Presigned GET URL, hết hạn sau 1 giờ' })),
+    avatarUrl: t.Nullable(t.String({ description: 'Presigned GET URL, expires after 1 hour' })),
     version: t.Integer({
-      description: 'Gửi lại trong `If-Match` khi cập nhật. 0 = chưa có bản ghi profile',
+      description: 'Send back in `If-Match` when updating. 0 = no profile record yet',
     }),
     createdAt: t.String({ format: 'date-time' }),
   },
-  { description: 'Thông tin tài khoản kèm hồ sơ' },
+  { description: 'Account information with profile' },
 )
 
 export const profileRoutes = ({ verifier, useCases: uc }: ProfileRouteDeps) =>
@@ -37,7 +37,7 @@ export const profileRoutes = ({ verifier, useCases: uc }: ProfileRouteDeps) =>
     .use(authPlugin(verifier))
     .get('/', ({ auth }) => uc.getMe.execute({ userId: auth.userId }), {
       auth: true,
-      detail: { summary: 'Lấy thông tin của tôi' },
+      detail: { summary: 'Get my account' },
       response: { 200: meBody, 404: errorResponse(404, 'user_not_found') },
     })
     .patch(
@@ -58,13 +58,14 @@ export const profileRoutes = ({ verifier, useCases: uc }: ProfileRouteDeps) =>
         headers: t.Object({
           'if-match': t.Optional(
             t.String({
-              description: 'Phiên bản hiện có (`version`) để chống ghi đè; sai phiên bản trả 409',
+              description:
+                'Current version (`version`) to prevent overwrites; a wrong version returns 409',
             }),
           ),
         }),
         detail: {
-          summary: 'Cập nhật hồ sơ',
-          description: 'Chỉ cập nhật các trường được gửi. `bio: null` để xoá bio.',
+          summary: 'Update profile',
+          description: 'Updates only the fields sent. `bio: null` clears the bio.',
         },
         response: {
           200: meBody,
@@ -80,26 +81,26 @@ export const profileRoutes = ({ verifier, useCases: uc }: ProfileRouteDeps) =>
       {
         auth: true,
         body: t.Object({
-          contentType: t.String({ description: 'image/jpeg, image/png hoặc image/webp' }),
-          contentLength: t.Integer({ description: 'Kích thước file (byte), tối đa 2 MB' }),
+          contentType: t.String({ description: 'image/jpeg, image/png or image/webp' }),
+          contentLength: t.Integer({ description: 'File size (bytes), max 2 MB' }),
         }),
         detail: {
           summary: 'Xin URL upload avatar',
           description:
-            'Trả presigned URL; client `PUT` file thẳng lên storage rồi gọi `PUT /me/avatar` với `key`.',
+            'Returns a presigned URL; the client `PUT`s the file straight to storage, then calls `PUT /me/avatar` with the `key`.',
         },
         response: {
           200: t.Object(
             {
               uploadUrl: t.String(),
-              key: t.String({ description: 'Gửi lại ở `PUT /me/avatar`' }),
+              key: t.String({ description: 'Send back in `PUT /me/avatar`' }),
               method: t.Literal('PUT'),
               headers: t.Record(t.String(), t.String(), {
-                description: 'Header bắt buộc khi upload',
+                description: 'Headers required for the upload',
               }),
-              expiresIn: t.Number({ description: 'Thời gian sống của URL (giây)' }),
+              expiresIn: t.Number({ description: 'URL lifetime (seconds)' }),
             },
-            { description: 'Thông tin upload' },
+            { description: 'Upload information' },
           ),
           400: validationError('unsupported_avatar_type', 'avatar_too_large'),
         },
@@ -111,11 +112,16 @@ export const profileRoutes = ({ verifier, useCases: uc }: ProfileRouteDeps) =>
       {
         auth: true,
         body: t.Object({
-          key: t.String({ minLength: 1, maxLength: 200, description: '`key` nhận từ upload-url' }),
+          key: t.String({
+            minLength: 1,
+            maxLength: 200,
+            description: '`key` received from upload-url',
+          }),
         }),
         detail: {
-          summary: 'Đặt avatar',
-          description: 'Xác nhận file đã upload và gán làm avatar; avatar cũ được xoá bất đồng bộ.',
+          summary: 'Set avatar',
+          description:
+            'Confirms the file was uploaded and sets it as the avatar; the old avatar is deleted asynchronously.',
         },
         response: {
           200: meBody,

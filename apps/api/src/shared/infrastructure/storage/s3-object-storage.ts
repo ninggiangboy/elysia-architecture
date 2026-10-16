@@ -3,7 +3,7 @@ import type { ObjectStat, ObjectStorage } from '#/shared/application/ports'
 
 export interface S3Options {
   endpoint: string
-  /** Endpoint mà TRÌNH DUYỆT truy cập được (chữ ký presigned gắn với host này). */
+  /** Endpoint reachable from the BROWSER (the presigned signature is bound to this host). */
   publicEndpoint: string
   region: string
   bucket: string
@@ -23,7 +23,7 @@ export class S3ObjectStorage implements ObjectStorage {
       secretAccessKey: options.secretAccessKey,
     }
     this.internal = new S3Client({ ...base, endpoint: options.endpoint })
-    // Presign chỉ tính chữ ký cục bộ, không gọi mạng.
+    // Presigning only computes the signature locally, no network call.
     this.signer = new S3Client({ ...base, endpoint: options.publicEndpoint })
   }
 

@@ -6,7 +6,7 @@ export type ErrorKind =
   | 'conflict'
   | 'too_many_requests'
 
-/** Lỗi nghiệp vụ có mã ổn định (`code`) để client xử lý; `kind` quyết định HTTP status ở tầng presentation. */
+/** Business error with a stable `code` for clients to handle; `kind` decides the HTTP status in the presentation layer. */
 export class DomainError extends Error {
   constructor(
     readonly code: string,

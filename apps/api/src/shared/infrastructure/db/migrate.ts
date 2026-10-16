@@ -1,7 +1,7 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import type { Database } from './database'
 
-/** Mỗi module có thư mục migration và bảng lịch sử migration riêng (`drizzle_<module>`). */
+/** Each module has its own migration folder and migration history table (`drizzle_<module>`). */
 export async function migrateModule(
   database: Database,
   module: string,

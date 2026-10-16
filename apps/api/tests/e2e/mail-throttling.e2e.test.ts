@@ -9,7 +9,7 @@ import { createTestApp, eventually, sleep, type TestApp, uniqueEmail } from './h
 
 type Mail = Parameters<Mailer['send']>[0]
 
-/** Mailer giả có kịch bản: test quyết định mỗi lần gửi thành công hay lỗi. */
+/** Scripted fake mailer: the test decides whether each send succeeds or fails. */
 class ScriptedMailer implements Mailer {
   sent: Mail[] = []
   calls: Mail[] = []
@@ -109,7 +109,7 @@ describe('PostgresSendRateLimiter (shared state, safe across instances)', () => 
     const [row] = await t.container.database.db.execute<{ tokens: number }>(
       sql`select tokens from notification.rate_buckets where key = ${k}`,
     )
-    expect(Number(row?.tokens)).toBeCloseTo(8, 1) // 10 - 2 mail đã gửi; lần bị từ chối được hoàn lại
+    expect(Number(row?.tokens)).toBeCloseTo(8, 1) // 10 - 2 mails sent; the rejected attempt is given back
   })
 })
 
@@ -128,9 +128,9 @@ describe('outbox + mail under provider rate limiting', () => {
     )
     await eventually(async () => (await outboxRow(id)).publishedAt, 5_000, 'message published')
 
-    expect(mailer.callsTo(email)).toHaveLength(3) // 2 lần bị hoãn + 1 lần thành công
+    expect(mailer.callsTo(email)).toHaveLength(3) // 2 deferred + 1 successful
     const row = await outboxRow(id)
-    expect(row.attempts).toBe(1) // hoãn vì rate limit không tính số lần thử
+    expect(row.attempts).toBe(1) // deferral due to rate limit does not count as an attempt
     expect(row.deadAt).toBeNull()
   }, 20_000)
 
@@ -147,7 +147,7 @@ describe('outbox + mail under provider rate limiting', () => {
     expect(row.deadAt).toBeNull()
     expect(row.attempts).toBe(1)
     expect(mailer.to(email)).toHaveLength(0)
-    // Consumer khác của cùng event (tạo profile) vẫn chạy bình thường
+    // Another consumer of the same event (create profile) still runs normally
     const profiles = await t.container.database.db.execute(
       sql`select 1 from profile.profiles where user_id = ${payload.userId}`,
     )
@@ -172,7 +172,7 @@ describe('outbox + mail under provider rate limiting', () => {
     mailer.behavior = (m) => {
       if (m.to === email && outage) throw new MailRateLimitedError('daily quota exceeded', 100)
     }
-    // Event đã 25 giờ tuổi → vượt ngân sách hoãn 24 giờ ngay lần hoãn đầu tiên.
+    // The event is already 25 hours old → exceeds the 24-hour deferral budget on the very first deferral
     const id = await emit(
       IdentityEvents.UserRegistered,
       registered(email),

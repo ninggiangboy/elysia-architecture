@@ -3,7 +3,7 @@ import { inboxTable, outboxTable } from '#/shared/infrastructure/outbox/tables'
 
 export const profileSchema = pgSchema('profile')
 
-/** `user_id` tham chiếu user của module identity theo giá trị — KHÔNG có FK xuyên module. */
+/** `user_id` references the identity module's user by value — NO cross-module FK. */
 export const profiles = profileSchema.table('profiles', {
   userId: uuid('user_id').primaryKey(),
   displayName: text('display_name').notNull(),

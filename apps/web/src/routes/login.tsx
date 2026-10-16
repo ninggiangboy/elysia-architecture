@@ -38,21 +38,21 @@ function LoginPage() {
         {sentTo ? (
           <div className="flex flex-col items-center gap-3 text-center" role="status">
             <MailCheck className="size-10 text-muted-foreground" aria-hidden />
-            <CardTitle>Kiểm tra hộp thư của bạn</CardTitle>
+            <CardTitle>Check your inbox</CardTitle>
             <CardDescription>
-              Chúng tôi đã gửi liên kết đăng nhập tới <b className="text-foreground">{sentTo}</b>.
-              Liên kết có hiệu lực 15 phút.
+              We sent a sign-in link to <b className="text-foreground">{sentTo}</b>. The link is
+              valid for 15 minutes.
             </CardDescription>
             <Button variant="ghost" size="sm" onClick={() => setSentTo(null)}>
-              Dùng email khác
+              Use a different email
             </Button>
           </div>
         ) : (
           <form onSubmit={submit} className="flex flex-col gap-4">
             <div>
-              <CardTitle className="text-xl">Đăng nhập</CardTitle>
+              <CardTitle className="text-xl">Sign in</CardTitle>
               <CardDescription>
-                Nhập email, chúng tôi sẽ gửi liên kết đăng nhập — không cần mật khẩu.
+                Enter your email and we will send you a sign-in link — no password needed.
               </CardDescription>
             </div>
             <div className="flex flex-col gap-2">
@@ -69,7 +69,7 @@ function LoginPage() {
               />
             </div>
             <Button type="submit" disabled={send.isPending}>
-              {send.isPending ? 'Đang gửi…' : 'Gửi liên kết đăng nhập'}
+              {send.isPending ? 'Sending…' : 'Send sign-in link'}
             </Button>
           </form>
         )}

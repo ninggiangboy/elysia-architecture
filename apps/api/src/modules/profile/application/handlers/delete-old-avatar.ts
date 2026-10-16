@@ -14,7 +14,7 @@ export class DeleteOldAvatar implements IntegrationEventHandler {
   async handle(message: Envelope): Promise<void> {
     const { oldKey } = message.payload as unknown as AvatarChangedPayload
     if (!oldKey) return
-    // Xoá object không tồn tại vẫn thành công → idempotent.
+    // Deleting a non-existent object still succeeds → idempotent.
     await this.inbox.afterSideEffect(message.id, this.name, () => this.storage.delete(oldKey))
   }
 }

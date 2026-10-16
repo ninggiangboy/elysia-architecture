@@ -31,7 +31,7 @@ function AuthedLayout() {
                 await navigate({ to: '/login' })
               }}
             >
-              <LogOut className="size-4" aria-hidden /> Đăng xuất
+              <LogOut className="size-4" aria-hidden /> Sign out
             </Button>
           </div>
         </div>

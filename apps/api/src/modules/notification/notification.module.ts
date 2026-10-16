@@ -21,7 +21,7 @@ import { PostgresSendRateLimiter } from './infrastructure/postgres-send-rate-lim
 
 export interface NotificationModuleDeps {
   database: Database
-  /** Mailer thật (SMTP/SES…). Module tự bọc bộ giới hạn tốc độ quanh nó. */
+  /** The real mailer (SMTP/SES…). The module wraps the rate limiter around it itself. */
   mailer: Mailer
   webAppUrl: string
   clock: Clock

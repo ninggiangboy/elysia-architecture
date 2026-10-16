@@ -8,21 +8,21 @@ export interface AuthSession {
   sessionId: string
 }
 
-/** Cấu trúc tối thiểu shared cần — AccessTokenVerifier của identity thoả mãn nó (shared không import module). */
+/** Minimal shape shared needs — identity's AccessTokenVerifier satisfies it (shared does not import modules). */
 export interface TokenVerifier {
   verify(token: string): Promise<AuthSession>
 }
 
 /**
- * Macro `auth: true` cho route. Chỉ verify chữ ký/exp bằng public key (stateless, không truy vấn DB),
- * nên bất kỳ service nào có JWKS đều dùng lại được.
+ * The `auth: true` macro for routes. Only verifies signature/exp with the public key (stateless, no DB query),
+ * so any service that has the JWKS can reuse it.
  */
 export const authPlugin = (verifier: TokenVerifier) =>
   new Elysia({ name: 'auth' }).macro({
     auth: {
       detail: { security: bearerSecurity },
       response: { 401: errorResponse(401, 'missing_token', 'invalid_token') },
-      // Đọc từ `request` chứ không từ `headers`: route khai báo schema headers sẽ bị lược bỏ các header không khai báo.
+      // Read from `request`, not `headers`: a route that declares a headers schema has undeclared headers stripped.
       async resolve({ request }) {
         const header = request.headers.get('authorization')
         if (!header?.startsWith('Bearer ')) {

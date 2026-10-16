@@ -21,7 +21,10 @@ const readiness = t.Object({
 function healthRoutes(container: Container) {
   return new Elysia({ prefix: '/health', tags: ['health'] })
     .get('/live', () => ({ status: 'ok' as const }), {
-      detail: { summary: 'Liveness', description: 'Process còn sống. Không kiểm tra phụ thuộc.' },
+      detail: {
+        summary: 'Liveness',
+        description: 'The process is alive. Does not check dependencies.',
+      },
       response: { 200: t.Object({ status: t.Literal('ok') }) },
     })
     .get(
@@ -41,17 +44,17 @@ function healthRoutes(container: Container) {
       {
         detail: {
           summary: 'Readiness',
-          description: 'Kiểm tra kết nối database; 503 nếu chưa sẵn sàng.',
+          description: 'Checks the database connection; 503 if not ready.',
         },
         response: {
-          200: t.Object(readiness.properties, { description: 'Sẵn sàng nhận request' }),
-          503: t.Object(readiness.properties, { description: 'Database không phản hồi' }),
+          200: t.Object(readiness.properties, { description: 'Ready to accept requests' }),
+          503: t.Object(readiness.properties, { description: 'Database is not responding' }),
         },
       },
     )
 }
 
-/** Dùng chung cho main.ts và e2e test. `App` là type để web suy ra client (Eden Treaty). */
+/** Shared by main.ts and e2e tests. `App` is the type the web app uses to infer the client (Eden Treaty). */
 export function buildApp(container: Container) {
   return new Elysia({ prefix: API_PREFIX })
     .use(requestContextPlugin)
@@ -61,7 +64,7 @@ export function buildApp(container: Container) {
       openapi({
         enabled: container.config.NODE_ENV === 'development',
         path: '/openapi',
-        // Mặc định plugin loại đường dẫn có đuôi file (.json) — sẽ làm mất /.well-known/jwks.json khỏi docs.
+        // By default the plugin excludes paths with a file extension (.json) — which would drop /.well-known/jwks.json from the docs.
         exclude: { staticFile: false },
         documentation: openapiDocumentation,
       }),

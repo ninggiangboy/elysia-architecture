@@ -6,9 +6,9 @@ export interface AuthUser {
 }
 
 export interface AuthState {
-  /** unknown = chưa thử khôi phục phiên từ cookie refresh. */
+  /** unknown = have not yet tried to restore the session from the refresh cookie. */
   status: 'unknown' | 'authenticated' | 'anonymous'
-  /** Access token chỉ nằm trong bộ nhớ (không localStorage) để giảm bề mặt XSS; refresh token ở cookie httpOnly. */
+  /** The access token lives only in memory (not localStorage) to reduce XSS surface; the refresh token is in an httpOnly cookie. */
   accessToken: string | null
   user: AuthUser | null
 }

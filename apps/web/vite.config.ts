@@ -9,7 +9,7 @@ export default defineConfig({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {
     port: 5173,
-    // Cùng origin với web → cookie refresh (Path=/api/auth, SameSite=Lax) hoạt động mà không cần CORS.
+    // Same origin as the web app → the refresh cookie (Path=/api/auth, SameSite=Lax) works without CORS.
     proxy: { '/api': 'http://localhost:3000' },
   },
 })

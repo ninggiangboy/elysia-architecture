@@ -12,12 +12,12 @@ import { SystemClock, UuidV7Generator } from '#/shared/infrastructure/system'
 import { InProcessMessageBus } from '#/shared/messaging/in-process-bus'
 
 /**
- * Composition root — nơi DUY NHẤT biết adapter cụ thể và cách nối các module.
- * Tách module thành service: thay `identity.api` bằng HTTP client, thay InProcessMessageBus bằng broker,
- * domain/application của các module không đổi.
+ * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.
+ * To split a module into a service: replace `identity.api` with an HTTP client and InProcessMessageBus with a broker;
+ * each module's domain/application stays unchanged.
  */
 export interface ContainerOverrides {
-  /** Thay mailer của nhà cung cấp (test, hoặc adapter SES). Bộ giới hạn tốc độ vẫn được bọc bên ngoài. */
+  /** Replaces the provider mailer (tests, or an SES adapter). The rate limiter is still wrapped around it. */
   mailer?: Mailer
 }
 
@@ -29,7 +29,7 @@ export async function createContainer(
   const clock = new SystemClock()
   const ids = new UuidV7Generator()
 
-  // Một pool + một ngữ cảnh transaction cho mọi module; module chỉ khác nhau ở schema Postgres.
+  // One pool + one transaction context for all modules; modules differ only by Postgres schema.
   const database = new Database({
     url: config.DATABASE_URL,
     poolMax: config.DB_POOL_MAX,

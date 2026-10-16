@@ -32,7 +32,7 @@ export class DrizzleProfileRepository implements ProfileRepository {
       try {
         await ex.insert(profiles).values(toRow(profile, 1))
       } catch (err) {
-        // Profile vừa được tạo bởi request/handler khác → để client thử lại với dữ liệu mới.
+        // The profile was just created by another request/handler → let the client retry with the fresh data.
         if (isUniqueViolation(err))
           throw new ConflictError('profile_conflict', 'Profile was just created, retry')
         throw err

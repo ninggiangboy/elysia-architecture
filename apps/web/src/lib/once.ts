@@ -1,8 +1,8 @@
 const calls = new Map<string, Promise<unknown>>()
 
 /**
- * Đảm bảo `fn` chỉ chạy một lần cho mỗi `key` dù component mount nhiều lần (React StrictMode).
- * Cần cho các token dùng một lần như magic link.
+ * Ensures `fn` runs only once per `key` even if the component mounts several times (React StrictMode).
+ * Needed for one-time tokens such as magic links.
  */
 export function once<T>(key: string, fn: () => Promise<T>): Promise<T> {
   let p = calls.get(key) as Promise<T> | undefined

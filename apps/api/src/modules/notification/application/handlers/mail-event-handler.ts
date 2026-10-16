@@ -12,15 +12,15 @@ import type { MailContent } from '../templates'
 export interface MailRequest {
   to: string
   content: MailContent
-  /** ISO-8601. Qua thời điểm này mail vô nghĩa (vd. link hết hạn) → bỏ qua thay vì gửi trễ. */
+  /** ISO-8601. After this time the mail is pointless (e.g. link expired) → skip instead of sending late. */
   expiresAt?: string
 }
 
 /**
- * Handler chung: event → mail → gửi, ghi inbox sau khi xử lý xong (at-least-once).
- *  - Hết hạn: bỏ qua (không gửi một link đã chết).
- *  - MailPermanentError: bỏ mail này và ghi log lỗi — không để một địa chỉ hỏng chặn/đưa cả event vào dead.
- *  - MailRateLimitedError / lỗi khác: ném lên để relay hoãn hoặc retry.
+ * Generic handler: event → mail → send, record in the inbox once done (at-least-once).
+ *  - Expired: skip (do not send a dead link).
+ *  - MailPermanentError: drop this mail and log the error — a bad address must not block or send the whole event to dead.
+ *  - MailRateLimitedError / other errors: rethrow so the relay defers or retries.
  */
 export class MailEventHandler<TPayload> implements IntegrationEventHandler {
   constructor(

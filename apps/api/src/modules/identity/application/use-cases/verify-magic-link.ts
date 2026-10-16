@@ -26,8 +26,8 @@ export class VerifyMagicLink {
     try {
       return await this.attempt(cmd)
     } catch (err) {
-      // Hai link của cùng email chưa có tài khoản được verify đồng thời → một bên thua unique(email).
-      // Transaction đã rollback (link được trả lại) nên chạy lại một lần sẽ thấy user vừa được tạo.
+      // Two links for the same not-yet-registered email verified concurrently → one loses on unique(email).
+      // The transaction rolled back (the link is returned), so retrying once will see the user that was just created.
       if (err instanceof ConflictError && err.code === 'email_taken') return this.attempt(cmd)
       throw err
     }

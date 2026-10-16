@@ -1,6 +1,6 @@
 /**
- * Cấu hình chạy (runtime) lấy từ /config.json do web server phục vụ — một bản build dùng cho nhiều môi trường.
- * `apiOrigin` rỗng = cùng origin với web (qua Vite proxy khi dev, qua nginx khi chạy thật).
+ * Runtime config is read from /config.json served by the web server — one build serves many environments.
+ * An empty `apiOrigin` = same origin as the web app (via the Vite proxy in dev, via nginx in production).
  */
 interface RuntimeConfig {
   apiOrigin: string
@@ -13,7 +13,7 @@ export async function loadRuntimeConfig(): Promise<void> {
     const res = await fetch('/config.json', { cache: 'no-store' })
     if (res.ok) config = { ...config, ...(await res.json()) }
   } catch {
-    // dùng mặc định
+    // use the defaults
   }
 }
 

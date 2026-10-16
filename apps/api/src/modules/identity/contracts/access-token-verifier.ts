@@ -1,10 +1,10 @@
 export interface AccessTokenClaims {
   userId: string
-  /** = id của refresh-token family (phiên đăng nhập). */
+  /** = id of the refresh-token family (login session). */
   sessionId: string
 }
 
 export interface AccessTokenVerifier {
-  /** Ném lỗi nếu token sai chữ ký, hết hạn hoặc sai issuer/audience. */
+  /** Throws if the token has a bad signature, is expired, or has a wrong issuer/audience. */
   verify(token: string): Promise<AccessTokenClaims>
 }

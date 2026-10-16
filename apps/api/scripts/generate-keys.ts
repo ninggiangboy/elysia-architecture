@@ -1,4 +1,4 @@
-// Sinh cặp khoá ES256 cho dev và ghi vào .env gốc của monorepo.
+// Generates an ES256 key pair for dev and writes it to the monorepo root .env.
 import { exportPKCS8, exportSPKI, generateKeyPair } from 'jose'
 
 const envPath = new URL('../../../.env', import.meta.url).pathname

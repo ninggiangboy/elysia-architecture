@@ -36,17 +36,17 @@ const tokenBody = t.Object({
   token: t.String({
     minLength: 1,
     maxLength: 200,
-    description: 'Token nhận được trong link gửi qua email',
+    description: 'Token received in the link sent by email',
   }),
 })
 
 const sessionBody = t.Object(
   {
-    accessToken: t.String({ description: 'JWT, gửi qua `Authorization: Bearer`' }),
-    expiresIn: t.Number({ description: 'Thời gian sống của access token (giây)' }),
+    accessToken: t.String({ description: 'JWT, sent via `Authorization: Bearer`' }),
+    expiresIn: t.Number({ description: 'Access token lifetime (seconds)' }),
     user: t.Object({ id: t.String(), email: t.String({ format: 'email' }) }),
   },
-  { description: 'Phiên mới. Refresh token được set trong cookie HttpOnly `refresh_token`' },
+  { description: 'New session. The refresh token is set in the HttpOnly cookie `refresh_token`' },
 )
 
 const sentBody = t.Object({ status: t.Literal('sent') })
@@ -71,17 +71,17 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
       },
       {
         body: t.Object({
-          email: t.String({ maxLength: 254, description: 'Email nhận link đăng nhập' }),
+          email: t.String({ maxLength: 254, description: 'Email that receives the sign-in link' }),
         }),
         detail: {
-          summary: 'Gửi magic link',
+          summary: 'Send magic link',
           description:
-            'Gửi email chứa link đăng nhập một lần. Tài khoản được tạo tự động ở lần đăng nhập đầu tiên. ' +
-            'Giới hạn theo email và IP.',
+            'Sends an email containing a one-time sign-in link. The account is created automatically on first sign-in. ' +
+            'Rate-limited per email and IP.',
         },
         response: {
           202: t.Object(sentBody.properties, {
-            description: 'Đã nhận yêu cầu, email sẽ được gửi bất đồng bộ',
+            description: 'Request accepted, the email will be sent asynchronously',
           }),
           400: validationError('invalid_email'),
           429: errorResponse(429, 'magic_link_rate_limited'),
@@ -102,8 +102,9 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         body: tokenBody,
         cookie: cookieSchema,
         detail: {
-          summary: 'Đăng nhập bằng magic link',
-          description: 'Đổi token trong link lấy access token và set cookie refresh token.',
+          summary: 'Sign in with magic link',
+          description:
+            'Exchanges the token in the link for an access token and sets the refresh token cookie.',
         },
         response: {
           200: sessionBody,
@@ -131,10 +132,10 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
       {
         cookie: cookieSchema,
         detail: {
-          summary: 'Làm mới phiên',
+          summary: 'Refresh session',
           description:
-            'Dùng cookie `refresh_token` để cấp access token mới và xoay refresh token. ' +
-            'Dùng lại refresh token cũ (ngoài khoảng ân hạn) sẽ thu hồi cả phiên.',
+            'Uses the `refresh_token` cookie to issue a new access token and rotate the refresh token. ' +
+            'Reusing an old refresh token (outside the grace window) revokes the whole session.',
         },
         response: {
           200: sessionBody,
@@ -154,10 +155,10 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         auth: true,
         cookie: cookieSchema,
         detail: {
-          summary: 'Đăng xuất',
-          description: 'Thu hồi phiên hiện tại và xoá cookie refresh token.',
+          summary: 'Sign out',
+          description: 'Revokes the current session and clears the refresh token cookie.',
         },
-        response: { 204: t.Void({ description: 'Đã đăng xuất' }) },
+        response: { 204: t.Void({ description: 'Signed out' }) },
       },
     )
 
@@ -172,14 +173,15 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
       },
       {
         auth: true,
-        body: t.Object({ newEmail: t.String({ maxLength: 254, description: 'Email mới' }) }),
+        body: t.Object({ newEmail: t.String({ maxLength: 254, description: 'New email' }) }),
         detail: {
-          summary: 'Yêu cầu đổi email',
-          description: 'Gửi link xác nhận tới email mới. Email chỉ đổi sau khi xác nhận qua link.',
+          summary: 'Request email change',
+          description:
+            'Sends a confirmation link to the new email. The email changes only after confirming via the link.',
         },
         response: {
           202: t.Object(sentBody.properties, {
-            description: 'Đã nhận yêu cầu, email sẽ được gửi bất đồng bộ',
+            description: 'Request accepted, the email will be sent asynchronously',
           }),
           400: validationError('invalid_email', 'email_unchanged'),
           404: errorResponse(404, 'user_not_found'),
@@ -187,19 +189,19 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         },
       },
     )
-    // Token trong mail là credential — không cần đăng nhập (người dùng có thể mở link ở trình duyệt khác).
+    // The token in the mail is a credential — no sign-in required (the user may open the link in another browser).
     .post(
       '/email-change/confirm',
       ({ body }) => uc.confirmEmailChange.execute({ token: body.token }),
       {
         body: tokenBody,
         detail: {
-          summary: 'Xác nhận đổi email',
-          description: 'Không cần đăng nhập: token trong email là credential.',
+          summary: 'Confirm email change',
+          description: 'No sign-in required: the token in the email is the credential.',
         },
         response: {
           200: t.Object({
-            email: t.String({ format: 'email', description: 'Email mới của tài khoản' }),
+            email: t.String({ format: 'email', description: "The account's new email" }),
           }),
           400: validationError('invalid_email_change_token'),
           404: errorResponse(404, 'user_not_found'),
@@ -216,7 +218,7 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         tags: ['auth'],
         summary: 'JWKS',
         description:
-          'Public key (JWK Set) để service khác verify access token mà không cần gọi API này mỗi lần.',
+          'Public key (JWK Set) so other services can verify access tokens without calling this API each time.',
       },
     })
 }

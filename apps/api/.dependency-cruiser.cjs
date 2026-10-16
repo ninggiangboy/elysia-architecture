@@ -1,4 +1,4 @@
-/** Luật ranh giới kiến trúc — chạy bằng `bun run check:arch`. */
+/** Architecture boundary rules — run with `bun run check:arch`. */
 const FRAMEWORKS =
   'node_modules/(elysia|@elysiajs|drizzle-orm|drizzle-kit|postgres|nodemailer|jose|pino)/'
 const ROOT = '^src/(app|main|bootstrap)'
@@ -8,7 +8,7 @@ module.exports = {
     {
       name: 'domain-is-pure',
       comment:
-        'domain chỉ phụ thuộc domain; không biết application/infrastructure/presentation hay framework.',
+        'domain depends only on domain; it knows nothing of application/infrastructure/presentation or any framework.',
       severity: 'error',
       from: { path: ['^src/modules/[^/]+/domain/', '^src/shared/domain/'] },
       to: {
@@ -23,7 +23,7 @@ module.exports = {
     {
       name: 'application-no-infrastructure',
       comment:
-        'application nói chuyện với bên ngoài qua port; không import infrastructure/presentation/framework.',
+        'application talks to the outside world through ports; it does not import infrastructure/presentation/framework.',
       severity: 'error',
       from: { path: ['^src/modules/[^/]+/application/', '^src/shared/application/'] },
       to: {
@@ -38,7 +38,7 @@ module.exports = {
     {
       name: 'modules-talk-only-through-contracts',
       comment:
-        'Module A chỉ được import modules/B/contracts — không chạm nội bộ của B (để tách service sau này).',
+        'Module A may only import modules/B/contracts — never B internals (so modules can be split into services later).',
       severity: 'error',
       from: { path: '^src/modules/([^/]+)/' },
       to: {
@@ -48,7 +48,8 @@ module.exports = {
     },
     {
       name: 'contracts-are-self-contained',
-      comment: 'contracts là DTO/interface thuần: không import gì từ bên trong module hay shared.',
+      comment:
+        'contracts are plain DTOs/interfaces: they import nothing from inside the module or from shared.',
       severity: 'error',
       from: { path: '^src/modules/[^/]+/contracts/' },
       to: {
@@ -61,14 +62,14 @@ module.exports = {
     },
     {
       name: 'shared-knows-no-module',
-      comment: 'shared là building block, không phụ thuộc module nghiệp vụ.',
+      comment: 'shared is a building block and does not depend on business modules.',
       severity: 'error',
       from: { path: '^src/shared/', pathNot: '^src/shared/testing/' },
       to: { path: '^src/modules/' },
     },
     {
       name: 'only-composition-root-wires-modules',
-      comment: 'Chỉ app.ts/main.ts/bootstrap được import *.module.ts và cài đặt cụ thể.',
+      comment: 'Only app.ts/main.ts/bootstrap may import *.module.ts and concrete implementations.',
       severity: 'error',
       from: { path: '^src/(modules|shared)/' },
       to: { path: ROOT },

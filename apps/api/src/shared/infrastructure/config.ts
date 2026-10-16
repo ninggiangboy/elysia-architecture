@@ -75,15 +75,15 @@ const schema = z.object({
     .default('false')
     .transform((v) => v === 'true'),
   MAIL_FROM: z.string().default('App <no-reply@example.test>'),
-  /** Tốc độ gửi tối đa (mail/giây) — đặt bằng "max send rate" của tài khoản SES (sandbox: 1). */
+  /** Maximum send rate (mails/second) — set to the "max send rate" of the SES account (sandbox: 1). */
   MAIL_RATE_PER_SECOND: z.coerce.number().positive().default(10),
-  /** Số mail được gửi dồn trong một nhịp; mặc định = ceil(rate). */
+  /** Number of mails that may be sent in one burst; defaults to ceil(rate). */
   MAIL_BURST: z.coerce.number().int().positive().optional(),
-  /** Quota mỗi ngày (UTC); 0 = không giới hạn. SES: "24-hour sending quota". */
+  /** Quota per day (UTC); 0 = unlimited. SES: "24-hour sending quota". */
   MAIL_DAILY_QUOTA: z.coerce.number().int().nonnegative().default(0),
 
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
-  /** Thời gian tối đa một message được hoãn vì rate limit trước khi bị coi là dead. */
+  /** Maximum time a message may be deferred by the rate limit before it is considered dead. */
   OUTBOX_DEFER_BUDGET_HOURS: z.coerce.number().positive().default(24),
 })
 

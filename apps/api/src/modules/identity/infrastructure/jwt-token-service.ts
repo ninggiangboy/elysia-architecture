@@ -23,7 +23,7 @@ export interface JwtOptions {
 
 const ALG = 'ES256'
 
-/** Ký/verify access token ES256. Public key công bố qua JWKS nên service khác verify được mà không cần secret chung. */
+/** Signs/verifies ES256 access tokens. The public key is published via JWKS so other services can verify without a shared secret. */
 export class JwtTokenService implements TokenService, AccessTokenVerifier {
   private constructor(
     private options: JwtOptions,

@@ -18,7 +18,7 @@ export class MagicLink extends AggregateRoot {
     super(id, version)
   }
 
-  /** `rawToken` chỉ đi vào event (để gửi mail); aggregate chỉ giữ hash. */
+  /** `rawToken` goes only into the event (to send the mail); the aggregate keeps just the hash. */
   static issue(params: {
     id: string
     email: Email

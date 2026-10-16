@@ -10,8 +10,8 @@ export class DrizzleInboxGuard implements InboxGuard {
   ) {}
 
   /**
-   * Side-effect nằm trong DB của module: ghi inbox và chạy `fn` trong CÙNG transaction
-   * → exactly-once hiệu dụng. `fn` có thể dùng repository của module như bình thường.
+   * Side effect inside the module's DB: writes the inbox and runs `fn` in the SAME transaction
+   * → effectively exactly-once. `fn` can use the module's repositories as usual.
    */
   async transactional(messageId: string, handler: string, fn: () => Promise<void>): Promise<void> {
     await this.database.run(async () => {
@@ -20,14 +20,14 @@ export class DrizzleInboxGuard implements InboxGuard {
         .values({ messageId, handler })
         .onConflictDoNothing()
         .returning({ messageId: this.table.messageId })
-      if (inserted.length === 0) return // đã xử lý
+      if (inserted.length === 0) return // already processed
       await fn()
     })
   }
 
   /**
-   * Side-effect ra ngoài (gửi mail, gọi HTTP) không rollback được: chạy rồi mới ghi inbox
-   * → at-least-once; chỉ trùng lặp nếu process chết đúng giữa hai bước.
+   * External side effects (send mail, call HTTP) cannot be rolled back: run first, then write the inbox
+   * → at-least-once; duplicates only if the process dies exactly between the two steps.
    */
   async afterSideEffect(
     messageId: string,

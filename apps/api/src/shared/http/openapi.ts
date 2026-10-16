@@ -1,44 +1,44 @@
 import { t } from 'elysia'
 
-/** Khớp với `body()` trong error-handler.plugin.ts — mọi lỗi đều có dạng này. */
+/** Matches `body()` in error-handler.plugin.ts — every error has this shape. */
 const errorShape = {
   error: t.Object({
     code: t.String({
-      description: 'Mã lỗi ổn định, dùng để client xử lý',
+      description: 'Stable error code, for clients to handle',
       examples: ['not_found'],
     }),
-    message: t.String({ description: 'Thông điệp dành cho người đọc' }),
+    message: t.String({ description: 'Human-readable message' }),
     requestId: t.Optional(
-      t.String({ description: 'Trùng với header x-request-id, dùng để tra log' }),
+      t.String({ description: 'Same as the x-request-id header, used to look up logs' }),
     ),
     details: t.Optional(
-      t.Unknown({ description: 'Chỉ có ở validation_error: danh sách { path, message }' }),
+      t.Unknown({ description: 'Only on validation_error: a list of { path, message }' }),
     ),
   }),
 }
 
 const ERROR_DESCRIPTIONS = {
-  400: 'Dữ liệu không hợp lệ hoặc vi phạm quy tắc nghiệp vụ',
-  401: 'Thiếu hoặc sai thông tin xác thực',
-  404: 'Không tìm thấy tài nguyên',
-  409: 'Xung đột với trạng thái hiện tại',
-  429: 'Vượt giới hạn tần suất',
+  400: 'Invalid data or business rule violation',
+  401: 'Missing or invalid credentials',
+  404: 'Resource not found',
+  409: 'Conflicts with the current state',
+  429: 'Rate limit exceeded',
 } as const
 
 type ErrorStatus = keyof typeof ERROR_DESCRIPTIONS
 
 /**
- * Khai báo response lỗi cho một route. `codes` liệt kê các `error.code` có thể gặp để hiện trong docs.
- * Lưu ý: lỗi do onError trả ra không bị validate lại theo schema này, nên nó chỉ phục vụ tài liệu và type cho client.
+ * Declares the error responses of a route. `codes` lists the possible `error.code` values to show in the docs.
+ * Note: errors returned by onError are not re-validated against this schema, so it only serves docs and client typing.
  */
 export const errorResponse = (status: ErrorStatus, ...codes: string[]) =>
   t.Object(errorShape, {
     description: codes.length
-      ? `${ERROR_DESCRIPTIONS[status]}. Mã lỗi: ${codes.map((c) => `\`${c}\``).join(', ')}`
+      ? `${ERROR_DESCRIPTIONS[status]}. Error codes: ${codes.map((c) => `\`${c}\``).join(', ')}`
       : ERROR_DESCRIPTIONS[status],
   })
 
-/** Lỗi validate schema (400) có mặt ở mọi route nhận input, nên gộp sẵn để route chỉ khai báo phần riêng. */
+/** Schema validation errors (400) occur on every route that takes input, so they are bundled in and a route declares only its own. */
 export const validationError = (...codes: string[]) =>
   errorResponse(400, 'validation_error', ...codes)
 
@@ -51,15 +51,15 @@ export const openapiDocumentation = {
     title: 'Elysia Architecture API',
     version: '0.1.0',
     description:
-      'Backend modular monolith. Đăng nhập bằng magic link; access token (JWT) gửi qua `Authorization: Bearer`, ' +
-      'refresh token nằm trong cookie HttpOnly `refresh_token`.\n\n' +
-      'Mọi lỗi có dạng `{ "error": { "code", "message", "requestId", "details?" } }`.',
+      'Modular monolith backend. Sign in with a magic link; the access token (JWT) is sent via `Authorization: Bearer`, ' +
+      'and the refresh token lives in the HttpOnly cookie `refresh_token`.\n\n' +
+      'Every error has the shape `{ "error": { "code", "message", "requestId", "details?" } }`.',
   },
   tags: [
-    { name: 'health', description: 'Kiểm tra tình trạng dịch vụ' },
-    { name: 'auth', description: 'Đăng nhập passwordless, phiên và JWKS' },
-    { name: 'account', description: 'Thao tác trên tài khoản của người dùng hiện tại' },
-    { name: 'profile', description: 'Hồ sơ và ảnh đại diện của người dùng hiện tại' },
+    { name: 'health', description: 'Service health checks' },
+    { name: 'auth', description: 'Passwordless sign-in, sessions and JWKS' },
+    { name: 'account', description: "Operations on the current user's account" },
+    { name: 'profile', description: 'Profile and avatar of the current user' },
   ],
   components: {
     securitySchemes: {
@@ -67,7 +67,8 @@ export const openapiDocumentation = {
         type: 'http' as const,
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'Access token lấy từ `POST /auth/magic-link/verify` hoặc `POST /auth/refresh`',
+        description:
+          'Access token obtained from `POST /auth/magic-link/verify` or `POST /auth/refresh`',
       },
     },
   },

@@ -11,7 +11,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   ),
   notFoundComponent: () => (
     <main className="grid min-h-screen place-items-center text-muted-foreground">
-      Không tìm thấy trang.
+      Page not found.
     </main>
   ),
 })

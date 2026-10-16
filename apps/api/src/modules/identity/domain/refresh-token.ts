@@ -1,8 +1,8 @@
 export const REFRESH_REUSE_GRACE_MS = 10_000
 
 /**
- * Refresh token (opaque) thuộc một "family" = một phiên đăng nhập. Mỗi lần refresh sinh token mới cùng family,
- * token cũ bị thu hồi; dùng lại token đã thu hồi (ngoài khoảng grace) nghĩa là bị đánh cắp → thu hồi cả family.
+ * An (opaque) refresh token belongs to a "family" = one login session. Each refresh issues a new token in the same family
+ * and revokes the old one; reusing a revoked token (outside the grace window) means it was stolen → revoke the whole family.
  */
 export class RefreshToken {
   constructor(
@@ -18,7 +18,7 @@ export class RefreshToken {
     readonly ip: string | null,
   ) {}
 
-  /** Token vừa được xoay trong khoảng ngắn — thường là hai tab refresh đồng thời, không phải trộm. */
+  /** Token rotated within a short window — usually two tabs refreshing at once, not theft. */
   isRecentlyRotated(now: Date): boolean {
     return (
       this.revokedAt !== null &&

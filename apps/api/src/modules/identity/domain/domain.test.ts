@@ -30,7 +30,7 @@ describe('User', () => {
       email: 'a@b.co',
       registeredAt: now.toISOString(),
     })
-    expect(user.pullEvents()).toEqual([]) // đã lấy là hết
+    expect(user.pullEvents()).toEqual([]) // once pulled, they are gone
   })
 
   test('changeEmail records old and new address; same address is rejected', () => {

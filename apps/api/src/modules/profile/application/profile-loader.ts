@@ -5,8 +5,8 @@ import { Profile } from '../domain/profile'
 import type { ProfileRepository } from '../domain/profile-repository'
 
 /**
- * Lấy account (qua contract của identity) và profile. Chưa có profile (event welcome chưa kịp xử lý)
- * thì trả bản mặc định chưa persist (version 0) — hệ thống chịu được eventual consistency.
+ * Loads the account (via identity's contract) and the profile. If there is no profile yet (welcome event not yet processed),
+ * returns an unpersisted default (version 0) — the system tolerates eventual consistency.
  */
 export class ProfileLoader {
   constructor(

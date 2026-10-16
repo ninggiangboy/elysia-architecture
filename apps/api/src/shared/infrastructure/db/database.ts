@@ -4,9 +4,9 @@ import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import type { UnitOfWork } from '#/shared/application/ports'
 
-// biome-ignore lint/suspicious/noExplicitAny: schema generic không quan trọng — chỉ dùng query builder
+// biome-ignore lint/suspicious/noExplicitAny: the schema generic does not matter — only the query builder is used
 export type DrizzleDb = PostgresJsDatabase<any>
-/** Database hoặc transaction đang mở — cùng interface query builder. */
+/** An open Database or transaction — same query builder interface. */
 export type Executor = Pick<DrizzleDb, 'select' | 'insert' | 'update' | 'delete' | 'execute'>
 
 export interface DatabaseOptions {
@@ -16,8 +16,8 @@ export interface DatabaseOptions {
 }
 
 /**
- * MỘT pool kết nối + ngữ cảnh transaction dùng chung cho mọi module. Module chỉ khác nhau ở schema Postgres
- * (bảng của module nằm trong schema riêng, không có FK xuyên module), nên một transaction có thể bao nhiều module.
+ * ONE connection pool + transaction context shared by all modules. Modules differ only by Postgres schema
+ * (a module's tables live in its own schema, with no cross-module FK), so one transaction can span several modules.
  */
 export class Database implements UnitOfWork {
   private readonly txStorage = new AsyncLocalStorage<Executor>()
@@ -33,7 +33,7 @@ export class Database implements UnitOfWork {
     this.db = drizzle(this.client)
   }
 
-  /** Transaction hiện tại nếu đang trong `run`, ngược lại là pool. */
+  /** The current transaction if inside `run`, otherwise the pool. */
   get executor(): Executor {
     return this.txStorage.getStore() ?? this.db
   }
@@ -42,7 +42,7 @@ export class Database implements UnitOfWork {
     return this.txStorage.getStore() !== undefined
   }
 
-  /** Lồng nhau thì tham gia transaction ngoài (không savepoint). */
+  /** When nested, joins the outer transaction (no savepoint). */
   async run<T>(fn: () => Promise<T>): Promise<T> {
     if (this.inTransaction) return fn()
     return this.db.transaction((tx) => this.txStorage.run(tx as unknown as Executor, fn))
@@ -57,7 +57,7 @@ export class Database implements UnitOfWork {
   }
 }
 
-/** Unique violation (23505) — drizzle bọc lỗi driver trong `cause`. */
+/** Unique violation (23505) — drizzle wraps the driver error in `cause`. */
 export function isUniqueViolation(err: unknown): boolean {
   let current: unknown = err
   for (let depth = 0; depth < 3 && current; depth++) {

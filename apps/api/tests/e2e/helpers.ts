@@ -13,7 +13,7 @@ export async function createTestApp(
     ...process.env,
     OUTBOX_POLL_INTERVAL_MS: '200',
     LOG_LEVEL: 'silent',
-    // Giới hạn gửi mail thoải mái để các test khác không bị hoãn vì bucket dùng chung.
+    // Generous mail rate limits so other tests are not deferred by the shared bucket.
     MAIL_RATE_PER_SECOND: '200',
     ...env,
   })
@@ -68,7 +68,7 @@ export function client(app: TestApp['app']) {
       status: res.status,
       json,
       headers: res.headers,
-      /** "refresh_token=abc" — dùng lại làm header `cookie`. */
+      /** "refresh_token=abc" — reuse as the `cookie` header. */
       refreshCookie: setCookie?.match(/refresh_token=([^;]*)/)?.[1]
         ? `refresh_token=${setCookie.match(/refresh_token=([^;]*)/)?.[1]}`
         : undefined,
@@ -108,12 +108,12 @@ export async function countMails(address: string, subjectIncludes: string) {
   return (await mailsTo(address)).filter((m) => m.Subject.includes(subjectIncludes)).length
 }
 
-/** `skip` = số mail cùng loại đã có từ trước (để lấy mail MỚI khi cùng địa chỉ nhận nhiều mail). */
+/** `skip` = number of mails of the same kind that already existed (to get the NEW mail when one address receives several). */
 export async function waitForMail(address: string, subjectIncludes: string, skip = 0) {
   const summary = await eventually(
     async () => {
       const matches = (await mailsTo(address)).filter((m) => m.Subject.includes(subjectIncludes))
-      return matches.length > skip ? matches[0] : undefined // Mailpit trả mới nhất trước
+      return matches.length > skip ? matches[0] : undefined // Mailpit returns newest first
     },
     10_000,
     `mail "${subjectIncludes}" to ${address}`,
@@ -135,13 +135,13 @@ export const PNG_1X1 = Uint8Array.from(
   (c) => c.charCodeAt(0),
 )
 
-/** Đăng nhập đầy đủ qua magic link; trả access token + refresh cookie. */
+/** Full sign-in via magic link; returns the access token + refresh cookie. */
 export async function login(api: ReturnType<typeof client>, email: string) {
   const ip = uniqueIp()
-  const before = await countMails(email, 'đăng nhập')
+  const before = await countMails(email, 'sign-in')
   const requested = await api('POST', '/api/auth/magic-link', { body: { email }, ip })
   if (requested.status !== 202) throw new Error(`magic link request failed: ${requested.status}`)
-  const mail = await waitForMail(email, 'đăng nhập', before)
+  const mail = await waitForMail(email, 'sign-in', before)
   const verified = await api('POST', '/api/auth/magic-link/verify', {
     body: { token: mail.token },
     ip,

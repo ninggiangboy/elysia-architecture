@@ -11,16 +11,16 @@ interface SmtpLikeError {
 
 const THROTTLE_TEXT = /throttl|rate.?limit|too many|quota|sending rate|frequency/i
 const PERMANENT_CODES = new Set([550, 551, 552, 553, 554, 555])
-// 421 dịch vụ tạm không khả dụng · 450/451/452 hộp thư/hệ thống tạm bận · 454 = SES "Throttling failure"
+// 421 service temporarily unavailable · 450/451/452 mailbox/system temporarily busy · 454 = SES "Throttling failure"
 const TEMPORARY_REJECT_CODES = new Set([421, 450, 451, 452, 454])
 
 /**
- * Phân loại lỗi SMTP để relay xử lý đúng:
- *  - rate_limited: thử lại sau, không tính số lần thử (SES: 454 "Maximum sending rate exceeded", "Daily message quota exceeded")
- *  - permanent:    không bao giờ gửi được → bỏ mail này (550 hộp thư không tồn tại, 554 bị từ chối…)
- *  - transient:    lỗi khác (mất kết nối, timeout, sai thông tin đăng nhập 535…) → backoff thường, tính số lần thử
+ * Classifies SMTP errors so the relay handles them correctly:
+ *  - rate_limited: retry later, does not count as an attempt (SES: 454 "Maximum sending rate exceeded", "Daily message quota exceeded")
+ *  - permanent:    can never be sent → drop this mail (550 mailbox does not exist, 554 rejected…)
+ *  - transient:    other errors (lost connection, timeout, bad credentials 535…) → normal backoff, counts as an attempt
  *
- * Kiểm tra nội dung trước mã: Gmail báo quota bằng 550 5.4.5, SES sandbox/bị từ chối bằng 554.
+ * Check the message text before the code: Gmail reports quota with 550 5.4.5, SES sandbox/rejection with 554.
  */
 export function classifySmtpError(err: unknown): SmtpFailure {
   const e = (err ?? {}) as SmtpLikeError

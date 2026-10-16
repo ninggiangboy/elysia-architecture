@@ -1,9 +1,9 @@
 import { RetryLaterError } from '#/shared/messaging/errors'
 
-/** Nhà cung cấp mail (hoặc bộ giới hạn của mình) từ chối vì quá tốc độ/quota — thử lại sau là được. */
+/** The mail provider (or our own limiter) refused because of rate/quota — retrying later is fine. */
 export class MailRateLimitedError extends RetryLaterError {}
 
-/** Mail không bao giờ gửi được (địa chỉ không tồn tại, bị từ chối nội dung…) — retry vô ích. */
+/** The mail can never be sent (address does not exist, content rejected…) — retrying is pointless. */
 export class MailPermanentError extends Error {
   constructor(message: string) {
     super(message)

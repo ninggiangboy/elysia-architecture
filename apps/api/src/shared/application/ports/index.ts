@@ -9,22 +9,22 @@ export interface IdGenerator {
   next(): string
 }
 
-/** Transaction trong phạm vi MỘT module (một DB). Không có transaction xuyên module. */
+/** Transaction scoped to ONE module (one DB). There is no cross-module transaction. */
 export interface UnitOfWork {
   run<T>(fn: () => Promise<T>): Promise<T>
 }
 
-/** Ghi event vào bảng outbox của module, trong transaction hiện tại. */
+/** Writes an event to the module's outbox table, inside the current transaction. */
 export interface OutboxWriter {
   add(events: DomainEvent[]): Promise<void>
 }
 
-/** Cổng ra của relay. Hiện là in-process bus; có thể thay bằng NATS/Kafka/RabbitMQ. */
+/** Outbound port of the relay. Currently an in-process bus; can be replaced by NATS/Kafka/RabbitMQ. */
 export interface MessagePublisher {
   publish(message: Envelope): Promise<void>
 }
 
-/** Handler cho integration event. At-least-once: handler PHẢI idempotent (dùng InboxGuard). */
+/** Handler for an integration event. At-least-once: the handler MUST be idempotent (use InboxGuard). */
 export interface IntegrationEventHandler {
   readonly name: string
   readonly eventType: string
@@ -47,15 +47,15 @@ export interface ObjectStorage {
   delete(key: string): Promise<void>
 }
 
-/** Khử trùng lặp phía consumer (inbox pattern). Mỗi (messageId, handler) chỉ có hiệu lực một lần. */
+/** Consumer-side deduplication (inbox pattern). Each (messageId, handler) takes effect only once. */
 export interface InboxGuard {
-  /** Side-effect nằm trong DB của module: ghi inbox + chạy `fn` cùng một transaction. */
+  /** Side effect inside the module's DB: writes the inbox and runs `fn` in the same transaction. */
   transactional(messageId: string, handler: string, fn: () => Promise<void>): Promise<void>
-  /** Side-effect ra ngoài (gửi mail, xoá file): chạy rồi mới ghi inbox → at-least-once. */
+  /** External side effect (send mail, delete file): runs first, then writes the inbox → at-least-once. */
   afterSideEffect(messageId: string, handler: string, fn: () => Promise<void>): Promise<void>
 }
 
-/** Logger tối thiểu cho tầng application (pino thoả mãn cấu trúc này). */
+/** Minimal logger for the application layer (pino satisfies this shape). */
 export interface Log {
   info(fields: object, message: string): void
   warn(fields: object, message: string): void

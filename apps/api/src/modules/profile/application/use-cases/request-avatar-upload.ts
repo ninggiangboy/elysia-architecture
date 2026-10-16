@@ -12,7 +12,7 @@ export interface AvatarUploadTicket {
   expiresIn: number
 }
 
-/** Cấp presigned URL để trình duyệt PUT thẳng lên S3 — byte ảnh không đi qua API. */
+/** Issues a presigned URL so the browser PUTs straight to S3 — image bytes never pass through the API. */
 export class RequestAvatarUpload {
   constructor(
     private storage: ObjectStorage,

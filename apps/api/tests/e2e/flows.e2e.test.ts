@@ -79,7 +79,7 @@ describe('full user journey', () => {
     })
     expect(requested.status).toBe(202)
 
-    const mail = await waitForMail(email, 'đăng nhập')
+    const mail = await waitForMail(email, 'sign-in')
     expect(mail.token).toBeTruthy()
 
     const wrong = await api('POST', '/api/auth/magic-link/verify', { body: { token: 'nope' }, ip })
@@ -99,7 +99,7 @@ describe('full user journey', () => {
     userId = verified.json.user.id
     cookie = verified.refreshCookie!
 
-    // Link dùng một lần
+    // The link is single-use
     const replay = await api('POST', '/api/auth/magic-link/verify', {
       body: { token: mail.token },
       ip,
@@ -132,7 +132,7 @@ describe('full user journey', () => {
   })
 
   test('user_registered fans out to welcome mail and profile creation (two independent consumers)', async () => {
-    const welcome = await waitForMail(email, 'Chào mừng')
+    const welcome = await waitForMail(email, 'Welcome')
     expect(welcome.text).toContain(email)
     await eventually(
       async () => (await api('GET', '/api/me', { token: accessToken })).json.version === 1,
@@ -145,11 +145,11 @@ describe('full user journey', () => {
     const ok = await api('PATCH', '/api/me/profile', {
       token: accessToken,
       headers: { 'if-match': '1' },
-      body: { displayName: '  Nguyễn Văn A ', bio: 'Xin chào' },
+      body: { displayName: '  Jane Doe ', bio: 'Hello there' },
     })
     expect(ok.status).toBe(200)
-    expect(ok.json.displayName).toBe('Nguyễn Văn A')
-    expect(ok.json.bio).toBe('Xin chào')
+    expect(ok.json.displayName).toBe('Jane Doe')
+    expect(ok.json.bio).toBe('Hello there')
     expect(ok.json.version).toBe(2)
 
     const stale = await api('PATCH', '/api/me/profile', {
@@ -172,7 +172,7 @@ describe('full user journey', () => {
       body: { bio: null },
     })
     expect(cleared.json.bio).toBeNull()
-    expect(cleared.json.displayName).toBe('Nguyễn Văn A')
+    expect(cleared.json.displayName).toBe('Jane Doe')
   })
 
   test('concurrent updates with the same version: exactly one wins', async () => {
@@ -215,7 +215,7 @@ describe('full user journey', () => {
       return ticket.json.key as string
     }
 
-    // Chưa upload mà đã set → lỗi; key của người khác → lỗi
+    // Set before uploading → error; someone else's key → error
     const missing = await api('PUT', '/api/me/avatar', {
       token: accessToken,
       body: { key: `${userId}/missing.png` },
@@ -238,7 +238,7 @@ describe('full user journey', () => {
     expect(
       (await api('PUT', '/api/me/avatar', { token: accessToken, body: { key: secondKey } })).status,
     ).toBe(200)
-    // handler profile.delete-old-avatar xoá file cũ qua outbox
+    // the profile.delete-old-avatar handler deletes the old file via the outbox
     await eventually(
       async () => !(await t.container.storage.stat(firstKey)),
       10_000,
@@ -254,12 +254,12 @@ describe('full user journey', () => {
     const rotated = first.refreshCookie!
     expect(rotated).not.toBe(cookie)
 
-    // Dùng lại ngay (trong grace 10s, vd. hai tab) → từ chối nhưng KHÔNG thu hồi phiên
+    // Reuse right away (within the 10s grace, e.g. two tabs) → rejected but the session is NOT revoked
     const concurrent = await api('POST', '/api/auth/refresh', { cookie })
     expect(concurrent.status).toBe(401)
     expect((await api('POST', '/api/auth/refresh', { cookie: rotated })).status).toBe(200)
 
-    // Giả lập token cũ bị dùng lại sau grace → coi là bị đánh cắp
+    // Simulate the old token being reused after the grace window → treated as stolen
     const latest = (await api('POST', '/api/auth/refresh', { cookie: rotated })).refreshCookie!
     await t.container.database.db.execute(
       sql`update identity.refresh_tokens set revoked_at = now() - interval '1 minute' where token_hash = ${sha256Hex(rotated.split('=')[1]!)}`,
@@ -302,7 +302,7 @@ describe('full user journey', () => {
       body: { newEmail },
     })
     expect(requested.status).toBe(202)
-    const mail = await waitForMail(newEmail, 'Xác nhận')
+    const mail = await waitForMail(newEmail, 'Confirm')
 
     expect(
       (await api('POST', '/api/account/email-change/confirm', { body: { token: 'bad' } })).status,
@@ -319,7 +319,7 @@ describe('full user journey', () => {
 
     const me = await api('GET', '/api/me', { token: session.accessToken })
     expect(me.json.email).toBe(newEmail)
-    await waitForMail(email, 'đã được thay đổi') // thông báo gửi tới email cũ
+    await waitForMail(email, 'was changed') // notification sent to the old email
   })
 
   test('logout revokes the session', async () => {
@@ -378,7 +378,7 @@ describe('messaging guarantees', () => {
     await t.container.bus.publish(envelope)
     await t.container.bus.publish(envelope)
     await sleep(500)
-    const welcomes = (await mailsTo(email)).filter((m) => m.Subject.includes('Chào mừng'))
+    const welcomes = (await mailsTo(email)).filter((m) => m.Subject.includes('Welcome'))
     expect(welcomes).toHaveLength(1)
   })
 
@@ -408,8 +408,8 @@ describe('messaging guarantees', () => {
         headers: {},
         occurredAt: new Date(),
       })
-      await waitForMail(email, 'Chào mừng')
-      expect(failures).toBe(2) // lần 1 lỗi, lần 2 (sau backoff) thành công
+      await waitForMail(email, 'Welcome')
+      expect(failures).toBe(2) // 1st attempt failed, 2nd (after backoff) succeeded
       const row = await mod.db.execute<{ attempts: number; published_at: Date | null }>(
         sql`select attempts, published_at from identity.outbox_messages where id = ${id}`,
       )

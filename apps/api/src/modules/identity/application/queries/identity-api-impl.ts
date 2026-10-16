@@ -1,7 +1,7 @@
 import type { AccountDto, IdentityApi } from '../../contracts/identity-api'
 import type { UserRepository } from '../../domain/repositories'
 
-/** Hiện thực hợp đồng IdentityApi (in-process). */
+/** Implementation of the IdentityApi contract (in-process). */
 export class IdentityApiImpl implements IdentityApi {
   constructor(private users: UserRepository) {}
 

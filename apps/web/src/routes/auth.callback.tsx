@@ -15,11 +15,11 @@ export const Route = createFileRoute('/auth/callback')({
 function CallbackPage() {
   const { token } = Route.useSearch()
   const navigate = useNavigate()
-  const [error, setError] = useState<string | null>(token ? null : 'Liên kết không hợp lệ.')
+  const [error, setError] = useState<string | null>(token ? null : 'Invalid link.')
 
   useEffect(() => {
     if (!token) return
-    // Magic link dùng một lần: `once` chặn gọi hai lần khi StrictMode mount lại effect.
+    // A magic link is one-time: `once` prevents a double call when StrictMode remounts the effect.
     once(`magic:${token}`, () => verifyMagicLink(token))
       .then(() => navigate({ to: '/', replace: true }))
       .catch((err) => setError(errorMessage(err)))
@@ -30,14 +30,14 @@ function CallbackPage() {
       <Card className="w-full max-w-sm text-center" role="status">
         {error ? (
           <>
-            <CardTitle>Không thể đăng nhập</CardTitle>
+            <CardTitle>Could not sign in</CardTitle>
             <CardDescription>{error}</CardDescription>
             <Link to="/login" className="mt-4 inline-block text-sm underline">
-              Yêu cầu liên kết mới
+              Request a new link
             </Link>
           </>
         ) : (
-          <CardDescription>Đang đăng nhập…</CardDescription>
+          <CardDescription>Signing in…</CardDescription>
         )}
       </Card>
     </main>

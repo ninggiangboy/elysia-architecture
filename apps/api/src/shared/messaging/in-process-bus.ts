@@ -3,9 +3,9 @@ import type { Logger } from '#/shared/infrastructure/logger'
 import type { Envelope } from './envelope'
 
 /**
- * Transport mặc định: gọi handler ngay trong process. Lỗi của từng handler được cô lập:
- * các handler còn lại vẫn chạy, sau đó `publish` ném lỗi để relay retry (handler đã xong sẽ bị inbox chặn).
- * Khi chuyển sang broker, mỗi (module, handler.name) tương ứng một consumer group.
+ * Default transport: calls handlers directly in-process. Each handler's errors are isolated:
+ * the other handlers still run, then `publish` throws so the relay retries (handlers already done are blocked by the inbox).
+ * When moving to a broker, each (module, handler.name) maps to one consumer group.
  */
 export class InProcessMessageBus implements MessagePublisher {
   private handlers = new Map<string, IntegrationEventHandler[]>()

@@ -1,6 +1,6 @@
 /**
- * Sự kiện do aggregate ghi lại. `type` có version (vd. `identity.user_registered.v1`);
- * `payload` phải JSON-serializable và đủ thông tin để consumer không phải gọi ngược lại.
+ * Event recorded by an aggregate. `type` is versioned (e.g. `identity.user_registered.v1`);
+ * `payload` must be JSON-serializable and carry enough information so consumers never have to call back.
  */
 export interface DomainEvent {
   readonly type: string

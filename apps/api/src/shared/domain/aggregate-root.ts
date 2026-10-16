@@ -3,7 +3,7 @@ import type { DomainEvent } from './domain-event'
 export abstract class AggregateRoot {
   private pendingEvents: DomainEvent[] = []
 
-  /** `version` = phiên bản đã lưu trong DB (0 = chưa persist). Repository dùng cho optimistic locking. */
+  /** `version` = version stored in the DB (0 = not persisted). Used by the repository for optimistic locking. */
   constructor(
     readonly id: string,
     public version: number,

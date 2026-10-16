@@ -1,6 +1,6 @@
 export const MAILPIT = 'http://localhost:8025'
 
-/** IP giả cho mỗi lần chạy để không dính rate limit theo IP của magic link giữa các lần test. */
+/** A fake IP per run so the magic-link per-IP rate limit does not carry over between test runs. */
 export const TEST_IP = `10.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`
 
 export const PNG = Buffer.from(
@@ -18,7 +18,7 @@ export async function countMails(address: string, subject: string) {
   return (await search(address)).filter((m) => m.Subject.includes(subject)).length
 }
 
-/** Link trong mail MỚI (sau `skip` mail cùng loại đã có). */
+/** The link in the NEW mail (after the `skip` mails of the same kind that already existed). */
 export async function linkFromMail(address: string, subject: string, skip = 0): Promise<string> {
   const deadline = Date.now() + 15_000
   while (Date.now() < deadline) {

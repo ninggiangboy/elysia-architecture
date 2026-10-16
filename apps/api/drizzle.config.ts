@@ -1,6 +1,6 @@
 import { defineConfig } from 'drizzle-kit'
 
-// Mỗi module có schema, thư mục migration và bảng lịch sử migration riêng: chạy với MODULE=<identity|profile|notification>.
+// Each module has its own schema, migration folder and migration history table: run with MODULE=<identity|profile|notification>.
 const module = process.env.MODULE
 if (!module) throw new Error('MODULE env is required (identity | profile | notification)')
 

@@ -16,14 +16,14 @@ export class SetAvatar {
   ) {}
 
   async execute(cmd: { userId: string; key: string }): Promise<MeView> {
-    // Key phải nằm trong "thư mục" của chính user — chặn việc gán ảnh của người khác.
+    // The key must be inside the user's own "folder" — prevents assigning someone else's image.
     if (!cmd.key.startsWith(`${cmd.userId}/`) || cmd.key.includes('..')) {
       throw new ValidationError('invalid_avatar_key', 'Invalid avatar key')
     }
     const stat = await this.storage.stat(cmd.key)
     if (!stat) throw new ValidationError('avatar_not_uploaded', 'Avatar file was not uploaded')
     if (stat.size > AVATAR_MAX_BYTES || !(stat.contentType in AVATAR_CONTENT_TYPES)) {
-      // Presigned PUT không ép được size/type → kiểm tra sau và dọn file không hợp lệ.
+      // A presigned PUT cannot enforce size/type → check afterwards and clean up invalid files.
       await this.storage.delete(cmd.key)
       throw new ValidationError(
         'invalid_avatar',

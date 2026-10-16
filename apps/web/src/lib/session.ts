@@ -17,13 +17,13 @@ export function clearSession() {
 let inflight: Promise<boolean> | null = null
 
 /**
- * Đổi refresh cookie lấy access token mới. Single-flight: nhiều request cùng gặp 401 chỉ gọi refresh MỘT lần
- * (refresh token xoay vòng nên gọi song song sẽ làm hỏng phiên).
+ * Exchanges the refresh cookie for a new access token. Single-flight: many requests hitting 401 together call refresh only ONCE
+ * (the refresh token rotates, so parallel calls would break the session).
  */
 export function refreshSession(): Promise<boolean> {
   inflight ??= (async () => {
     try {
-      // Dùng fetch thô (không qua api client) để tránh vòng lặp interceptor.
+      // Use raw fetch (not the api client) to avoid an interceptor loop.
       const res = await fetch(`${apiOrigin()}/api/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
@@ -44,7 +44,7 @@ export function refreshSession(): Promise<boolean> {
   return inflight
 }
 
-/** Gọi trước khi vào route cần đăng nhập: khôi phục phiên từ cookie nếu chưa biết trạng thái. */
+/** Call before entering a route that needs sign-in: restores the session from the cookie if the state is not yet known. */
 export async function ensureSession(): Promise<boolean> {
   const { status } = authStore.get()
   if (status !== 'unknown') return status === 'authenticated'

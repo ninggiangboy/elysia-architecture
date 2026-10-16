@@ -1,16 +1,16 @@
-# Kiến trúc
+# Architecture
 
-## Bức tranh tổng thể
+## Big picture
 
 ```
         ┌────────────── apps/web (React) ──────────────┐
-        │  Eden Treaty client (type suy ra từ App)     │
+        │  Eden Treaty client (types inferred from App)│
         └───────────────┬──────────────────────────────┘
-                        │ /api  (cùng origin: Vite proxy / nginx)
+                        │ /api  (same origin: Vite proxy / nginx)
 ┌───────────────────────▼───────────────────────────────────────────────┐
-│ apps/api  (stateless · N instance)                                    │
+│ apps/api  (stateless · N instances)                                   │
 │                                                                       │
-│  presentation ─► application ─► domain          (mỗi module)          │
+│  presentation ─► application ─► domain          (per module)          │
 │                       │  ▲                                            │
 │                  ports│  │adapters (infrastructure)                   │
 │                       ▼  │                                            │
@@ -25,122 +25,122 @@
         Postgres · SeaweedFS(S3) · SMTP(Mailpit)
 ```
 
-## Layer và luật phụ thuộc
+## Layers and dependency rules
 
-Mỗi module có 4 lớp; mũi tên là "được phép import":
+Each module has 4 layers; an arrow means "may import":
 
 ```
 presentation ─► application ─► domain
-infrastructure ─► application, domain      (cài đặt port)
+infrastructure ─► application, domain      (implements ports)
 ```
 
-| Lớp | Chứa | Không được biết |
+| Layer | Contains | Must not know about |
 | --- | --- | --- |
-| `domain` | Aggregate, value object, domain event, interface repository | Mọi thứ khác, kể cả framework |
-| `application` | Use case, port (interface), handler của integration event | `infrastructure`, `presentation`, Elysia, Drizzle |
-| `infrastructure` | Repository Drizzle, JWT, S3, SMTP, outbox | `presentation` |
-| `presentation` | Route Elysia, validate input, map lỗi → HTTP | — |
-| `contracts` | Event type, DTO, interface mà module khác được dùng | Mọi thứ trong module |
+| `domain` | Aggregates, value objects, domain events, repository interfaces | Anything else, including frameworks |
+| `application` | Use cases, ports (interfaces), integration event handlers | `infrastructure`, `presentation`, Elysia, Drizzle |
+| `infrastructure` | Drizzle repositories, JWT, S3, SMTP, outbox | `presentation` |
+| `presentation` | Elysia routes, input validation, error → HTTP mapping | — |
+| `contracts` | Event types, DTOs, interfaces that other modules may use | Anything inside the module |
 
-Các luật này được **kiểm tự động**: `bun run check:arch` (`apps/api/.dependency-cruiser.cjs`) —
-domain thuần, application không import infrastructure, module A chỉ import `modules/B/contracts`, `shared` không biết module nào,
-và chỉ composition root (`app.ts`, `main.ts`, `bootstrap/`) biết adapter cụ thể.
+These rules are **checked automatically**: `bun run check:arch` (`apps/api/.dependency-cruiser.cjs`) —
+domain stays pure, application does not import infrastructure, module A imports only `modules/B/contracts`, `shared` knows no module,
+and only the composition root (`app.ts`, `main.ts`, `bootstrap/`) knows concrete adapters.
 
-`bootstrap/container.ts` là composition root: nơi duy nhất nối module với adapter. Không dùng DI container, wiring tay để dễ đọc.
+`bootstrap/container.ts` is the composition root: the only place that wires modules to adapters. No DI container is used; the wiring is manual to keep it readable.
 
-Import nội bộ của api dùng alias `#/*` → `src/*` qua `paths` trong tsconfig (Bun và tsc đều đọc được; web ánh xạ `#/*` về `../api/src/*` để suy type từ backend).
+The api's internal imports use the alias `#/*` → `src/*` via `paths` in tsconfig (both Bun and tsc understand it; the web app maps `#/*` to `../api/src/*` to infer types from the backend).
 
-## Nguyên tắc distributed-ready
+## Distributed-ready principles
 
-Mục tiêu: chạy N instance, và tách bất kỳ module nào thành service riêng mà **không viết lại domain/application**.
+Goal: run N instances, and split any module into its own service **without rewriting domain/application**.
 
-1. **Stateless.** Không giữ state trong RAM giữa các request. Auth bằng JWT, rate limit trong DB, file đi thẳng lên S3 bằng presigned URL. Không cần sticky session.
-2. **Module = service tương lai.**
-   - Mỗi module một Postgres schema (`identity`, `profile`, `notification`), migration riêng, outbox/inbox riêng.
-   - Không FK hay JOIN xuyên module. `profile.profiles.user_id` chỉ giữ giá trị id của user.
-   - Mọi module dùng chung MỘT pool và một `UnitOfWork` (`Database`, đọc `DATABASE_URL`); module chỉ khác nhau ở schema Postgres. Một transaction có thể bao nhiều module, nhưng nên giữ trong một module để sau này tách service không phải viết lại.
-3. **Giao tiếp chỉ qua `contracts/`.**
-   - Đồng bộ: interface như `IdentityApi.getAccount` với DTO thuần (ISO string, không entity). Hôm nay là gọi hàm in-process; mai thay bằng HTTP client cùng interface. Caller phải chịu được lỗi/timeout và không gọi trong transaction.
-   - Bất đồng bộ: integration event có version (`identity.user_registered.v1`). Chỉ **thêm** field; thay đổi phá vỡ thì ra `.v2` và phát song song.
-4. **At-least-once + idempotent.** Outbox đảm bảo "ghi DB và phát event" nguyên tử; phía nhận dùng inbox `(message_id, handler)` để mỗi handler chỉ có hiệu lực một lần.
-   Không giả định thứ tự giữa các event. Payload mang đủ dữ liệu (ví dụ email) để handler không gọi ngược lại module phát.
-5. **Transport thay được.** Relay đẩy qua port `MessagePublisher`. Hiện là `InProcessMessageBus`; thay bằng NATS/Kafka/RabbitMQ mà không đổi handler (mỗi `(module, handler.name)` là một consumer group).
-6. **Đúng khi nhiều instance.**
-   - Outbox claim bằng `FOR UPDATE SKIP LOCKED` + lease, instance nào cũng chạy relay được mà không trùng message.
-   - Optimistic locking bằng cột `version` (409 `version_conflict`).
-   - "Consume" token (magic link, refresh, đổi email) là một `UPDATE … WHERE chưa dùng AND còn hạn RETURNING` nguyên tử.
-   - Job chỉ nên chạy một nơi (dọn outbox) lấy `pg_try_advisory_xact_lock`.
-7. **Process roles.** `APP_ROLES=api,relay` (mặc định). Tách worker: chạy cùng image với `APP_ROLES=relay`.
-8. **Token verify ở mọi nơi.** Access token ES256 có `kid`; public key ở `/api/.well-known/jwks.json`. Service khác verify không cần secret chung, và xoay khoá được.
-9. **Quan sát được.** `x-request-id`/`x-correlation-id` nằm trong AsyncLocalStorage, gắn vào mọi dòng log (pino JSON) và ghi vào `headers` của outbox message, nên log của handler bất đồng bộ nối được về request gốc.
-10. **Vận hành.** Cấu hình chỉ qua env; `/health/live` và `/health/ready` (ping DB); graceful shutdown (dừng nhận request → dừng relay → đóng pool); migration là job riêng; `DB_PREPARE=false` để chạy sau PgBouncer.
+1. **Stateless.** No state kept in RAM between requests. Auth uses JWT, rate limits live in the DB, files go straight to S3 via presigned URLs. No sticky sessions needed.
+2. **Module = future service.**
+   - Each module has its own Postgres schema (`identity`, `profile`, `notification`), its own migrations, and its own outbox/inbox.
+   - No cross-module FKs or JOINs. `profile.profiles.user_id` only holds the user's id value.
+   - All modules share ONE pool and one `UnitOfWork` (`Database`, reads `DATABASE_URL`); modules differ only by Postgres schema. A transaction can span several modules, but keep it within one module so splitting into services later needs no rewrite.
+3. **Communicate only through `contracts/`.**
+   - Synchronous: interfaces such as `IdentityApi.getAccount` with plain DTOs (ISO strings, no entities). Today it is an in-process call; tomorrow swap in an HTTP client with the same interface. Callers must tolerate errors/timeouts and must not call inside a transaction.
+   - Asynchronous: versioned integration events (`identity.user_registered.v1`). Only **add** fields; a breaking change ships as `.v2` and is emitted in parallel.
+4. **At-least-once + idempotent.** The outbox makes "write to the DB and emit the event" atomic; the receiving side uses an inbox `(message_id, handler)` so each handler takes effect only once.
+   Do not assume ordering between events. Payloads carry enough data (e.g. email) so handlers never call back into the emitting module.
+5. **Swappable transport.** The relay pushes through the `MessagePublisher` port. Currently `InProcessMessageBus`; replace it with NATS/Kafka/RabbitMQ without changing handlers (each `(module, handler.name)` is a consumer group).
+6. **Correct with multiple instances.**
+   - The outbox claims with `FOR UPDATE SKIP LOCKED` + a lease, so any instance can run the relay without duplicating messages.
+   - Optimistic locking via a `version` column (409 `version_conflict`).
+   - "Consuming" a token (magic link, refresh, email change) is one atomic `UPDATE … WHERE unused AND not expired RETURNING`.
+   - Jobs that should run in only one place (outbox cleanup) take `pg_try_advisory_xact_lock`.
+7. **Process roles.** `APP_ROLES=api,relay` (default). To split out a worker: run the same image with `APP_ROLES=relay`.
+8. **Verify tokens anywhere.** The ES256 access token carries a `kid`; the public key is at `/api/.well-known/jwks.json`. Other services verify without a shared secret, and keys can be rotated.
+9. **Observable.** `x-request-id`/`x-correlation-id` live in AsyncLocalStorage, are attached to every log line (pino JSON) and written into the outbox message `headers`, so logs of async handlers can be traced back to the original request.
+10. **Operations.** Configuration through env only; `/health/live` and `/health/ready` (DB ping); graceful shutdown (stop accepting requests → stop the relay → close the pool); migrations are a separate job; `DB_PREPARE=false` to run behind PgBouncer.
 
-## Luồng tiêu biểu
+## Typical flows
 
-**Đăng nhập bằng magic link**
+**Sign in with a magic link**
 
 ```
 POST /auth/magic-link ──► RequestMagicLink
-   throttle (đếm trong DB) → MagicLink.issue → [tx: insert magic_links + outbox] → 202
+   throttle (counted in the DB) → MagicLink.issue → [tx: insert magic_links + outbox] → 202
 OutboxRelay ──► bus ──► notification.send-magic-link ──► SMTP
 POST /auth/magic-link/verify ──► VerifyMagicLink
-   [tx: consume nguyên tử → tìm/tạo User (+ event user_registered) → refresh token mới] → access JWT + cookie
-user_registered ──► profile.create-on-user-registered (inbox, cùng tx)   ┐ hai consumer độc lập
-                └─► notification.send-welcome (gửi mail → ghi inbox)      ┘
+   [tx: atomic consume → find/create User (+ user_registered event) → new refresh token] → access JWT + cookie
+user_registered ──► profile.create-on-user-registered (inbox, same tx)   ┐ two independent consumers
+                └─► notification.send-welcome (send mail → write inbox)   ┘
 ```
 
-**Phiên đăng nhập**: access JWT 15 phút (stateless) + refresh token opaque trong cookie httpOnly `Path=/api/auth`.
-Mỗi lần refresh xoay token trong cùng "family"; dùng lại token đã xoay ngoài cửa sổ 10 giây bị coi là bị đánh cắp và thu hồi cả family.
-Hai tab refresh đồng thời (trong 10 giây) chỉ bị từ chối, không mất phiên.
+**Session**: a 15-minute access JWT (stateless) + an opaque refresh token in the httpOnly cookie `Path=/api/auth`.
+Each refresh rotates the token within the same "family"; reusing a rotated token outside the 10-second window is treated as theft and revokes the whole family.
+Two tabs refreshing at once (within 10 seconds) are only rejected, and the session is not lost.
 
-**Avatar**: `POST upload-url` cấp presigned PUT (5 phút) → trình duyệt PUT thẳng lên SeaweedFS → `PUT /me/avatar {key}` kiểm key thuộc user, `stat` size/type
-(presigned PUT không ép được, nên file sai bị xoá) → phát `profile.avatar_changed.v1` → handler xoá file cũ.
+**Avatar**: `POST upload-url` issues a presigned PUT (5 minutes) → the browser PUTs straight to SeaweedFS → `PUT /me/avatar {key}` checks the key belongs to the user and `stat`s size/type
+(a presigned PUT cannot enforce them, so a bad file is deleted) → emits `profile.avatar_changed.v1` → a handler deletes the old file.
 
-## Gửi mail và rate limit
+## Sending mail and rate limiting
 
-Mail đi qua outbox nên không bao giờ làm chậm hay làm hỏng request. Phần "gửi sao cho nhà cung cấp không từ chối" gồm bốn lớp:
+Mail goes through the outbox, so it never slows down or breaks a request. "Sending in a way the provider will not reject" has four layers:
 
 ```
-OutboxRelay ─► MailEventHandler ─► ThrottledMailer ─► Mailer thật (SMTP / SES…)
-   ▲                │  hết hạn → bỏ          │ acquire()/penalize()
-   │                │  permanent → bỏ+log    ▼
-   └── hoãn đúng giờ ◄── RetryLaterError ── PostgresSendRateLimiter (token bucket + quota ngày)
+OutboxRelay ─► MailEventHandler ─► ThrottledMailer ─► real Mailer (SMTP / SES…)
+   ▲                │  expired → skip        │ acquire()/penalize()
+   │                │  permanent → skip+log  ▼
+   └── deferred to the right time ◄── RetryLaterError ── PostgresSendRateLimiter (token bucket + daily quota)
 ```
 
-1. **Giới hạn chủ động** (`ThrottledMailer` + `PostgresSendRateLimiter`): token bucket `MAIL_RATE_PER_SECOND` (burst `MAIL_BURST`) và quota ngày `MAIL_DAILY_QUOTA`.
-   Trạng thái nằm trong Postgres, mỗi lần xin phép là một upsert nguyên tử nên N instance cùng chia một giới hạn. Hết quota thì lỗi kèm đúng thời gian cần chờ, và không đụng tới nhà cung cấp.
-2. **Thích ứng**: nếu nhà cung cấp vẫn báo quá tải (SES `454 Throttling failure`, Gmail `550 5.4.5`…), bucket bị "ghi nợ" (`penalize`) nên mọi instance cùng lùi lại, không đập tiếp.
-3. **Relay hiểu "thử lại sau"** (`RetryLaterError`): hoãn message tới đúng thời điểm gợi ý (+ jitter ≤10%), **hoàn lại** lần thử vừa tính nên một đợt rate limit dài không đẩy mail vào dead. Chỉ bỏ cuộc khi message già hơn `OUTBOX_DEFER_BUDGET_HOURS` (mặc định 24 giờ).
-   Lỗi thường (mất kết nối, sai credentials 535…) vẫn theo backoff mũ và tối đa 10 lần.
-4. **Mail vô nghĩa thì không gửi**: link magic link/đổi email có `expiresAt`; nếu mail bị hoãn quá hạn thì bỏ qua thay vì gửi một link đã chết. Lỗi vĩnh viễn của một địa chỉ (550/554) chỉ bỏ mail đó và log `error`, không đưa cả event vào dead hay chặn consumer khác.
+1. **Proactive limit** (`ThrottledMailer` + `PostgresSendRateLimiter`): a token bucket `MAIL_RATE_PER_SECOND` (burst `MAIL_BURST`) and a daily quota `MAIL_DAILY_QUOTA`.
+   State lives in Postgres and every permission request is one atomic upsert, so N instances share one limit. When the quota runs out it fails with the exact time to wait, without touching the provider.
+2. **Adaptive**: if the provider still reports overload (SES `454 Throttling failure`, Gmail `550 5.4.5`…), the bucket is put "in debt" (`penalize`) so every instance backs off together instead of continuing to hammer.
+3. **The relay understands "retry later"** (`RetryLaterError`): it defers the message to the suggested time (+ jitter ≤10%) and **gives back** the attempt it just counted, so a long rate-limit spell does not push mail to dead. It gives up only when the message is older than `OUTBOX_DEFER_BUDGET_HOURS` (default 24 hours).
+   Ordinary errors (lost connection, bad credentials 535…) still follow exponential backoff, up to 10 attempts.
+4. **Pointless mail is not sent**: magic link / email-change links carry `expiresAt`; if a mail is deferred past that, it is skipped instead of sending a dead link. A permanent failure for one address (550/554) drops only that mail and logs `error`, without sending the whole event to dead or blocking other consumers.
 
-Vận hành dead-letter: `bun run --filter @app/api outbox:list` và `outbox:requeue [-- --id <uuid> | --type <event>]`.
-Requeue an toàn vì inbox chặn handler đã xong, không gửi trùng.
+Dead-letter operations: `bun run --filter @app/api outbox:list` and `outbox:requeue [-- --id <uuid> | --type <event>]`.
+Requeue is safe because the inbox blocks handlers that already finished, so nothing is sent twice.
 
-### Dùng Amazon SES
+### Using Amazon SES
 
-- **Cách nhanh, không cần code**: SES có SMTP interface. Đặt `SMTP_HOST=email-smtp.<region>.amazonaws.com`, `SMTP_PORT=587`, `SMTP_REQUIRE_TLS=true`, `SMTP_USER`/`SMTP_PASSWORD` (SMTP credentials của SES), `MAIL_FROM` là địa chỉ đã verify.
-  Đặt `MAIL_RATE_PER_SECOND` bằng *maximum send rate* và `MAIL_DAILY_QUOTA` bằng *24-hour sending quota* của tài khoản (sandbox: 1/giây, 200/ngày). Lỗi `454` được nhận diện là rate limit; `554 Message rejected` (vd. chưa verify địa chỉ nhận trong sandbox) là permanent.
-- **Dùng SES API (AWS SDK)** khi cần configuration set, tag hay bounce tracking: viết `SesMailer implements Mailer`, map `ThrottlingException`/`Maximum sending rate exceeded`/`Daily message quota exceeded` → `MailRateLimitedError`, và `MessageRejected`/`MailFromDomainNotVerified` → `MailPermanentError`; truyền vào `createContainer(config, logger, { mailer })`. Bucket, hoãn, hết hạn, dead-letter giữ nguyên.
-- Bounce/complaint của SES đến qua SNS: nên thêm một endpoint/handler ghi lại địa chỉ bounce và chặn gửi lại (suppression list) — chưa có trong dự án.
+- **Quick way, no code**: SES has an SMTP interface. Set `SMTP_HOST=email-smtp.<region>.amazonaws.com`, `SMTP_PORT=587`, `SMTP_REQUIRE_TLS=true`, `SMTP_USER`/`SMTP_PASSWORD` (the SES SMTP credentials), and `MAIL_FROM` to a verified address.
+  Set `MAIL_RATE_PER_SECOND` to the account's *maximum send rate* and `MAIL_DAILY_QUOTA` to its *24-hour sending quota* (sandbox: 1/second, 200/day). The `454` error is recognised as a rate limit; `554 Message rejected` (e.g. recipient not verified in the sandbox) is permanent.
+- **Use the SES API (AWS SDK)** when you need a configuration set, tags or bounce tracking: write `SesMailer implements Mailer`, map `ThrottlingException`/`Maximum sending rate exceeded`/`Daily message quota exceeded` → `MailRateLimitedError`, and `MessageRejected`/`MailFromDomainNotVerified` → `MailPermanentError`; pass it to `createContainer(config, logger, { mailer })`. The bucket, deferral, expiry and dead-letter behaviour stay the same.
+- SES bounces/complaints arrive via SNS: add an endpoint/handler that records bounced addresses and blocks resending (a suppression list) — not in the project yet.
 
-## Đánh đổi có chủ đích
+## Deliberate trade-offs
 
-- **Logout không thu hồi access token ngay**: tối đa 15 phút còn hiệu lực. Muốn tức thì cần denylist có store nhanh (Redis) — dự án chủ động không dùng Redis.
-- **Rate limit magic link trong Postgres** (3/email, 10/IP mỗi 15 phút): đúng khi nhiều instance, nhưng có thể vượt vài request khi race. Đủ để chống spam; cần chặt hơn thì thay adapter của port `MagicLinkThrottle`.
-- **`x-forwarded-for` chỉ đáng tin sau reverse proxy do mình kiểm soát** (nginx trong compose đã set). Không expose API trực tiếp ra Internet mà vẫn tin header này.
-- **Giới hạn gửi mail dùng một bucket chung cho mọi loại mail**: mail quan trọng (magic link) có thể phải xếp sau mail chào mừng khi quá tải. Nếu cần ưu tiên, tách bucket theo loại (tham số `key`) hoặc sắp xếp ưu tiên khi claim.
-- **Token thô của magic link nằm trong outbox** tới khi bị dọn (message đã publish bị xoá sau 7 ngày). Nếu cần chặt hơn: mã hoá payload hoặc xoá payload ngay sau khi publish.
-- **Gọi chéo module đồng bộ (`IdentityApi`)** làm `GET /me` phụ thuộc identity. Khi tách service cần timeout + fallback; hiện `GET /me` chỉ chịu được việc *thiếu profile*, không chịu được identity ngừng.
-- **Một pool, một transaction chung cho mọi module**: tiện và tiết kiệm kết nối, nhưng module không bị ép cô lập transaction. Khi tách service phải rà các chỗ transaction đang bao nhiều module.
+- **Logout does not revoke the access token immediately**: it stays valid for up to 15 minutes. Making it instant needs a denylist in a fast store (Redis) — the project deliberately avoids Redis.
+- **Magic-link rate limit in Postgres** (3/email, 10/IP per 15 minutes): correct with many instances, but a few extra requests can slip through under a race. Enough to stop spam; for something stricter, replace the adapter of the `MagicLinkThrottle` port.
+- **`x-forwarded-for` is trustworthy only behind a reverse proxy we control** (the nginx in compose sets it). Do not expose the API directly to the Internet while still trusting this header.
+- **Mail rate limiting uses one shared bucket for all mail types**: important mail (magic link) may queue behind welcome mail under load. If you need priority, split buckets by type (the `key` parameter) or order by priority when claiming.
+- **The raw magic-link token sits in the outbox** until cleanup (published messages are deleted after 7 days). For something stricter: encrypt the payload or wipe it right after publishing.
+- **Synchronous cross-module calls (`IdentityApi`)** make `GET /me` depend on identity. When splitting services you need a timeout + fallback; today `GET /me` tolerates a *missing profile* but not an identity outage.
+- **One pool and one shared transaction for all modules**: convenient and saves connections, but modules are not forced to isolate their transactions. When splitting services, review every place where a transaction spans several modules.
 
-## Checklist: tách một module thành service
+## Checklist: splitting a module into a service
 
-Ví dụ tách `notification` (đơn giản nhất) hoặc `profile`:
+For example splitting out `notification` (the simplest) or `profile`:
 
-1. **Dữ liệu**: tạo database riêng cho service mới, trỏ `DATABASE_URL` của nó tới đó và chạy `db:migrate` cho module đó (migration đã tách sẵn theo module; cần giới hạn danh sách module trong `scripts/db.ts`). Không có FK xuyên module nên không phải cắt gì.
-2. **Transport**: viết `MessagePublisher` + consumer cho broker thật (NATS/Kafka/…): relay của module phát publish lên broker; service mới subscribe theo `(module, handler.name)`. Handler giữ nguyên vì đã idempotent.
-3. **Gọi đồng bộ**: với contract mà module khác đang gọi (ví dụ `IdentityApi`), viết `HttpIdentityApi implements IdentityApi` và đổi wiring trong composition root. Thêm timeout, retry, circuit breaker.
-4. **Auth**: service mới verify JWT bằng JWKS của identity (`createRemoteJWKSet`) thay vì `AccessTokenVerifier` in-process.
-5. **Triển khai**: dùng lại image, đặt `APP_ROLES` phù hợp (`api`, `relay`) và chỉ mount route/handler của module đó trong composition root mới.
-6. **Kiểm**: `check:arch` phải vẫn sạch (module không import nội bộ module khác), chạy lại e2e qua mạng.
+1. **Data**: create a separate database for the new service, point its `DATABASE_URL` at it and run `db:migrate` for that module (migrations are already split per module; you need to restrict the module list in `scripts/db.ts`). There are no cross-module FKs, so nothing needs cutting.
+2. **Transport**: write a `MessagePublisher` + consumer for a real broker (NATS/Kafka/…): the emitting module's relay publishes to the broker; the new service subscribes per `(module, handler.name)`. Handlers stay unchanged because they are already idempotent.
+3. **Synchronous calls**: for a contract other modules call (e.g. `IdentityApi`), write `HttpIdentityApi implements IdentityApi` and change the wiring in the composition root. Add timeouts, retries and a circuit breaker.
+4. **Auth**: the new service verifies JWTs with identity's JWKS (`createRemoteJWKSet`) instead of the in-process `AccessTokenVerifier`.
+5. **Deployment**: reuse the image, set a suitable `APP_ROLES` (`api`, `relay`) and mount only that module's routes/handlers in the new composition root.
+6. **Verify**: `check:arch` must stay clean (no module imports another module's internals); rerun e2e over the network.

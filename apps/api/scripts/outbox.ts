@@ -1,7 +1,7 @@
-// Vận hành dead-letter của outbox:
+// Outbox dead-letter operations:
 //   bun scripts/outbox.ts list
 //   bun scripts/outbox.ts requeue [--module identity|profile] [--type <event type>] [--id <uuid>]
-// Handler đã xử lý xong một message sẽ bị inbox chặn nên requeue không gửi trùng; chỉ handler còn dở mới chạy lại.
+// A handler that already finished a message is blocked by the inbox, so requeue does not send duplicates; only unfinished handlers run again.
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'

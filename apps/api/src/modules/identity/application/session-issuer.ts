@@ -15,7 +15,7 @@ export interface SessionMeta {
   userAgent: string | null
 }
 
-/** Phát hành cặp access + refresh token. Gọi trong UnitOfWork của use case. */
+/** Issues an access + refresh token pair. Called inside the use case's UnitOfWork. */
 export class SessionIssuer {
   constructor(
     private refreshTokens: RefreshTokenRepository,
@@ -26,8 +26,8 @@ export class SessionIssuer {
   ) {}
 
   /**
-   * `familyId` = phiên đăng nhập. Đăng nhập mới → family mới; refresh → giữ family cũ và dùng `tokenId`
-   * đã được ghi vào `replaced_by_id` của token trước.
+   * `familyId` = the login session. New login → new family; refresh → keeps the old family and uses the `tokenId`
+   * already recorded in the previous token's `replaced_by_id`.
    */
   async issue(params: {
     userId: string

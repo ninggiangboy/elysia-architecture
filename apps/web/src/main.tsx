@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { loadRuntimeConfig } from '@/lib/config'
 
-// Cấu hình phải sẵn sàng trước khi api client được khởi tạo → import app sau khi đã load config.
+// Config must be ready before the api client is created → import the app only after the config has loaded.
 await loadRuntimeConfig()
 const { App } = await import('./app')
 

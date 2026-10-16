@@ -23,7 +23,7 @@ export class ConfirmEmailChange {
 
       const user = await this.users.findById(request.userId)
       if (!user) throw new NotFoundError('user_not_found', 'User not found')
-      // Email bị người khác chiếm trong lúc chờ → save() ném ConflictError('email_taken') và rollback cả việc consume.
+      // Email taken by someone else while waiting → save() throws ConflictError('email_taken') and rolls back the consume too.
       user.changeEmail(request.newEmail, now)
       await this.users.save(user)
       await this.outbox.add(user.pullEvents())

@@ -19,7 +19,7 @@ export function EditProfileForm({ me }: { me: Me }) {
   const [displayName, setDisplayName] = useState(me.displayName)
   const [bio, setBio] = useState(me.bio ?? '')
 
-  // Đồng bộ lại form khi dữ liệu server đổi (sau khi lưu, hoặc sau khi tải lại do xung đột phiên bản).
+  // Re-sync the form when server data changes (after saving, or after a reload caused by a version conflict).
   useEffect(() => {
     setDisplayName(me.displayName)
     setBio(me.bio ?? '')
@@ -30,11 +30,13 @@ export function EditProfileForm({ me }: { me: Me }) {
       updateProfile({ displayName, bio: bio.trim() === '' ? null : bio }, me.version),
     onSuccess: (data) => {
       queryClient.setQueryData(['me'], data)
-      toast.success('Đã lưu thay đổi')
+      toast.success('Changes saved')
     },
     onError: (err) => {
       if (err instanceof ApiError && err.code === 'version_conflict') {
-        toast.error('Hồ sơ vừa được thay đổi ở nơi khác. Đã tải lại dữ liệu mới, vui lòng thử lại.')
+        toast.error(
+          'Your profile was changed elsewhere. The latest data has been reloaded, please try again.',
+        )
         void queryClient.invalidateQueries({ queryKey: ['me'] })
       } else {
         toast.error(errorMessage(err))
@@ -51,7 +53,7 @@ export function EditProfileForm({ me }: { me: Me }) {
   return (
     <form onSubmit={submit} className="mt-4 flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="displayName">Tên hiển thị</Label>
+        <Label htmlFor="displayName">Display name</Label>
         <Input
           id="displayName"
           required
@@ -61,7 +63,7 @@ export function EditProfileForm({ me }: { me: Me }) {
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="bio">Giới thiệu</Label>
+        <Label htmlFor="bio">Bio</Label>
         <Textarea
           id="bio"
           maxLength={BIO_MAX}
@@ -73,7 +75,7 @@ export function EditProfileForm({ me }: { me: Me }) {
         </span>
       </div>
       <Button type="submit" className="self-start" disabled={!dirty || save.isPending}>
-        {save.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+        {save.isPending ? 'Saving…' : 'Save changes'}
       </Button>
     </form>
   )

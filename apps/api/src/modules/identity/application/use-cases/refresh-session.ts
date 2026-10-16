@@ -20,13 +20,13 @@ export class RefreshSession {
     const now = this.clock.now()
     const hash = this.tokens.hashOpaqueToken(cmd.refreshToken)
 
-    // Trả null (thay vì ném) trong transaction để việc thu hồi family được COMMIT trước khi báo lỗi.
+    // Return null (instead of throwing) inside the transaction so the family revocation is COMMITTED before reporting the error.
     const result = await this.uow.run(async () => {
       const nextTokenId = this.ids.next()
       const old = await this.refreshTokens.consume(hash, nextTokenId, now)
       if (!old) {
         const known = await this.refreshTokens.findByHash(hash)
-        // Token đã bị xoay mà còn bị dùng lại → coi như bị đánh cắp, thu hồi cả phiên.
+        // A rotated token that is used again → treat as stolen, revoke the whole session.
         if (known && !known.isRecentlyRotated(now)) {
           await this.refreshTokens.revokeFamily(known.familyId, now)
         }

@@ -1,7 +1,7 @@
 import type { Email } from '../../domain/email'
 
 export interface TokenService {
-  /** Token ngẫu nhiên không đoán được + hash để lưu DB. */
+  /** Unguessable random token + hash to store in the DB. */
   newOpaqueToken(): { token: string; hash: string }
   hashOpaqueToken(token: string): string
   signAccessToken(claims: {

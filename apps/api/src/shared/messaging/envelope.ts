@@ -4,11 +4,11 @@ export interface MessageHeaders {
   traceparent?: string
 }
 
-/** Phong bì JSON của integration event — định dạng "trên dây", độc lập transport. */
+/** JSON envelope of an integration event — the "on the wire" format, independent of transport. */
 export interface Envelope<TPayload = Record<string, unknown>> {
   id: string
   type: string
-  /** Tên module phát event. */
+  /** Name of the module that emitted the event. */
   source: string
   aggregateId: string
   occurredAt: string

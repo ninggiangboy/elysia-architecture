@@ -5,11 +5,11 @@ import type { SendRateLimiter } from './ports'
 const DEFAULT_PENALTY_MS = 30_000
 
 /**
- * Bọc một Mailer thật bằng bộ giới hạn tốc độ chủ động. Hai lớp bảo vệ:
- *  1. Chủ động: không gửi quá `MAIL_RATE_PER_SECOND` / quota ngày → ném MailRateLimitedError(retryAfter chính xác).
- *  2. Thích ứng: nếu nhà cung cấp vẫn báo quá tải thì chặn toàn bộ instance một khoảng (penalize),
- *     tránh việc mỗi instance tiếp tục đập vào nhà cung cấp.
- * Relay thấy MailRateLimitedError sẽ hoãn message mà không tính số lần thử.
+ * Wraps a real Mailer with a proactive rate limiter. Two layers of protection:
+ *  1. Proactive: never send more than `MAIL_RATE_PER_SECOND` / the daily quota → throws MailRateLimitedError (exact retryAfter).
+ *  2. Adaptive: if the provider still reports overload, block every instance for a while (penalize),
+ *     so instances do not keep hammering the provider.
+ * When the relay sees MailRateLimitedError it defers the message without counting an attempt.
  */
 export class ThrottledMailer implements Mailer {
   constructor(

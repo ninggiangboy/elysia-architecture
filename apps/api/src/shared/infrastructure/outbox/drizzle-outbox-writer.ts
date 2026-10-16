@@ -18,7 +18,7 @@ export class DrizzleOutboxWriter implements OutboxWriter {
         'OutboxWriter.add must be called inside UnitOfWork.run (transactional outbox)',
       )
     }
-    // Ghi correlation vào header để log của handler bất đồng bộ nối được về request gốc.
+    // Write the correlation into headers so async handler logs can be traced back to the original request.
     const ctx = requestContext.get()
     const headers: Record<string, string> = ctx
       ? { correlationId: ctx.correlationId, causationId: ctx.requestId }

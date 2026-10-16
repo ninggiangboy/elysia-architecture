@@ -12,7 +12,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
   const request = useMutation({
     mutationFn: requestEmailChange,
     onSuccess: (_, email) => {
-      toast.success(`Đã gửi liên kết xác nhận tới ${email}`)
+      toast.success(`Confirmation link sent to ${email}`)
       setNewEmail('')
     },
     onError: (err) => toast.error(errorMessage(err)),
@@ -26,12 +26,12 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
   return (
     <form onSubmit={submit} className="mt-4 flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="newEmail">Email mới</Label>
+        <Label htmlFor="newEmail">New email</Label>
         <Input
           id="newEmail"
           type="email"
           required
-          placeholder={`Hiện tại: ${currentEmail}`}
+          placeholder={`Current: ${currentEmail}`}
           value={newEmail}
           onChange={(e) => setNewEmail(e.target.value)}
         />
@@ -42,7 +42,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
         className="self-start"
         disabled={request.isPending || !newEmail}
       >
-        {request.isPending ? 'Đang gửi…' : 'Gửi liên kết xác nhận'}
+        {request.isPending ? 'Sending…' : 'Send confirmation link'}
       </Button>
     </form>
   )

@@ -8,7 +8,7 @@ export interface MeView {
   displayName: string
   bio: string | null
   avatarUrl: string | null
-  /** Dùng cho `If-Match` khi cập nhật. 0 = chưa có bản ghi profile. */
+  /** Used for `If-Match` on update. 0 = no profile record yet. */
   version: number
   createdAt: string
 }

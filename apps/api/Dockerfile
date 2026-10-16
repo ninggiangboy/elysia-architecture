@@ -1,4 +1,4 @@
-# Build context = thư mục gốc monorepo:  docker build -f apps/api/Dockerfile .
+# Build context = monorepo root:  docker build -f apps/api/Dockerfile .
 FROM oven/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
@@ -21,5 +21,5 @@ WORKDIR /app/apps/api
 USER bun
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s CMD bun -e "fetch('http://localhost:3000/api/health/live').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-# Chạy migration bằng job riêng:  bun scripts/db.ts migrate
+# Run migrations as a separate job:  bun scripts/db.ts migrate
 CMD ["bun", "src/main.ts"]

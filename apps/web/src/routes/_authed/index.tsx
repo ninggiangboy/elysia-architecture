@@ -8,7 +8,7 @@ import { meQuery } from '@/features/profile/queries'
 
 export const Route = createFileRoute('/_authed/')({
   loader: ({ context }) => context.queryClient.ensureQueryData(meQuery),
-  pendingComponent: () => <p className="text-sm text-muted-foreground">Đang tải…</p>,
+  pendingComponent: () => <p className="text-sm text-muted-foreground">Loading…</p>,
   errorComponent: ({ error }) => (
     <p role="alert" className="text-sm text-destructive">
       {(error as Error).message}
@@ -36,16 +36,16 @@ function ProfilePage() {
       </Card>
 
       <Card>
-        <CardTitle>Thông tin cá nhân</CardTitle>
-        <CardDescription>Tên hiển thị và giới thiệu ngắn.</CardDescription>
+        <CardTitle>Personal information</CardTitle>
+        <CardDescription>Display name and a short bio.</CardDescription>
         <EditProfileForm me={me} />
       </Card>
 
       <Card>
-        <CardTitle>Đổi địa chỉ email</CardTitle>
+        <CardTitle>Change email address</CardTitle>
         <CardDescription>
-          Chúng tôi sẽ gửi liên kết xác nhận tới địa chỉ mới; email chỉ đổi khi bạn bấm vào liên kết
-          đó.
+          We will send a confirmation link to the new address; your email only changes once you
+          click that link.
         </CardDescription>
         <ChangeEmailForm currentEmail={me.email} />
       </Card>

@@ -233,7 +233,7 @@ describe('identity use cases', () => {
       await expect(
         uc.refresh.execute({ refreshToken: session.session.refreshToken, meta }),
       ).rejects.toBeInstanceOf(UnauthorizedError)
-      await uc.refresh.execute({ refreshToken: next.session.refreshToken, meta }) // vẫn dùng được
+      await uc.refresh.execute({ refreshToken: next.session.refreshToken, meta }) // still usable
     })
 
     test('reuse of a rotated token long after rotation is treated as theft: whole family revoked', async () => {

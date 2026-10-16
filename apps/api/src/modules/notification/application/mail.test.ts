@@ -149,7 +149,7 @@ describe('MailEventHandler', () => {
     expect(logs).toContain('mail permanently rejected, dropping')
     inner.failWith = undefined
     await handler().handle(m)
-    expect(inner.sent).toHaveLength(0) // inbox đã ghi nhận, không gửi lại
+    expect(inner.sent).toHaveLength(0) // inbox already recorded it, not sent again
   })
 
   test('rate limiting propagates so the relay can defer, and leaves the inbox untouched', async () => {

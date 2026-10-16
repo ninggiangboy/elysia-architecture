@@ -1,4 +1,4 @@
-/** Hằng số dùng chung web ↔ api (không chứa logic). */
+/** Constants shared by web ↔ api (no logic). */
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 

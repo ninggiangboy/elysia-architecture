@@ -22,7 +22,7 @@ async function shutdown(signal: string) {
   if (shuttingDown) return
   shuttingDown = true
   logger.info({ signal }, 'shutting down')
-  // Thứ tự: ngừng nhận request → dừng relay (đợi batch đang chạy) → đóng pool DB.
+  // Order: stop accepting requests → stop the relay (wait for the running batch) → close the DB pool.
   await app?.stop()
   await container.close()
   process.exit(0)

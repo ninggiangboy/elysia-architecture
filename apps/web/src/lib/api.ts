@@ -8,7 +8,7 @@ import { refreshSession } from './session'
 const isAuthEndpoint = (input: RequestInfo | URL) =>
   String(input instanceof Request ? input.url : input).includes('/api/auth/')
 
-/** fetch gắn Bearer; gặp 401 thì refresh (single-flight) rồi thử lại đúng một lần. */
+/** fetch with a Bearer token; on 401 it refreshes (single-flight) and retries exactly once. */
 const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const send = () => {
     const headers = new Headers(init?.headers)
@@ -21,9 +21,9 @@ const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (await refreshSession()) return send()
   }
   return res
-}) as typeof fetch // bun-types thêm `preconnect` vào typeof fetch; ép kiểu để khớp
+}) as typeof fetch // bun-types adds `preconnect` to typeof fetch; cast to match
 
-/** Client có type đầy đủ suy ra từ backend (Eden Treaty) — đổi API ở server là web báo lỗi compile. */
+/** Fully typed client inferred from the backend (Eden Treaty) — change the API on the server and the web app fails to compile. */
 export const http = treaty<App>(apiOrigin(), { fetcher: authFetch })
 
 export class ApiError extends Error {
@@ -43,7 +43,7 @@ export function unwrap<R extends { data: unknown; error: unknown }>(
     const { status, value } = res.error as { status: number; value: ApiErrorBody | undefined }
     throw new ApiError(
       value?.error?.code ?? 'unknown_error',
-      value?.error?.message ?? 'Có lỗi xảy ra, vui lòng thử lại',
+      value?.error?.message ?? 'Something went wrong, please try again',
       status,
     )
   }
@@ -51,4 +51,4 @@ export function unwrap<R extends { data: unknown; error: unknown }>(
 }
 
 export const errorMessage = (err: unknown) =>
-  err instanceof Error ? err.message : 'Có lỗi xảy ra, vui lòng thử lại'
+  err instanceof Error ? err.message : 'Something went wrong, please try again'

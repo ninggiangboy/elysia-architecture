@@ -19,7 +19,7 @@ export class DisplayName {
     return new DisplayName(value)
   }
 
-  /** Tên mặc định lấy từ phần trước @ của email. */
+  /** Default name is taken from the part of the email before @. */
   static fromEmail(email: string): DisplayName {
     const local = stripControlChars(email.split('@')[0] ?? '').trim()
     return DisplayName.create((local || 'user').slice(0, DISPLAY_NAME_MAX))
@@ -29,7 +29,7 @@ export class DisplayName {
 export class Bio {
   private constructor(readonly value: string) {}
 
-  /** Chuỗi rỗng = xoá bio (trả null). */
+  /** Empty string = clear the bio (returns null). */
   static create(raw: string): Bio | null {
     const value = raw.trim()
     if (value.length === 0) return null

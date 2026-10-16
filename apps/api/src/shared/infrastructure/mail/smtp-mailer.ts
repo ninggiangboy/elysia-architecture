@@ -6,7 +6,7 @@ import { classifySmtpError } from './classify-smtp-error'
 export interface SmtpOptions {
   host: string
   port: number
-  /** true = TLS ngay từ đầu (cổng 465). Cổng 587 giữ false và bật `requireTls` (STARTTLS). */
+  /** true = TLS from the start (port 465). Port 587 keeps false and enables `requireTls` (STARTTLS). */
   secure?: boolean
   requireTls?: boolean
   user?: string
@@ -14,8 +14,8 @@ export interface SmtpOptions {
 }
 
 /**
- * Gửi qua SMTP. Dùng được cho Mailpit (dev) và Amazon SES qua SMTP interface
- * (host `email-smtp.<region>.amazonaws.com`, cổng 587, `requireTls`, user/password là SMTP credentials của SES).
+ * Sends over SMTP. Works with Mailpit (dev) and Amazon SES via its SMTP interface
+ * (host `email-smtp.<region>.amazonaws.com`, port 587, `requireTls`, user/password are the SES SMTP credentials).
  */
 export class SmtpMailer implements Mailer {
   private transport: nodemailer.Transporter
@@ -30,7 +30,7 @@ export class SmtpMailer implements Mailer {
       secure: options.secure ?? false,
       requireTLS: options.requireTls ?? false,
       auth: options.user ? { user: options.user, pass: options.password ?? '' } : undefined,
-      // Luôn có timeout: handler treo sẽ chặn cả batch của outbox relay.
+      // Always set a timeout: a hung handler would block the whole outbox relay batch.
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
       socketTimeout: 20_000,

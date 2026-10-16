@@ -1,6 +1,6 @@
 /**
- * Integration event do identity phát ra. Payload là hợp đồng công khai: chỉ thêm field (backward compatible);
- * thay đổi phá vỡ phải ra version mới (`.v2`) và phát song song một thời gian.
+ * Integration events emitted by identity. The payload is a public contract: only add fields (backward compatible);
+ * breaking changes need a new version (`.v2`) emitted in parallel for a while.
  */
 export const IdentityEvents = {
   MagicLinkRequested: 'identity.magic_link_requested.v1',
@@ -11,7 +11,7 @@ export const IdentityEvents = {
 
 export interface MagicLinkRequestedPayload {
   email: string
-  /** Token thô — chỉ nằm trong outbox cho tới khi bị dọn. */
+  /** Raw token — lives in the outbox only until it is cleaned up. */
   token: string
   expiresAt: string
 }

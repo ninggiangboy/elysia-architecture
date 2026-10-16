@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test'
 import { TEST_IP } from './e2e/support'
 
-// Cần hạ tầng đang chạy (`bun run infra:up`) và đã migrate. Playwright tự bật api + web nếu chưa chạy.
+// Needs the infrastructure running (`bun run infra:up`) and migrated. Playwright starts api + web itself if they are not running.
 export default defineConfig({
   testDir: './e2e',
   timeout: 45_000,

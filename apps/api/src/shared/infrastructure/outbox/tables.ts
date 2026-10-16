@@ -10,7 +10,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
-/** Bảng outbox nằm trong schema của module phát event. */
+/** The outbox table lives in the schema of the module that emits events. */
 export function outboxTable(schema: PgSchema) {
   return schema.table(
     'outbox_messages',
@@ -36,7 +36,7 @@ export function outboxTable(schema: PgSchema) {
   )
 }
 
-/** Bảng inbox nằm trong schema của module tiêu thụ event — đảm bảo mỗi (message, handler) xử lý một lần. */
+/** The inbox table lives in the schema of the module that consumes events — ensures each (message, handler) is processed once. */
 export function inboxTable(schema: PgSchema) {
   return schema.table(
     'inbox',

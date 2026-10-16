@@ -2,7 +2,7 @@ import { DomainError } from '#/shared/domain/errors'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-/** Value object: email đã chuẩn hoá (trim + lowercase). */
+/** Value object: normalized email (trim + lowercase). */
 export class Email {
   private constructor(readonly value: string) {}
 

@@ -17,7 +17,7 @@ function ConfirmEmailPage() {
   const { token } = Route.useSearch()
   const queryClient = useQueryClient()
   const [result, setResult] = useState<{ email: string } | { error: string } | null>(
-    token ? null : { error: 'Liên kết không hợp lệ.' },
+    token ? null : { error: 'Invalid link.' },
   )
 
   useEffect(() => {
@@ -34,22 +34,22 @@ function ConfirmEmailPage() {
     <main className="grid min-h-screen place-items-center px-4">
       <Card className="w-full max-w-sm text-center" role="status">
         {!result ? (
-          <CardDescription>Đang xác nhận…</CardDescription>
+          <CardDescription>Confirming…</CardDescription>
         ) : 'error' in result ? (
           <>
-            <CardTitle>Không thể xác nhận</CardTitle>
+            <CardTitle>Could not confirm</CardTitle>
             <CardDescription>{result.error}</CardDescription>
           </>
         ) : (
           <>
-            <CardTitle>Đã đổi email</CardTitle>
+            <CardTitle>Email changed</CardTitle>
             <CardDescription>
-              Email tài khoản của bạn giờ là <b className="text-foreground">{result.email}</b>.
+              Your account email is now <b className="text-foreground">{result.email}</b>.
             </CardDescription>
           </>
         )}
         <Link to="/" className="mt-4 inline-block text-sm underline">
-          Về trang chủ
+          Back to home
         </Link>
       </Card>
     </main>

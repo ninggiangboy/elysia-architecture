@@ -63,7 +63,7 @@ export class Profile extends AggregateRoot {
     )
   }
 
-  /** `bio: null | ''` xoá bio; `undefined` giữ nguyên. */
+  /** `bio: null | ''` clears the bio; `undefined` leaves it unchanged. */
   update(changes: { displayName?: string; bio?: string | null }, now: Date): void {
     if (changes.displayName !== undefined)
       this._displayName = DisplayName.create(changes.displayName)

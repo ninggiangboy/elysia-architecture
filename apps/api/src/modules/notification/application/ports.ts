@@ -1,12 +1,12 @@
 export type SendGrant = { ok: true } | { ok: false; retryAfterMs: number }
 
 /**
- * Bộ giới hạn tốc độ gửi mail, dùng chung giữa các instance. Hiện cài bằng Postgres;
- * thay bằng Redis/dịch vụ khác chỉ cần cài lại port này.
+ * Mail send rate limiter, shared across instances. Currently implemented with Postgres;
+ * swapping in Redis/another service only requires reimplementing this port.
  */
 export interface SendRateLimiter {
-  /** Xin phép gửi MỘT mail. Từ chối kèm thời gian nên thử lại. */
+  /** Asks permission to send ONE mail. On refusal, says how long to wait before retrying. */
   acquire(): Promise<SendGrant>
-  /** Nhà cung cấp báo quá tốc độ: chặn mọi instance trong `ms` tới. */
+  /** The provider reported an over-rate condition: block every instance for the next `ms`. */
   penalize(ms: number): Promise<void>
 }

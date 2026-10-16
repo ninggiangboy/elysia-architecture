@@ -13,14 +13,14 @@ export const notificationSchema = pgSchema('notification')
 
 export const inbox = inboxTable(notificationSchema)
 
-/** Token bucket dùng chung cho mọi instance: giới hạn tốc độ gửi mail (mail/giây). */
+/** Token bucket shared by all instances: limits the mail send rate (mails/second). */
 export const rateBuckets = notificationSchema.table('rate_buckets', {
   key: text('key').primaryKey(),
   tokens: doublePrecision('tokens').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 })
 
-/** Bộ đếm quota theo ngày (UTC). */
+/** Daily quota counter (UTC). */
 export const mailQuota = notificationSchema.table(
   'mail_quota',
   {

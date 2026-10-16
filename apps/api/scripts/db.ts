@@ -1,4 +1,4 @@
-// Quản lý migration theo từng module:  bun scripts/db.ts generate | migrate
+// Per-module migration management:  bun scripts/db.ts generate | migrate
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { Database } from '#/shared/infrastructure/db/database'
