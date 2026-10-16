@@ -34,7 +34,7 @@ describe('health & plumbing', () => {
     expect((await api('GET', '/api/health/live')).status).toBe(200)
     const ready = await api('GET', '/api/health/ready')
     expect(ready.status).toBe(200)
-    expect(ready.json.databases).toEqual({ identity: 'up', profile: 'up', notification: 'up' })
+    expect(ready.json.database).toBe('up')
   })
 
   test('unknown route and validation errors use the error envelope', async () => {
@@ -57,7 +57,7 @@ describe('health & plumbing', () => {
     })
     expect(res.status).toBe(202)
     expect(res.headers.get('x-request-id')).toBe('req-abc-1')
-    const rows = await t.container.modules.identity.mod.db.execute<{
+    const rows = await t.container.database.db.execute<{
       headers: Record<string, string>
     }>(sql`select headers from identity.outbox_messages where payload->>'email' = ${email}`)
     expect(rows[0]?.headers.correlationId).toBe('corr-xyz-9')
@@ -261,7 +261,7 @@ describe('full user journey', () => {
 
     // Giả lập token cũ bị dùng lại sau grace → coi là bị đánh cắp
     const latest = (await api('POST', '/api/auth/refresh', { cookie: rotated })).refreshCookie!
-    await t.container.modules.identity.mod.db.execute(
+    await t.container.database.db.execute(
       sql`update identity.refresh_tokens set revoked_at = now() - interval '1 minute' where token_hash = ${sha256Hex(rotated.split('=')[1]!)}`,
     )
     expect((await api('POST', '/api/auth/refresh', { cookie: rotated })).status).toBe(401)
@@ -384,7 +384,8 @@ describe('messaging guarantees', () => {
 
   test('a failing handler is retried with backoff and the successful one is not repeated', async () => {
     const email = uniqueEmail('retry')
-    const { mod, table } = t.container.modules.identity.outbox
+    const { table } = t.container.modules.identity.outbox
+    const mod = t.container.database
     let failures = 0
     const original = t.container.bus.publish.bind(t.container.bus)
     t.container.bus.publish = async (m) => {

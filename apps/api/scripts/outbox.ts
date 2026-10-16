@@ -5,11 +5,10 @@
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'
-import { databaseUrlFor, type ModuleName } from '#/shared/infrastructure/config'
-import { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import { Database } from '#/shared/infrastructure/db/database'
 import type { OutboxTable } from '#/shared/infrastructure/outbox/tables'
 
-const SOURCES: { name: ModuleName; table: OutboxTable }[] = [
+const SOURCES: { name: string; table: OutboxTable }[] = [
   { name: 'identity', table: identityOutbox },
   { name: 'profile', table: profileOutbox },
 ]
@@ -32,29 +31,17 @@ if (command !== 'list' && command !== 'requeue') {
 }
 
 let total = 0
-for (const { name, table } of SOURCES) {
-  if (onlyModule && onlyModule !== name) continue
-  const mod = new ModuleDatabase(name, {
-    url: databaseUrlFor(
-      {
-        DATABASE_URL: env.DATABASE_URL,
-        IDENTITY_DATABASE_URL: env.IDENTITY_DATABASE_URL,
-        PROFILE_DATABASE_URL: env.PROFILE_DATABASE_URL,
-        NOTIFICATION_DATABASE_URL: env.NOTIFICATION_DATABASE_URL,
-      },
-      name,
-    ),
-    poolMax: 1,
-    prepare: false,
-  })
-  try {
+const database = new Database({ url: env.DATABASE_URL, poolMax: 1, prepare: false })
+try {
+  for (const { name, table } of SOURCES) {
+    if (onlyModule && onlyModule !== name) continue
     const dead = and(
       isNotNull(table.deadAt),
       type ? eq(table.type, type) : undefined,
       id ? eq(table.id, id) : undefined,
     )
     if (command === 'list') {
-      const rows = await mod.db
+      const rows = await database.db
         .select({
           id: table.id,
           type: table.type,
@@ -71,15 +58,15 @@ for (const { name, table } of SOURCES) {
       }
       total += rows.length
     } else {
-      const rows = await mod.db
+      const rows = await database.db
         .update(table)
         .set({ deadAt: null, attempts: 0, lockedUntil: null, nextAttemptAt: sql`now()` })
         .where(dead)
         .returning({ id: table.id })
       total += rows.length
     }
-  } finally {
-    await mod.close()
   }
+} finally {
+  await database.close()
 }
 console.log(command === 'list' ? `${total} dead message(s)` : `${total} message(s) requeued`)

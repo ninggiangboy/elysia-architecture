@@ -16,21 +16,15 @@ function healthRoutes(container: Container) {
   return new Elysia({ prefix: '/health', tags: ['health'] })
     .get('/live', () => ({ status: 'ok' as const }))
     .get('/ready', async ({ set }) => {
-      const results = await Promise.all(
-        container.databases.map(async (db) => {
-          try {
-            await withTimeout(db.ping(), 2000)
-            return [db.name, 'up'] as const
-          } catch {
-            return [db.name, 'down'] as const
-          }
-        }),
+      const database = await withTimeout(container.database.ping(), 2000).then(
+        () => 'up' as const,
+        () => 'down' as const,
       )
-      const ready = results.every(([, status]) => status === 'up')
+      const ready = database === 'up'
       if (!ready) set.status = 503
       return {
         status: ready ? ('ready' as const) : ('degraded' as const),
-        databases: Object.fromEntries(results),
+        database,
       }
     })
 }

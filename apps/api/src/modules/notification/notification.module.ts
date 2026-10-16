@@ -6,7 +6,7 @@ import {
   type UserRegisteredPayload,
 } from '#/modules/identity/contracts'
 import type { Clock, IntegrationEventHandler, Log, Mailer } from '#/shared/application/ports'
-import type { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { MailEventHandler } from './application/handlers/mail-event-handler'
 import {
@@ -20,7 +20,7 @@ import { inbox } from './infrastructure/persistence/schema'
 import { PostgresSendRateLimiter } from './infrastructure/postgres-send-rate-limiter'
 
 export interface NotificationModuleDeps {
-  mod: ModuleDatabase
+  database: Database
   /** Mailer thật (SMTP/SES…). Module tự bọc bộ giới hạn tốc độ quanh nó. */
   mailer: Mailer
   webAppUrl: string
@@ -31,7 +31,6 @@ export interface NotificationModuleDeps {
 
 export interface NotificationModule {
   name: 'notification'
-  mod: ModuleDatabase
   handlers: IntegrationEventHandler[]
 }
 
@@ -39,17 +38,17 @@ const minutesUntil = (iso: string) =>
   Math.max(1, Math.round((new Date(iso).getTime() - Date.now()) / 60_000))
 
 export function createNotificationModule({
-  mod,
+  database,
   mailer: providerMailer,
   webAppUrl,
   clock,
   log,
   sending,
 }: NotificationModuleDeps): NotificationModule {
-  const guard = new DrizzleInboxGuard(mod, inbox)
+  const guard = new DrizzleInboxGuard(database, inbox)
   const mailer = new ThrottledMailer(
     providerMailer,
-    new PostgresSendRateLimiter(mod, {
+    new PostgresSendRateLimiter(database, {
       ratePerSecond: sending.ratePerSecond,
       burst: sending.burst ?? Math.max(1, Math.ceil(sending.ratePerSecond)),
       dailyQuota: sending.dailyQuota,
@@ -60,7 +59,6 @@ export function createNotificationModule({
 
   return {
     name: 'notification',
-    mod,
     handlers: [
       new MailEventHandler<MagicLinkRequestedPayload>(
         'notification.send-magic-link',

@@ -2,8 +2,8 @@ import { createIdentityModule } from '#/modules/identity/identity.module'
 import { createNotificationModule } from '#/modules/notification/notification.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import type { IntegrationEventHandler, Mailer } from '#/shared/application/ports'
-import { type Config, databaseUrlFor, type ModuleName } from '#/shared/infrastructure/config'
-import { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import type { Config } from '#/shared/infrastructure/config'
+import { Database } from '#/shared/infrastructure/db/database'
 import type { Logger } from '#/shared/infrastructure/logger'
 import { SmtpMailer } from '#/shared/infrastructure/mail/smtp-mailer'
 import { OutboxRelay } from '#/shared/infrastructure/outbox/outbox-relay'
@@ -14,7 +14,7 @@ import { InProcessMessageBus } from '#/shared/messaging/in-process-bus'
 /**
  * Composition root — nơi DUY NHẤT biết adapter cụ thể và cách nối các module.
  * Tách module thành service: thay `identity.api` bằng HTTP client, thay InProcessMessageBus bằng broker,
- * đổi `<MODULE>_DATABASE_URL` — domain/application của các module không đổi.
+ * domain/application của các module không đổi.
  */
 export interface ContainerOverrides {
   /** Thay mailer của nhà cung cấp (test, hoặc adapter SES). Bộ giới hạn tốc độ vẫn được bọc bên ngoài. */
@@ -29,17 +29,12 @@ export async function createContainer(
   const clock = new SystemClock()
   const ids = new UuidV7Generator()
 
-  const database = (name: ModuleName) =>
-    new ModuleDatabase(name, {
-      url: databaseUrlFor(config, name),
-      poolMax: config.DB_POOL_MAX,
-      prepare: config.DB_PREPARE,
-    })
-  const databases = {
-    identity: database('identity'),
-    profile: database('profile'),
-    notification: database('notification'),
-  }
+  // Một pool + một ngữ cảnh transaction cho mọi module; module chỉ khác nhau ở schema Postgres.
+  const database = new Database({
+    url: config.DATABASE_URL,
+    poolMax: config.DB_POOL_MAX,
+    prepare: config.DB_PREPARE,
+  })
 
   const storage = new S3ObjectStorage({
     endpoint: config.S3_ENDPOINT,
@@ -63,9 +58,9 @@ export async function createContainer(
       config.MAIL_FROM,
     )
 
-  const identity = await createIdentityModule({ mod: databases.identity, config, clock, ids })
+  const identity = await createIdentityModule({ database, config, clock, ids })
   const profile = createProfileModule({
-    mod: databases.profile,
+    database,
     clock,
     ids,
     storage,
@@ -73,7 +68,7 @@ export async function createContainer(
     verifier: identity.verifier,
   })
   const notification = createNotificationModule({
-    mod: databases.notification,
+    database,
     mailer,
     webAppUrl: config.WEB_APP_URL,
     clock,
@@ -89,7 +84,7 @@ export async function createContainer(
   const handlers: IntegrationEventHandler[] = [...profile.handlers, ...notification.handlers]
   for (const handler of handlers) bus.subscribe(handler)
 
-  const relay = new OutboxRelay([identity.outbox, profile.outbox], bus, logger, {
+  const relay = new OutboxRelay(database, [identity.outbox, profile.outbox], bus, logger, {
     pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
     deferBudgetMs: config.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
   })
@@ -101,12 +96,12 @@ export async function createContainer(
     ids,
     storage,
     modules: { identity, profile, notification },
-    databases: Object.values(databases),
+    database,
     bus,
     relay,
     async close() {
       await relay.stop()
-      await Promise.all(Object.values(databases).map((db) => db.close()))
+      await database.close()
     },
   }
 }

@@ -1,15 +1,15 @@
 import { and, eq } from 'drizzle-orm'
 import { ConflictError, VersionConflictError } from '#/shared/application/errors'
-import { isUniqueViolation, type ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
 import { Profile } from '../../domain/profile'
 import type { ProfileRepository } from '../../domain/profile-repository'
 import { profiles } from './schema'
 
 export class DrizzleProfileRepository implements ProfileRepository {
-  constructor(private mod: ModuleDatabase) {}
+  constructor(private database: Database) {}
 
   async findByUserId(userId: string): Promise<Profile | null> {
-    const [row] = await this.mod.executor
+    const [row] = await this.database.executor
       .select()
       .from(profiles)
       .where(eq(profiles.userId, userId))
@@ -27,7 +27,7 @@ export class DrizzleProfileRepository implements ProfileRepository {
   }
 
   async save(profile: Profile): Promise<void> {
-    const ex = this.mod.executor
+    const ex = this.database.executor
     if (profile.version === 0) {
       try {
         await ex.insert(profiles).values(toRow(profile, 1))
@@ -50,7 +50,7 @@ export class DrizzleProfileRepository implements ProfileRepository {
   }
 
   async createIfAbsent(profile: Profile): Promise<boolean> {
-    const inserted = await this.mod.executor
+    const inserted = await this.database.executor
       .insert(profiles)
       .values(toRow(profile, 1))
       .onConflictDoNothing()

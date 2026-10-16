@@ -1,6 +1,6 @@
 import type { Clock, IdGenerator } from '#/shared/application/ports'
 import type { Config } from '#/shared/infrastructure/config'
-import type { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import { IdentityApiImpl } from './application/queries/identity-api-impl'
@@ -25,7 +25,7 @@ import { outbox } from './infrastructure/persistence/schema'
 import { identityRoutes } from './presentation/routes'
 
 export interface IdentityModuleDeps {
-  mod: ModuleDatabase
+  database: Database
   config: Config
   clock: Clock
   ids: IdGenerator
@@ -33,7 +33,6 @@ export interface IdentityModuleDeps {
 
 export interface IdentityModule {
   name: 'identity'
-  mod: ModuleDatabase
   routes: ReturnType<typeof identityRoutes>
   api: IdentityApi
   verifier: AccessTokenVerifier
@@ -41,7 +40,7 @@ export interface IdentityModule {
 }
 
 export async function createIdentityModule(deps: IdentityModuleDeps): Promise<IdentityModule> {
-  const { mod, config, clock, ids } = deps
+  const { database, config, clock, ids } = deps
 
   const tokenService = await JwtTokenService.create(
     {
@@ -55,12 +54,12 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
     ids,
   )
 
-  const users = new DrizzleUserRepository(mod)
-  const magicLinks = new DrizzleMagicLinkRepository(mod)
-  const emailChanges = new DrizzleEmailChangeRequestRepository(mod)
-  const refreshTokens = new DrizzleRefreshTokenRepository(mod)
-  const outboxWriter = new DrizzleOutboxWriter(mod, outbox, () => ids.next())
-  const throttle = new DrizzleMagicLinkThrottle(mod, {
+  const users = new DrizzleUserRepository(database)
+  const magicLinks = new DrizzleMagicLinkRepository(database)
+  const emailChanges = new DrizzleEmailChangeRequestRepository(database)
+  const refreshTokens = new DrizzleRefreshTokenRepository(database)
+  const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
+  const throttle = new DrizzleMagicLinkThrottle(database, {
     perEmail: config.MAGIC_LINK_MAX_PER_EMAIL,
     perIp: config.MAGIC_LINK_MAX_PER_IP,
   })
@@ -82,7 +81,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         throttle,
         tokenService,
         outboxWriter,
-        mod,
+        database,
         ids,
         clock,
       ),
@@ -92,7 +91,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         sessions,
         tokenService,
         outboxWriter,
-        mod,
+        database,
         ids,
         clock,
       ),
@@ -101,7 +100,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         users,
         sessions,
         tokenService,
-        mod,
+        database,
         ids,
         clock,
       ),
@@ -111,7 +110,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         emailChanges,
         tokenService,
         outboxWriter,
-        mod,
+        database,
         ids,
         clock,
       ),
@@ -120,7 +119,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
         emailChanges,
         tokenService,
         outboxWriter,
-        mod,
+        database,
         clock,
       ),
     },
@@ -128,10 +127,9 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
 
   return {
     name: 'identity',
-    mod,
     routes,
     api: new IdentityApiImpl(users),
     verifier: tokenService,
-    outbox: { name: 'identity', mod, table: outbox },
+    outbox: { name: 'identity', table: outbox },
   }
 }

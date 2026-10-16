@@ -57,8 +57,8 @@ Mục tiêu: chạy N instance, và tách bất kỳ module nào thành service 
 1. **Stateless.** Không giữ state trong RAM giữa các request. Auth bằng JWT, rate limit trong DB, file đi thẳng lên S3 bằng presigned URL. Không cần sticky session.
 2. **Module = service tương lai.**
    - Mỗi module một Postgres schema (`identity`, `profile`, `notification`), migration riêng, outbox/inbox riêng.
-   - Không FK, JOIN hay transaction xuyên module. `profile.profiles.user_id` chỉ giữ giá trị id của user.
-   - Mỗi module tự đọc connection string (`IDENTITY_DATABASE_URL`, …; mặc định `DATABASE_URL`) và có pool + `UnitOfWork` riêng (`ModuleDatabase`). Tách DB chỉ là đổi env.
+   - Không FK hay JOIN xuyên module. `profile.profiles.user_id` chỉ giữ giá trị id của user.
+   - Mọi module dùng chung MỘT pool và một `UnitOfWork` (`Database`, đọc `DATABASE_URL`); module chỉ khác nhau ở schema Postgres. Một transaction có thể bao nhiều module, nhưng nên giữ trong một module để sau này tách service không phải viết lại.
 3. **Giao tiếp chỉ qua `contracts/`.**
    - Đồng bộ: interface như `IdentityApi.getAccount` với DTO thuần (ISO string, không entity). Hôm nay là gọi hàm in-process; mai thay bằng HTTP client cùng interface. Caller phải chịu được lỗi/timeout và không gọi trong transaction.
    - Bất đồng bộ: integration event có version (`identity.user_registered.v1`). Chỉ **thêm** field; thay đổi phá vỡ thì ra `.v2` và phát song song.
@@ -73,7 +73,7 @@ Mục tiêu: chạy N instance, và tách bất kỳ module nào thành service 
 7. **Process roles.** `APP_ROLES=api,relay` (mặc định). Tách worker: chạy cùng image với `APP_ROLES=relay`.
 8. **Token verify ở mọi nơi.** Access token ES256 có `kid`; public key ở `/api/.well-known/jwks.json`. Service khác verify không cần secret chung, và xoay khoá được.
 9. **Quan sát được.** `x-request-id`/`x-correlation-id` nằm trong AsyncLocalStorage, gắn vào mọi dòng log (pino JSON) và ghi vào `headers` của outbox message, nên log của handler bất đồng bộ nối được về request gốc.
-10. **Vận hành.** Cấu hình chỉ qua env; `/health/live` và `/health/ready` (ping DB từng module); graceful shutdown (dừng nhận request → dừng relay → đóng pool); migration là job riêng; `DB_PREPARE=false` để chạy sau PgBouncer.
+10. **Vận hành.** Cấu hình chỉ qua env; `/health/live` và `/health/ready` (ping DB); graceful shutdown (dừng nhận request → dừng relay → đóng pool); migration là job riêng; `DB_PREPARE=false` để chạy sau PgBouncer.
 
 ## Luồng tiêu biểu
 
@@ -132,13 +132,13 @@ Requeue an toàn vì inbox chặn handler đã xong, không gửi trùng.
 - **Giới hạn gửi mail dùng một bucket chung cho mọi loại mail**: mail quan trọng (magic link) có thể phải xếp sau mail chào mừng khi quá tải. Nếu cần ưu tiên, tách bucket theo loại (tham số `key`) hoặc sắp xếp ưu tiên khi claim.
 - **Token thô của magic link nằm trong outbox** tới khi bị dọn (message đã publish bị xoá sau 7 ngày). Nếu cần chặt hơn: mã hoá payload hoặc xoá payload ngay sau khi publish.
 - **Gọi chéo module đồng bộ (`IdentityApi`)** làm `GET /me` phụ thuộc identity. Khi tách service cần timeout + fallback; hiện `GET /me` chỉ chịu được việc *thiếu profile*, không chịu được identity ngừng.
-- **Pool DB theo module**: 3 module × `DB_POOL_MAX` kết nối khi cùng trỏ một DB. Chỉnh `DB_POOL_MAX` hoặc dùng PgBouncer.
+- **Một pool, một transaction chung cho mọi module**: tiện và tiết kiệm kết nối, nhưng module không bị ép cô lập transaction. Khi tách service phải rà các chỗ transaction đang bao nhiều module.
 
 ## Checklist: tách một module thành service
 
 Ví dụ tách `notification` (đơn giản nhất) hoặc `profile`:
 
-1. **Dữ liệu**: tạo database riêng, đặt `<MODULE>_DATABASE_URL`, chạy `db:migrate` cho module đó (migration đã tách sẵn theo module). Không có FK xuyên module nên không phải cắt gì.
+1. **Dữ liệu**: tạo database riêng cho service mới, trỏ `DATABASE_URL` của nó tới đó và chạy `db:migrate` cho module đó (migration đã tách sẵn theo module; cần giới hạn danh sách module trong `scripts/db.ts`). Không có FK xuyên module nên không phải cắt gì.
 2. **Transport**: viết `MessagePublisher` + consumer cho broker thật (NATS/Kafka/…): relay của module phát publish lên broker; service mới subscribe theo `(module, handler.name)`. Handler giữ nguyên vì đã idempotent.
 3. **Gọi đồng bộ**: với contract mà module khác đang gọi (ví dụ `IdentityApi`), viết `HttpIdentityApi implements IdentityApi` và đổi wiring trong composition root. Thêm timeout, retry, circuit breaker.
 4. **Auth**: service mới verify JWT bằng JWKS của identity (`createRemoteJWKSet`) thay vì `AccessTokenVerifier` in-process.

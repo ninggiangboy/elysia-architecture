@@ -38,9 +38,6 @@ const schema = z.object({
   CORS_ORIGINS: z.string().default('').transform(csv),
 
   DATABASE_URL: z.string().min(1),
-  IDENTITY_DATABASE_URL: z.string().optional(),
-  PROFILE_DATABASE_URL: z.string().optional(),
-  NOTIFICATION_DATABASE_URL: z.string().optional(),
   DB_POOL_MAX: z.coerce.number().int().positive().default(10),
   DB_PREPARE: z
     .enum(['true', 'false'])
@@ -101,20 +98,4 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     throw new Error(`Invalid configuration:\n${details}`)
   }
   return parsed.data
-}
-
-export type ModuleName = 'identity' | 'profile' | 'notification'
-
-export type DatabaseUrls = Pick<
-  Config,
-  'DATABASE_URL' | 'IDENTITY_DATABASE_URL' | 'PROFILE_DATABASE_URL' | 'NOTIFICATION_DATABASE_URL'
->
-
-export function databaseUrlFor(config: DatabaseUrls, module: ModuleName): string {
-  const override = {
-    identity: config.IDENTITY_DATABASE_URL,
-    profile: config.PROFILE_DATABASE_URL,
-    notification: config.NOTIFICATION_DATABASE_URL,
-  }[module]
-  return override || config.DATABASE_URL
 }

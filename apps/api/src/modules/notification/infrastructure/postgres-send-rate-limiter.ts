@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import type { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import type { Database } from '#/shared/infrastructure/db/database'
 import type { SendGrant, SendRateLimiter } from '../application/ports'
 
 export interface SendRateLimiterOptions {
@@ -23,7 +23,7 @@ export class PostgresSendRateLimiter implements SendRateLimiter {
   private readonly key: string
 
   constructor(
-    private mod: ModuleDatabase,
+    private database: Database,
     private options: SendRateLimiterOptions,
   ) {
     this.key = options.key ?? 'mail'
@@ -33,8 +33,8 @@ export class PostgresSendRateLimiter implements SendRateLimiter {
     const { ratePerSecond: rate, burst: cap, dailyQuota } = this.options
     try {
       // Cùng một transaction: nếu quota ngày hết thì rollback luôn token đã lấy.
-      return await this.mod.run(async (): Promise<SendGrant> => {
-        const ex = this.mod.executor
+      return await this.database.run(async (): Promise<SendGrant> => {
+        const ex = this.database.executor
         const taken = await ex.execute<{ tokens: number }>(sql`
           insert into notification.rate_buckets as b (key, tokens, updated_at)
           values (${this.key}, ${cap}::float8 - 1, now())
@@ -79,7 +79,7 @@ export class PostgresSendRateLimiter implements SendRateLimiter {
 
   async penalize(ms: number): Promise<void> {
     // Token âm = nợ: cần đủ thời gian nạp lại thì acquire mới thành công trở lại.
-    await this.mod.executor.execute(sql`
+    await this.database.executor.execute(sql`
       insert into notification.rate_buckets as b (key, tokens, updated_at)
       values (${this.key}, ${-(ms / 1000) * this.options.ratePerSecond}::float8, now())
       on conflict (key) do update

@@ -1,19 +1,19 @@
 import type { OutboxWriter } from '#/shared/application/ports'
 import type { DomainEvent } from '#/shared/domain/domain-event'
-import type { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import type { Database } from '#/shared/infrastructure/db/database'
 import { requestContext } from '#/shared/infrastructure/request-context'
 import type { OutboxTable } from './tables'
 
 export class DrizzleOutboxWriter implements OutboxWriter {
   constructor(
-    private mod: ModuleDatabase,
+    private database: Database,
     private table: OutboxTable,
     private newId: () => string,
   ) {}
 
   async add(events: DomainEvent[]): Promise<void> {
     if (events.length === 0) return
-    if (!this.mod.inTransaction) {
+    if (!this.database.inTransaction) {
       throw new Error(
         'OutboxWriter.add must be called inside UnitOfWork.run (transactional outbox)',
       )
@@ -23,7 +23,7 @@ export class DrizzleOutboxWriter implements OutboxWriter {
     const headers: Record<string, string> = ctx
       ? { correlationId: ctx.correlationId, causationId: ctx.requestId }
       : {}
-    await this.mod.executor.insert(this.table).values(
+    await this.database.executor.insert(this.table).values(
       events.map((e) => ({
         id: this.newId(),
         type: e.type,

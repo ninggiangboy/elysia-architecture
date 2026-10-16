@@ -11,6 +11,6 @@ export default defineConfig({
   schemaFilter: [module],
   migrations: { schema: `drizzle_${module}`, table: '__migrations' },
   dbCredentials: {
-    url: process.env[`${module.toUpperCase()}_DATABASE_URL`] || process.env.DATABASE_URL || '',
+    url: process.env.DATABASE_URL || '',
   },
 })

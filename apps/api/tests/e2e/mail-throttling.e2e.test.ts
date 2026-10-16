@@ -29,7 +29,7 @@ class ScriptedMailer implements Mailer {
 
 let t: TestApp
 const mailer = new ScriptedMailer()
-const identity = () => t.container.modules.identity.mod.db
+const identity = () => t.container.database.db
 
 beforeAll(async () => {
   t = await createTestApp({ mailer })
@@ -55,7 +55,7 @@ const outboxRow = async (id: string) =>
 
 describe('PostgresSendRateLimiter (shared state, safe across instances)', () => {
   const limiter = (key: string, o: { rate?: number; burst?: number; quota?: number } = {}) =>
-    new PostgresSendRateLimiter(t.container.modules.notification.mod, {
+    new PostgresSendRateLimiter(t.container.database, {
       key,
       ratePerSecond: o.rate ?? 5,
       burst: o.burst ?? 3,
@@ -106,7 +106,7 @@ describe('PostgresSendRateLimiter (shared state, safe across instances)', () => 
     if (denied.ok) return
     expect(denied.retryAfterMs).toBeGreaterThan(0)
     expect(denied.retryAfterMs).toBeLessThanOrEqual(3600_000)
-    const [row] = await t.container.modules.notification.mod.db.execute<{ tokens: number }>(
+    const [row] = await t.container.database.db.execute<{ tokens: number }>(
       sql`select tokens from notification.rate_buckets where key = ${k}`,
     )
     expect(Number(row?.tokens)).toBeCloseTo(8, 1) // 10 - 2 mail đã gửi; lần bị từ chối được hoàn lại
@@ -148,7 +148,7 @@ describe('outbox + mail under provider rate limiting', () => {
     expect(row.attempts).toBe(1)
     expect(mailer.to(email)).toHaveLength(0)
     // Consumer khác của cùng event (tạo profile) vẫn chạy bình thường
-    const profiles = await t.container.modules.profile.mod.db.execute(
+    const profiles = await t.container.database.db.execute(
       sql`select 1 from profile.profiles where user_id = ${payload.userId}`,
     )
     expect(profiles).toHaveLength(1)

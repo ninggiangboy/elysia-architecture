@@ -1,6 +1,6 @@
 import { and, eq, gt, isNull } from 'drizzle-orm'
 import { ConflictError, VersionConflictError } from '#/shared/application/errors'
-import { isUniqueViolation, type ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'
 import { MagicLink } from '../../domain/magic-link'
@@ -15,15 +15,15 @@ import { User } from '../../domain/user'
 import { emailChangeRequests, magicLinks, refreshTokens, users } from './schema'
 
 export class DrizzleUserRepository implements UserRepository {
-  constructor(private mod: ModuleDatabase) {}
+  constructor(private database: Database) {}
 
   async findById(id: string): Promise<User | null> {
-    const [row] = await this.mod.executor.select().from(users).where(eq(users.id, id)).limit(1)
+    const [row] = await this.database.executor.select().from(users).where(eq(users.id, id)).limit(1)
     return row ? toUser(row) : null
   }
 
   async findByEmail(email: Email): Promise<User | null> {
-    const [row] = await this.mod.executor
+    const [row] = await this.database.executor
       .select()
       .from(users)
       .where(eq(users.email, email.value))
@@ -32,7 +32,7 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async existsByEmail(email: Email): Promise<boolean> {
-    const rows = await this.mod.executor
+    const rows = await this.database.executor
       .select({ id: users.id })
       .from(users)
       .where(eq(users.email, email.value))
@@ -41,7 +41,7 @@ export class DrizzleUserRepository implements UserRepository {
   }
 
   async save(user: User): Promise<void> {
-    const ex = this.mod.executor
+    const ex = this.database.executor
     try {
       if (user.version === 0) {
         await ex.insert(users).values({
@@ -79,10 +79,10 @@ function toUser(row: typeof users.$inferSelect): User {
 }
 
 export class DrizzleMagicLinkRepository implements MagicLinkRepository {
-  constructor(private mod: ModuleDatabase) {}
+  constructor(private database: Database) {}
 
   async add(link: MagicLink): Promise<void> {
-    await this.mod.executor.insert(magicLinks).values({
+    await this.database.executor.insert(magicLinks).values({
       id: link.id,
       email: link.email.value,
       tokenHash: link.tokenHash,
@@ -93,7 +93,7 @@ export class DrizzleMagicLinkRepository implements MagicLinkRepository {
   }
 
   async consume(tokenHash: string, now: Date): Promise<MagicLink | null> {
-    const [row] = await this.mod.executor
+    const [row] = await this.database.executor
       .update(magicLinks)
       .set({ consumedAt: now })
       .where(
@@ -119,10 +119,10 @@ export class DrizzleMagicLinkRepository implements MagicLinkRepository {
 }
 
 export class DrizzleEmailChangeRequestRepository implements EmailChangeRequestRepository {
-  constructor(private mod: ModuleDatabase) {}
+  constructor(private database: Database) {}
 
   async add(request: EmailChangeRequest): Promise<void> {
-    await this.mod.executor.insert(emailChangeRequests).values({
+    await this.database.executor.insert(emailChangeRequests).values({
       id: request.id,
       userId: request.userId,
       newEmail: request.newEmail.value,
@@ -133,7 +133,7 @@ export class DrizzleEmailChangeRequestRepository implements EmailChangeRequestRe
   }
 
   async consume(tokenHash: string, now: Date): Promise<EmailChangeRequest | null> {
-    const [row] = await this.mod.executor
+    const [row] = await this.database.executor
       .update(emailChangeRequests)
       .set({ consumedAt: now })
       .where(
@@ -159,10 +159,10 @@ export class DrizzleEmailChangeRequestRepository implements EmailChangeRequestRe
 }
 
 export class DrizzleRefreshTokenRepository implements RefreshTokenRepository {
-  constructor(private mod: ModuleDatabase) {}
+  constructor(private database: Database) {}
 
   async add(token: RefreshToken): Promise<void> {
-    await this.mod.executor.insert(refreshTokens).values({
+    await this.database.executor.insert(refreshTokens).values({
       id: token.id,
       userId: token.userId,
       familyId: token.familyId,
@@ -175,7 +175,7 @@ export class DrizzleRefreshTokenRepository implements RefreshTokenRepository {
   }
 
   async findByHash(tokenHash: string): Promise<RefreshToken | null> {
-    const [row] = await this.mod.executor
+    const [row] = await this.database.executor
       .select()
       .from(refreshTokens)
       .where(eq(refreshTokens.tokenHash, tokenHash))
@@ -188,7 +188,7 @@ export class DrizzleRefreshTokenRepository implements RefreshTokenRepository {
     replacedById: string | null,
     now: Date,
   ): Promise<RefreshToken | null> {
-    const [row] = await this.mod.executor
+    const [row] = await this.database.executor
       .update(refreshTokens)
       .set({ revokedAt: now, replacedById })
       .where(
@@ -203,7 +203,7 @@ export class DrizzleRefreshTokenRepository implements RefreshTokenRepository {
   }
 
   async revokeFamily(familyId: string, now: Date): Promise<void> {
-    await this.mod.executor
+    await this.database.executor
       .update(refreshTokens)
       .set({ revokedAt: now })
       .where(and(eq(refreshTokens.familyId, familyId), isNull(refreshTokens.revokedAt)))

@@ -5,9 +5,9 @@ import postgres from 'postgres'
 import type { UnitOfWork } from '#/shared/application/ports'
 
 // biome-ignore lint/suspicious/noExplicitAny: schema generic không quan trọng — chỉ dùng query builder
-export type Database = PostgresJsDatabase<any>
+export type DrizzleDb = PostgresJsDatabase<any>
 /** Database hoặc transaction đang mở — cùng interface query builder. */
-export type Executor = Pick<Database, 'select' | 'insert' | 'update' | 'delete' | 'execute'>
+export type Executor = Pick<DrizzleDb, 'select' | 'insert' | 'update' | 'delete' | 'execute'>
 
 export interface DatabaseOptions {
   url: string
@@ -16,18 +16,15 @@ export interface DatabaseOptions {
 }
 
 /**
- * Kết nối + ngữ cảnh transaction của MỘT module. Mỗi module có instance riêng nên repository
- * của module A không thể vô tình chạy trong transaction của module B — đúng ranh giới để tách DB sau này.
+ * MỘT pool kết nối + ngữ cảnh transaction dùng chung cho mọi module. Module chỉ khác nhau ở schema Postgres
+ * (bảng của module nằm trong schema riêng, không có FK xuyên module), nên một transaction có thể bao nhiều module.
  */
-export class ModuleDatabase implements UnitOfWork {
+export class Database implements UnitOfWork {
   private readonly txStorage = new AsyncLocalStorage<Executor>()
   readonly client: postgres.Sql
-  readonly db: Database
+  readonly db: DrizzleDb
 
-  constructor(
-    readonly name: string,
-    options: DatabaseOptions,
-  ) {
+  constructor(options: DatabaseOptions) {
     this.client = postgres(options.url, {
       max: options.poolMax,
       prepare: options.prepare,

@@ -1,7 +1,7 @@
 import { and, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm'
 import type { MessagePublisher } from '#/shared/application/ports'
 import { withAdvisoryXactLock } from '#/shared/infrastructure/db/advisory-lock'
-import type { ModuleDatabase } from '#/shared/infrastructure/db/module-database'
+import type { Database } from '#/shared/infrastructure/db/database'
 import type { Logger } from '#/shared/infrastructure/logger'
 import type { Envelope, MessageHeaders } from '#/shared/messaging/envelope'
 import { RetryLaterError } from '#/shared/messaging/errors'
@@ -10,7 +10,6 @@ import type { OutboxTable } from './tables'
 export interface OutboxSource {
   /** Tên module phát event (ghi vào envelope.source). */
   name: string
-  mod: ModuleDatabase
   table: OutboxTable
 }
 
@@ -45,6 +44,7 @@ export class OutboxRelay {
   private readonly defaultDeferMs: number
 
   constructor(
+    private database: Database,
     private sources: OutboxSource[],
     private publisher: MessagePublisher,
     private logger: Logger,
@@ -86,9 +86,9 @@ export class OutboxRelay {
 
   /** Xử lý một batch của một nguồn; trả về số message đã claim. */
   async drain(source: OutboxSource): Promise<number> {
-    const { mod, table } = source
+    const { table } = source
     const now = new Date()
-    const claimed = await mod.db
+    const claimed = await this.database.db
       .update(table)
       .set({
         lockedUntil: sql`now() + make_interval(secs => ${this.leaseSeconds})`,
@@ -97,7 +97,7 @@ export class OutboxRelay {
       .where(
         inArray(
           table.id,
-          mod.db
+          this.database.db
             .select({ id: table.id })
             .from(table)
             .where(
@@ -127,7 +127,7 @@ export class OutboxRelay {
       }
       try {
         await this.publisher.publish(envelope)
-        await mod.db
+        await this.database.db
           .update(table)
           .set({ publishedAt: new Date(), lockedUntil: null, lastError: null })
           .where(inArrayId(table, row.id))
@@ -152,7 +152,7 @@ export class OutboxRelay {
       return this.defer(source, row, errors)
     }
 
-    const { mod, table } = source
+    const { table } = source
     const message = err instanceof Error ? err.message : String(err)
     const dead = row.attempts >= this.maxAttempts
     // Backoff mũ: 2s, 4s, 8s … tối đa 5 phút.
@@ -161,7 +161,7 @@ export class OutboxRelay {
       { messageId: row.id, attempts: row.attempts, dead, err: message },
       'outbox publish failed',
     )
-    await mod.db
+    await this.database.db
       .update(table)
       .set({
         lockedUntil: null,
@@ -181,7 +181,7 @@ export class OutboxRelay {
     row: { id: string; attempts: number; occurredAt: Date },
     errors: RetryLaterError[],
   ) {
-    const { mod, table } = source
+    const { table } = source
     const message = errors.map((e) => e.message).join('; ')
     const ageMs = Date.now() - row.occurredAt.getTime()
     const exhausted = ageMs > this.deferBudgetMs
@@ -193,7 +193,7 @@ export class OutboxRelay {
       { messageId: row.id, delayMs, ageMs, exhausted, reason: message },
       exhausted ? 'outbox message exhausted its deferral budget' : 'outbox message deferred',
     )
-    await mod.db
+    await this.database.db
       .update(table)
       .set({
         lockedUntil: null,
@@ -209,9 +209,9 @@ export class OutboxRelay {
   private async maybeCleanup(): Promise<void> {
     if (Date.now() - this.lastCleanup < 10 * 60_000) return
     this.lastCleanup = Date.now()
-    for (const { name, mod, table } of this.sources) {
-      await withAdvisoryXactLock(mod, `outbox-cleanup:${name}`, async () => {
-        await mod.executor
+    for (const { name, table } of this.sources) {
+      await withAdvisoryXactLock(this.database, `outbox-cleanup:${name}`, async () => {
+        await this.database.executor
           .delete(table)
           .where(
             and(
