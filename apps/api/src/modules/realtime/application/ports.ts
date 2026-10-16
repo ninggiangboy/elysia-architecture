@@ -21,13 +21,28 @@ export interface RealtimeConnection {
   close(reason: string): void
 }
 
+/** A registered connection. Nothing is sent to it until `start()`, so the caller can write its own opening frame first. */
+export interface RealtimeRegistration {
+  /**
+   * `true` when the client's `Last-Event-ID` was still in the replay buffer, so `start()` sends every event it missed
+   * and it need not refetch its state. `false` (no id, unknown id, too old, or too many missed): refetch.
+   */
+  readonly resumed: boolean
+  /** Sends the replayed events, then switches to live delivery with no gap and no duplicate. */
+  start(): void
+  unregister(): void
+}
+
 export interface RealtimeGateway {
   /**
-   * Delivers the event to every open connection of the user — on whichever API instance holds it.
-   * Fire-and-forget: offline users miss it (clients refetch state when they reconnect).
+   * Stores the event briefly (for replay) and delivers it to every open connection of the user — on whichever API
+   * instance holds it. Offline users get it from the replay buffer if they reconnect in time.
    * `closeSessionId`: after delivery, connections opened by that session are closed by the server.
    */
   publish(target: { userId: string; closeSessionId?: string }, event: RealtimeEvent): Promise<void>
-  /** Starts delivering the user's messages to `connection`; resolves once none can be missed. Returns the unregister function. */
-  register(connection: RealtimeConnection): Promise<() => void>
+  /**
+   * Starts collecting the user's messages for `connection`; resolves once none can be missed.
+   * `lastEventId`: the last `id` the client saw (`Last-Event-ID` header) — untrusted input.
+   */
+  register(connection: RealtimeConnection, lastEventId?: string): Promise<RealtimeRegistration>
 }

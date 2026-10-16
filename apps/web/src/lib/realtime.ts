@@ -89,18 +89,31 @@ type Outcome = 'again' | 'retry' | 'stop'
 async function connectOnce(
   listener: RealtimeListener,
   signal: AbortSignal,
+  lastEventId: { current?: string },
   onReady: () => void,
 ): Promise<Outcome> {
   const token = authStore.get().accessToken
   if (!token) return 'stop'
   try {
     const res = await fetch(`${apiOrigin()}/api/realtime/events`, {
-      headers: { authorization: `Bearer ${token}`, accept: 'text/event-stream' },
+      headers: {
+        authorization: `Bearer ${token}`,
+        accept: 'text/event-stream',
+        // What EventSource would send by itself: the server replays what we missed since this event.
+        ...(lastEventId.current ? { 'last-event-id': lastEventId.current } : {}),
+      },
       signal,
     })
     if (res.status === 401) return (await refreshSession()) ? 'again' : 'stop'
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
-    return (await readStream(res.body, listener, onReady)) ? 'stop' : 'retry'
+    const tracked: RealtimeListener = {
+      ...listener,
+      onMessage(message) {
+        if (message.id) lastEventId.current = message.id
+        listener.onMessage(message)
+      },
+    }
+    return (await readStream(res.body, tracked, onReady)) ? 'stop' : 'retry'
   } catch {
     return signal.aborted ? 'stop' : 'retry'
   }
@@ -108,16 +121,18 @@ async function connectOnce(
 
 /**
  * Server-Sent Events over `fetch` (EventSource cannot send the Authorization header).
- * Reconnects with backoff; every (re)connect reports `open` again so callers can refetch what they missed.
+ * Reconnects with backoff, resuming from the last event id seen. Every (re)connect delivers a `ready` message whose
+ * `data.resumed` says whether the missed events follow (`true`) or the caller must refetch its state (`false`).
  */
 export function connectSse(listener: RealtimeListener): RealtimeHandle {
   const stop = new AbortController()
+  const lastEventId: { current?: string } = {}
 
   void (async () => {
     let attempt = 0
     while (!stop.signal.aborted) {
       listener.onStatus?.(attempt === 0 ? 'connecting' : 'reconnecting')
-      const outcome = await connectOnce(listener, stop.signal, () => {
+      const outcome = await connectOnce(listener, stop.signal, lastEventId, () => {
         attempt = 0
       })
       if (outcome === 'stop') break

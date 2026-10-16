@@ -4,7 +4,7 @@ import {
   NotificationEvents,
   type NotificationReadPayload,
 } from '#/modules/notification/contracts'
-import type { Clock, IdGenerator, IntegrationEventHandler, Log } from '#/shared/application/ports'
+import type { Clock, IntegrationEventHandler, Log } from '#/shared/application/ports'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { RealtimePushHandler } from './application/handlers/realtime-push-handler'
@@ -15,23 +15,35 @@ import { realtimeRoutes } from './presentation/routes'
 export interface RealtimeModuleDeps {
   database: Database
   clock: Clock
-  ids: IdGenerator
   log: Log
   verifier: TokenVerifier
+  /** How long a client can be disconnected and still replay what it missed via `Last-Event-ID`. */
+  replayWindowMs: number
 }
 
 export interface RealtimeModule {
   name: 'realtime'
   routes: ReturnType<typeof realtimeRoutes>
   handlers: IntegrationEventHandler[]
-  /** Closes every live connection and stops listening. Call before stopping the HTTP server. */
+  /** Deletes replay-buffer events older than `olderThan`; returns how many. Runs on a timer, exposed for tests. */
+  prune(olderThan: Date): Promise<number>
+  /** Closes every live connection, stops listening and stops pruning. Call before stopping the HTTP server. */
   stop(): Promise<void>
 }
 
-/** Stateless-friendly live updates (SSE). Owns no tables: it only relays events to connected clients. */
+const PRUNE_INTERVAL_MS = 60_000
+
+/** Stateless-friendly live updates (SSE). Its only table is a short replay buffer; it otherwise just relays events to connected clients. */
 export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
-  const { database, clock, ids, log, verifier } = deps
-  const hub = new PgRealtimeHub(database.client, ids, clock, log)
+  const { database, clock, log, verifier, replayWindowMs } = deps
+  const hub = new PgRealtimeHub(database, clock, log)
+
+  const prune = () =>
+    hub
+      .prune(new Date(clock.now().getTime() - replayWindowMs))
+      .catch((err) => log.warn({ err }, 'pruning the realtime replay buffer failed'))
+  const pruneTimer = setInterval(prune, PRUNE_INTERVAL_MS)
+  pruneTimer.unref()
 
   return {
     name: 'realtime',
@@ -89,6 +101,10 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
         clock,
       ),
     ],
-    stop: () => hub.stop(),
+    prune: (olderThan) => hub.prune(olderThan),
+    async stop() {
+      clearInterval(pruneTimer)
+      await hub.stop()
+    },
   }
 }

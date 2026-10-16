@@ -111,6 +111,8 @@ const schema = z
     VAPID_SUBJECT: blank,
     /** After a Web Push to a user, notifications in the same window of this length are stored but not pushed; 0 = push all. */
     PUSH_QUIET_WINDOW_SECONDS: z.coerce.number().int().nonnegative().default(30),
+    /** How long a disconnected SSE client can still replay what it missed via `Last-Event-ID`. */
+    REALTIME_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(300),
 
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
     /** Messages claimed per relay batch. */

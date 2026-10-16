@@ -107,9 +107,9 @@ export async function createContainer(
   const realtime = createRealtimeModule({
     database,
     clock,
-    ids,
     log: logger,
     verifier: identity.verifier,
+    replayWindowMs: config.REALTIME_REPLAY_WINDOW_SECONDS * 1000,
   })
 
   const bus = new InProcessMessageBus(logger)

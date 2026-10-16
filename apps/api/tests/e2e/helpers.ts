@@ -168,11 +168,18 @@ export interface SseMessage {
 export const WAIT_MS = 5_000
 
 /** Minimal SSE client over `app.handle`: buffers parsed events, lets a test await the next matching one. */
-export async function openSse(app: TestApp['app'], token: string) {
+export async function openSse(
+  app: TestApp['app'],
+  token: string,
+  options: { lastEventId?: string } = {},
+) {
   const controller = new AbortController()
   const res = await app.handle(
     new Request('http://localhost/api/realtime/events', {
-      headers: { authorization: `Bearer ${token}` },
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...(options.lastEventId ? { 'last-event-id': options.lastEventId } : {}),
+      },
       signal: controller.signal,
     }),
   )

@@ -15,7 +15,8 @@ const TOAST_QUIET_MS = 30_000
  *  - this device was signed out remotely → sign out here immediately instead of waiting for the access token to expire;
  *  - another device signed out → refresh the device list;
  *  - a notification arrived or was read elsewhere → refresh the badge and the list;
- *  - every (re)connect refetches both, because events sent while disconnected are not replayed.
+ *  - every (re)connect refetches both, unless the server resumed the stream (`resumed`): then the events missed while
+ *    disconnected are replayed and handled like live ones.
  */
 export function useLiveSession() {
   const queryClient = useQueryClient()
@@ -45,6 +46,7 @@ export function useLiveSession() {
     const handlers: Record<string, (data: RealtimeMessage['data']) => void> = {
       ready(data) {
         ownSessionId = data?.sessionId
+        if (data?.resumed === true) return
         void refreshDevices()
         void refreshNotifications()
       },

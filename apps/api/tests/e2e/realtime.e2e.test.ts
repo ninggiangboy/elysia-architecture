@@ -92,6 +92,97 @@ describe('server-sent events', () => {
   })
 })
 
+describe('replay with Last-Event-ID', () => {
+  const say = (api: typeof apiA, token: string, message: string) =>
+    api('POST', '/api/realtime/test', { token, body: { message } })
+
+  test('a reconnecting client receives exactly the events it missed, after ready', async () => {
+    const me = await login(apiA, uniqueEmail('replay'))
+    const first = await openSse(a.app, me.accessToken)
+    await first.next('ready')
+    await say(apiA, me.accessToken, 'one')
+    const seen = await first.next('realtime.test')
+    first.close()
+
+    // Sent while the client is offline — from the other instance.
+    await say(apiB, me.accessToken, 'two')
+    await say(apiB, me.accessToken, 'three')
+
+    const second = await openSse(a.app, me.accessToken, { lastEventId: seen.id })
+    try {
+      const ready = await second.next('ready')
+      expect(ready.data.resumed).toBe(true)
+      await second.next('realtime.test', (m) => m.data.message === 'three')
+      const messages = second.received.filter((m) => m.type === 'realtime.test')
+      expect(messages.map((m) => m.data.message)).toEqual(['two', 'three'])
+      expect(second.received[0]?.type).toBe('ready')
+
+      // Live delivery continues after the replay, with no duplicates.
+      await say(apiA, me.accessToken, 'four')
+      await second.next('realtime.test', (m) => m.data.message === 'four')
+      expect(
+        second.received.filter((m) => m.type === 'realtime.test').map((m) => m.data.message),
+      ).toEqual(['two', 'three', 'four'])
+    } finally {
+      second.close()
+    }
+  })
+
+  test('nothing is replayed without Last-Event-ID, and ready says to refetch', async () => {
+    const me = await login(apiA, uniqueEmail('no-replay'))
+    await say(apiA, me.accessToken, 'missed')
+    const stream = await openSse(a.app, me.accessToken)
+    try {
+      expect((await stream.next('ready')).data.resumed).toBe(false)
+      await say(apiA, me.accessToken, 'live')
+      await stream.next('realtime.test')
+      expect(stream.received.filter((m) => m.type === 'realtime.test')).toHaveLength(1)
+    } finally {
+      stream.close()
+    }
+  })
+
+  test('an unknown, malformed or foreign id is not replayed', async () => {
+    const me = await login(apiA, uniqueEmail('replay-bad'))
+    const other = await login(apiA, uniqueEmail('replay-other'))
+    const theirs = await openSse(a.app, other.accessToken)
+    await theirs.next('ready')
+    await say(apiA, other.accessToken, 'secret')
+    const foreignId = (await theirs.next('realtime.test')).id
+    theirs.close()
+    await say(apiA, me.accessToken, 'mine')
+
+    for (const lastEventId of [foreignId, '999999999999999', 'abc', '1; drop table', '-1']) {
+      const stream = await openSse(a.app, me.accessToken, { lastEventId })
+      try {
+        const ready = await stream.next('ready')
+        expect(ready.data.resumed).toBe(false)
+      } finally {
+        stream.close()
+      }
+    }
+  })
+
+  test('pruned events are gone, so the client is told to refetch', async () => {
+    const me = await login(apiA, uniqueEmail('pruned'))
+    const first = await openSse(a.app, me.accessToken)
+    await first.next('ready')
+    await say(apiA, me.accessToken, 'old')
+    const seen = await first.next('realtime.test')
+    first.close()
+
+    const removed = await a.container.modules.realtime.prune(new Date(Date.now() + 60_000))
+    expect(removed).toBeGreaterThan(0)
+
+    const second = await openSse(a.app, me.accessToken, { lastEventId: seen.id })
+    try {
+      expect((await second.next('ready')).data.resumed).toBe(false)
+    } finally {
+      second.close()
+    }
+  })
+})
+
 describe('session events over realtime', () => {
   test('remote logout reaches the device and closes its connections', async () => {
     const email = uniqueEmail('devices-rt')

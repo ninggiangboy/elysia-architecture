@@ -12,7 +12,7 @@ class RecordingGateway implements RealtimeGateway {
     this.published.push({ target, event })
   }
   async register() {
-    return () => {}
+    return { resumed: false, start() {}, unregister() {} }
   }
 }
 

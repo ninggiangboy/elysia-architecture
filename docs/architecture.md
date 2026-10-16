@@ -40,7 +40,7 @@
 | `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked` | — | — |
 | `profile` | profiles (display name, avatar, optimistic-lock `version`) | `avatar_changed` | `user_registered` (create profile), `avatar_changed` (delete old file) | `IdentityApi.getAccount` (sync, for `GET /me`) |
 | `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read` | identity events (mail, in-app), `session_revoked` (drop push subscriptions), `created` (Web Push) | — |
-| `realtime` | nothing (no tables) | — | `session_revoked`, `notification.created/read` → SSE | — |
+| `realtime` | `realtime.events` (short replay buffer) | — | `session_revoked`, `notification.created/read` → SSE | — |
 
 Event names are `<module>.<name>.v1` (see each module's `contracts/events.ts`). Contracts are the *only* thing another module may import.
 
@@ -75,7 +75,7 @@ Goal: run N instances, and split any module into its own service **without rewri
 
 1. **Stateless.** No state kept in RAM between requests. Auth uses JWT, rate limits live in the DB, files go straight to S3 via presigned URLs. No sticky sessions needed.
 2. **Module = future service.**
-   - Each module that persists data has its own Postgres schema (`identity`, `profile`, `notification`), its own migrations, and its own outbox/inbox. `realtime` owns no tables — it is a pure delivery edge.
+   - Each module that persists data has its own Postgres schema (`identity`, `profile`, `notification`), its own migrations, and its own outbox/inbox. `realtime` only owns a short replay buffer (`realtime.events`, a few minutes of events) — it is a delivery edge, not a store.
    - No cross-module FKs or JOINs. `profile.profiles.user_id` only holds the user's id value.
    - All modules share ONE pool and one `UnitOfWork` (`Database`, reads `DATABASE_URL`); modules differ only by Postgres schema. A transaction can span several modules, but keep it within one module so splitting into services later needs no rewrite.
 3. **Communicate only through `contracts/`.**
@@ -114,11 +114,13 @@ Each refresh rotates the token within the same "family"; reusing a rotated token
 Two tabs refreshing at once (within 10 seconds) are only rejected, and the session is not lost.
 A family **is** one signed-in device (its id is the `sid` claim), and each refresh row stores that device's user agent and IP. `GET /account/sessions` lists the user's families that still hold a live refresh token; `DELETE /account/sessions/{id}` (or `DELETE /account/sessions` for all but the current one) revokes them — scoped by `user_id`, so one user can never revoke another's session.
 
-**Realtime (SSE)**: the `realtime` module owns no tables; it pushes events to clients that are connected right now.
-- Flow: use case → outbox (`identity.session_started.v1`, `identity.session_revoked.v1`) → relay → `RealtimePushHandler` → `NOTIFY realtime` → every API instance that has a `LISTEN realtime` connection delivers to its own sockets. Postgres is the fan-out, so there is no Redis, no sticky sessions, and the relay may run in a different process from the API.
+**Realtime (SSE)**: the `realtime` module pushes events to clients that are connected right now, and replays the last few minutes to one that reconnects.
+- Flow: use case → outbox (`identity.session_started.v1`, `identity.session_revoked.v1`) → relay → `RealtimePushHandler` → [tx: insert into `realtime.events` + `NOTIFY realtime`] → every API instance that has a `LISTEN realtime` connection delivers to its own sockets. Postgres is the fan-out, so there is no Redis, no sticky sessions, and the relay may run in a different process from the API.
 - One transport, SSE (`GET /realtime/events`), carrying messages `{ id, type, data, at }`. It is consumed with `fetch` (not `EventSource`) so it can send `Authorization: Bearer`. Server → client only is all these use cases need; WebSocket was deliberately left out.
 - Remote logout is pushed to the revoked device (`session.revoked`) and the server then closes that session's connections, so the web app signs out immediately instead of after the 15-minute access token. Other devices of the user refresh their device list from the same event.
-- Best-effort by design: no replay, events older than 60 s are dropped, and a notification sent while an instance reconnects its LISTEN is lost — clients refetch their state whenever a stream (re)opens. Authentication is checked when the stream opens.
+- **Replay (`Last-Event-ID`)**: every message gets a per-user increasing `seq` from the insert, used as the SSE `id:` (and the JSON `id`). A client that reconnects sends the last id it saw as `Last-Event-ID`; `ready` then says `resumed: true` and the missed events follow it, in order, before live delivery continues (the connection is subscribed before the buffer is read and the overlap is de-duplicated, so nothing is lost or doubled). Publishers take a per-user advisory lock so `seq` order is commit order for one user.
+- Replay is refused (`resumed: false`, nothing replayed, the client refetches its state) when there is no id, the id is malformed or belongs to someone else, the id's row was already pruned (so the events after it may have been too), or more than 200 events were missed. The header is untrusted input: it is parsed as a plain integer and the lookup is always scoped to the authenticated user. The buffer is pruned every minute to `REALTIME_REPLAY_WINDOW_SECONDS` (default 300).
+- Still best-effort beyond that: events older than 60 s when the relay delivers them are dropped, and a replay failure just degrades to `resumed: false`. Authentication is checked when the stream opens.
 - Deployment: the reverse proxy must not buffer responses and must allow long reads (see `docker/nginx/default.conf`); LISTEN needs a direct Postgres connection, not PgBouncer in transaction mode. On shutdown `realtime.stop()` runs before the HTTP server stops, otherwise open streams would hold it up.
 
 **In-app notifications**: the `notification` module keeps a per-user inbox (`notification.notifications`) next to its mail handlers.

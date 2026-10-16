@@ -1,7 +1,12 @@
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
 import { errorResponse, validationError } from '#/shared/http/openapi'
-import type { RealtimeConnection, RealtimeGateway, RealtimeMessage } from '../application/ports'
+import type {
+  RealtimeConnection,
+  RealtimeGateway,
+  RealtimeMessage,
+  RealtimeRegistration,
+} from '../application/ports'
 import type { SendTestEvent } from '../application/use-cases/send-test-event'
 
 export interface RealtimeRouteDeps {
@@ -59,18 +64,25 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
         const stream = new ReadableStream<Uint8Array>({
           async start(c) {
             controller = c
+            let registration: RealtimeRegistration
             try {
-              unregister = await gateway.register(connection)
+              registration = await gateway.register(
+                connection,
+                request.headers.get('last-event-id') ?? undefined,
+              )
             } catch (err) {
               dispose()
               throw err
             }
+            unregister = registration.unregister
             if (closed) return unregister()
             request.signal.addEventListener('abort', dispose)
             heartbeat = setInterval(() => write(': ping\n\n'), SSE_HEARTBEAT_MS)
             write(
-              `retry: 3000\nevent: ready\ndata: ${JSON.stringify({ sessionId: auth.sessionId })}\n\n`,
+              `retry: 3000\nevent: ready\ndata: ${JSON.stringify({ sessionId: auth.sessionId, resumed: registration.resumed })}\n\n`,
             )
+            // After `ready`, so the client knows whether what follows is a replay of what it missed.
+            registration.start()
           },
           cancel: dispose,
         })
@@ -90,7 +102,9 @@ export const realtimeRoutes = ({ verifier, gateway, useCases: uc }: RealtimeRout
           description:
             'Live events for the signed-in user (`ready`, `session.revoked`, `notification.created`, `notification.read`, `realtime.test`). ' +
             '`EventSource` cannot send an `Authorization` header, so consume it with `fetch` and read the body stream. ' +
-            'Each `data:` is a JSON `{ id, type, data, at }`. No replay: refetch your state after reconnecting.',
+            'Each `data:` is a JSON `{ id, type, data, at }`, and the SSE `id:` is that same id. ' +
+            'To resume after a disconnect send the last id you saw as `Last-Event-ID`: `ready` then carries `resumed: true` and the events you missed follow it. ' +
+            'With `resumed: false` (no id, id too old, or too many missed) nothing is replayed: refetch your state.',
         },
       },
     )
