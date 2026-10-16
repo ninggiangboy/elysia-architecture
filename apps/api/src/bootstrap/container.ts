@@ -106,6 +106,8 @@ export async function createContainer(
     logger,
     {
       pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
+      batchSize: config.OUTBOX_BATCH_SIZE,
+      concurrency: Math.min(config.OUTBOX_CONCURRENCY, Math.max(1, config.DB_POOL_MAX - 2)),
       deferBudgetMs: config.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
     },
   )

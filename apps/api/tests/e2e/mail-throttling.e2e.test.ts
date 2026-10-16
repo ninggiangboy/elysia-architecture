@@ -190,8 +190,8 @@ describe('outbox + mail under provider rate limiting', () => {
     await proc.exited
 
     await eventually(async () => mailer.to(email).length === 1, 10_000, 'mail after requeue')
-    const row = await outboxRow(id)
-    expect(row.deadAt).toBeNull()
-    expect(row.publishedAt).not.toBeNull()
+    // The relay marks the message published just after the handler returns, so wait for it.
+    await eventually(async () => (await outboxRow(id)).publishedAt, 10_000, 'message published')
+    expect((await outboxRow(id)).deadAt).toBeNull()
   }, 25_000)
 })

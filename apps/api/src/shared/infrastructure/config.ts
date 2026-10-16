@@ -83,6 +83,10 @@ const schema = z.object({
   MAIL_DAILY_QUOTA: z.coerce.number().int().nonnegative().default(0),
 
   OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
+  /** Messages claimed per relay batch. */
+  OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().default(200),
+  /** Aggregates processed in parallel per batch; keep below DB_POOL_MAX. Messages of one aggregate stay ordered. */
+  OUTBOX_CONCURRENCY: z.coerce.number().int().positive().default(8),
   /** Maximum time a message may be deferred by the rate limit before it is considered dead. */
   OUTBOX_DEFER_BUDGET_HOURS: z.coerce.number().positive().default(24),
 })

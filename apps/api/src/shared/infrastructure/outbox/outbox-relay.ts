@@ -16,6 +16,11 @@ export interface OutboxSource {
 export interface OutboxRelayOptions {
   pollIntervalMs: number
   batchSize?: number
+  /**
+   * How many aggregates are processed at the same time within a batch. Messages of one aggregate always run
+   * one after another, in id order. Keep it below the DB pool size: each in-flight message holds a connection.
+   */
+  concurrency?: number
   leaseSeconds?: number
   maxAttempts?: number
   retentionDays?: number
@@ -23,6 +28,16 @@ export interface OutboxRelayOptions {
   deferBudgetMs?: number
   /** Default delay when RetryLaterError carries no retryAfterMs. */
   defaultDeferMs?: number
+}
+
+type ClaimedRow = {
+  id: string
+  type: string
+  aggregateId: string
+  occurredAt: Date
+  payload: Record<string, unknown>
+  headers: Record<string, string>
+  attempts: number
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -37,6 +52,7 @@ export class OutboxRelay {
   private lastCleanup = 0
 
   private readonly batchSize: number
+  private readonly concurrency: number
   private readonly leaseSeconds: number
   private readonly maxAttempts: number
   private readonly retentionDays: number
@@ -50,7 +66,8 @@ export class OutboxRelay {
     private logger: Logger,
     private options: OutboxRelayOptions,
   ) {
-    this.batchSize = options.batchSize ?? 50
+    this.batchSize = options.batchSize ?? 200
+    this.concurrency = Math.max(1, options.concurrency ?? 8)
     this.leaseSeconds = options.leaseSeconds ?? 30
     this.maxAttempts = options.maxAttempts ?? 10
     this.retentionDays = options.retentionDays ?? 7
@@ -115,27 +132,57 @@ export class OutboxRelay {
       )
       .returning()
 
-    for (const row of claimed) {
-      const envelope: Envelope = {
-        id: row.id,
-        type: row.type,
-        source: source.name,
-        aggregateId: row.aggregateId,
-        occurredAt: row.occurredAt.toISOString(),
-        payload: row.payload,
-        headers: row.headers as MessageHeaders,
-      }
-      try {
-        await this.publisher.publish(envelope)
-        await this.database.db
-          .update(table)
-          .set({ publishedAt: new Date(), lockedUntil: null, lastError: null })
-          .where(inArrayId(table, row.id))
-      } catch (err) {
-        await this.recordFailure(source, row, err)
+    // Ordering: RETURNING has no defined order and ids are UUIDv7 (time-ordered), so sort by id, then run the
+    // messages of one aggregate strictly in sequence while different aggregates proceed in parallel.
+    const byAggregate = new Map<string, typeof claimed>()
+    for (const row of [...claimed].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+      const group = byAggregate.get(row.aggregateId) ?? []
+      group.push(row)
+      byAggregate.set(row.aggregateId, group)
+    }
+    const queue = [...byAggregate.values()]
+    const worker = async () => {
+      for (let group = queue.shift(); group; group = queue.shift()) {
+        for (const row of group) await this.process(source, row)
       }
     }
+    await Promise.all(Array.from({ length: Math.min(this.concurrency, queue.length) }, worker))
     return claimed.length
+  }
+
+  private async process(source: OutboxSource, row: ClaimedRow): Promise<void> {
+    const { table } = source
+    const envelope: Envelope = {
+      id: row.id,
+      type: row.type,
+      source: source.name,
+      aggregateId: row.aggregateId,
+      occurredAt: row.occurredAt.toISOString(),
+      payload: row.payload,
+      headers: row.headers as MessageHeaders,
+    }
+    try {
+      await this.publisher.publish(envelope)
+    } catch (err) {
+      await this.safely(row, () => this.recordFailure(source, row, err))
+      return
+    }
+    // Published but not yet marked: if marking fails the lease expires and the message is redelivered (at-least-once).
+    await this.safely(row, () =>
+      this.database.db
+        .update(table)
+        .set({ publishedAt: new Date(), lockedUntil: null, lastError: null })
+        .where(inArrayId(table, row.id)),
+    )
+  }
+
+  /** One message's bookkeeping failing must not abandon the rest of the batch: its lease will expire and it is retried. */
+  private async safely(row: { id: string }, fn: () => Promise<unknown>): Promise<void> {
+    try {
+      await fn()
+    } catch (err) {
+      this.logger.error({ err, messageId: row.id }, 'outbox bookkeeping failed, lease will expire')
+    }
   }
 
   private async recordFailure(
