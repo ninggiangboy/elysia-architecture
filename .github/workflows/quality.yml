@@ -14,6 +14,19 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.c.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: c
+        uses: ./.github/actions/changes
+
   pr-title:
     name: PR title (conventional commits)
     if: github.event_name == 'pull_request'
@@ -40,6 +53,8 @@ jobs:
   coverage:
     name: Test coverage
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -68,6 +83,8 @@ jobs:
   unused-code:
     name: Unused code & dependencies (knip)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -79,6 +96,8 @@ jobs:
   duplication:
     name: Duplicated code (jscpd)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -90,6 +109,8 @@ jobs:
   format:
     name: Lint, smells & complexity (Biome)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: biomejs/setup-biome@v2

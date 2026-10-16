@@ -1,0 +1,51 @@
+name: Detect changed paths
+description: >
+  Reports which areas of the repo changed (see .github/filters.yml). Pull requests are filtered;
+  every other event (push to main, schedule, manual) reports everything as changed so main is always fully verified.
+
+outputs:
+  code:
+    description: Source or config changed (anything except docs-only changes)
+    value: ${{ steps.result.outputs.code }}
+  deps:
+    description: Dependency manifests or lockfile changed
+    value: ${{ steps.result.outputs.deps }}
+  e2e:
+    description: Anything the E2E suite exercises changed
+    value: ${{ steps.result.outputs.e2e }}
+  docker_matrix:
+    description: JSON array of app names whose Docker image needs rebuilding
+    value: ${{ steps.result.outputs.docker_matrix }}
+
+# The caller must run actions/checkout first (a local action cannot be loaded without it).
+runs:
+  using: composite
+  steps:
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: .github/filters.yml
+    - id: result
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        CODE: ${{ steps.filter.outputs.code }}
+        DEPS: ${{ steps.filter.outputs.deps }}
+        E2E: ${{ steps.filter.outputs.e2e }}
+        IMAGE_API: ${{ steps.filter.outputs.image_api }}
+        IMAGE_WEB: ${{ steps.filter.outputs.image_web }}
+      run: |
+        if [ "$EVENT" != "pull_request" ]; then
+          CODE=true DEPS=true E2E=true IMAGE_API=true IMAGE_WEB=true
+        fi
+        apps=()
+        [ "$IMAGE_API" = true ] && apps+=(api)
+        [ "$IMAGE_WEB" = true ] && apps+=(web)
+        matrix=$(printf '%s\n' "${apps[@]}" | jq -R . | jq -sc 'map(select(length > 0))')
+        {
+          echo "code=$CODE"
+          echo "deps=$DEPS"
+          echo "e2e=$E2E"
+          echo "docker_matrix=$matrix"
+        } >> "$GITHUB_OUTPUT"
+        echo "code=$CODE deps=$DEPS e2e=$E2E docker=$matrix"
