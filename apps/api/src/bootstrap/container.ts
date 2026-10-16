@@ -68,6 +68,7 @@ export async function createContainer(
     VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT
       ? {
           publicKey: VAPID_PUBLIC_KEY,
+          quietWindowMs: config.PUSH_QUIET_WINDOW_SECONDS * 1000,
           sender:
             overrides.webPushSender ??
             new WebPushLibrarySender({

@@ -14,8 +14,8 @@ import type { ListQuery, NotificationRepository } from '../domain/notification-r
 import { CreateNotificationHandler } from './handlers/create-notification-handler'
 import {
   describeDevice,
+  type NotificationDraft,
   newSignInNotification,
-  SIGN_IN_GROUP_WINDOW_MS,
   suspiciousSessionNotification,
 } from './in-app-notifications'
 import { MarkAllNotificationsRead, MarkNotificationRead } from './use-cases/mark-read'
@@ -44,6 +44,12 @@ class InMemoryNotifications implements NotificationRepository {
     if (!target) return null
     Object.assign(target.props, latest, { count: target.props.count + 1 })
     return target
+  }
+  async createdAtBefore(userId: string, id: string) {
+    const previous = this.rows
+      .filter((n) => n.userId === userId && n.id < id)
+      .sort((a, b) => (a.id < b.id ? 1 : -1))[0]
+    return previous?.props.createdAt ?? null
   }
   async list(q: ListQuery) {
     return this.rows
@@ -167,6 +173,12 @@ describe('CreateNotificationHandler', () => {
 })
 
 describe('CreateNotificationHandler with a group', () => {
+  const WINDOW_MS = 10 * 60_000
+  // No real draft is grouped yet, so exercise the mechanism with the sign-in one.
+  const grouped = (p: Parameters<typeof newSignInNotification>[0]): NotificationDraft => ({
+    ...newSignInNotification(p),
+    group: { key: 'new_sign_in', withinMs: WINDOW_MS },
+  })
   const signIn = (n: number) =>
     envelope(`m${n}`, { userId: ALICE, sessionId: `s${n}`, ip: null, userAgent: `UA ${n}` })
   let repo: InMemoryNotifications
@@ -180,7 +192,7 @@ describe('CreateNotificationHandler with a group', () => {
     handler = new CreateNotificationHandler(
       'test.sign-in',
       IdentityEvents.SessionStarted,
-      newSignInNotification,
+      grouped,
       repo,
       outbox,
       new InMemoryInbox(),
@@ -215,7 +227,7 @@ describe('CreateNotificationHandler with a group', () => {
 
   test('starts a new notification once the window has passed', async () => {
     await handler.handle(signIn(1))
-    clock.advance(SIGN_IN_GROUP_WINDOW_MS + 1)
+    clock.advance(WINDOW_MS + 1)
     await handler.handle(signIn(2))
     expect(repo.rows).toHaveLength(2)
   })

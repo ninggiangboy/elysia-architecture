@@ -58,7 +58,7 @@ export interface NotificationModuleDeps {
   verifier: TokenVerifier
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
   /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
-  webPush?: { sender: WebPushSender; publicKey: string }
+  webPush?: { sender: WebPushSender; publicKey: string; quietWindowMs?: number }
 }
 
 export interface NotificationModule {
@@ -130,7 +130,15 @@ export function createNotificationModule({
     handlers: [
       ...(webPush
         ? [
-            new WebPushHandler(pushSubscriptions, webPush.sender, guard, clock, log),
+            new WebPushHandler(
+              pushSubscriptions,
+              notifications,
+              webPush.sender,
+              guard,
+              clock,
+              log,
+              webPush.quietWindowMs,
+            ),
             new DropPushSubscriptionsHandler(pushSubscriptions),
           ]
         : []),

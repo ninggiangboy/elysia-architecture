@@ -20,6 +20,8 @@ export interface NotificationRepository {
     since: Date,
     latest: Pick<NotificationProps, 'title' | 'body' | 'data'>,
   ): Promise<Notification | null>
+  /** `createdAt` of the user's newest notification older than `id` (ids are time-ordered), `null` if there is none. */
+  createdAtBefore(userId: string, id: string): Promise<Date | null>
   /** Newest first. */
   list(query: ListQuery): Promise<Notification[]>
   countUnread(userId: string): Promise<number>

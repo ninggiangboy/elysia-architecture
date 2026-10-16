@@ -7,6 +7,9 @@ import { forgetPush, syncPush } from '@/lib/push'
 import { connectSse, type RealtimeMessage } from '@/lib/realtime'
 import { clearSession } from '@/lib/session'
 
+/** After a toast, further notifications within this window only update the badge and list (security alerts excepted). */
+const TOAST_QUIET_MS = 30_000
+
 /**
  * App-wide live channel (SSE) for a signed-in user:
  *  - this device was signed out remotely → sign out here immediately instead of waiting for the access token to expire;
@@ -26,6 +29,7 @@ export function useLiveSession() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: one connection per mounted layout; both are stable
   useEffect(() => {
     let ownSessionId: unknown
+    let lastToastAt = 0
     const refreshDevices = () => queryClient.invalidateQueries({ queryKey: sessionsQuery.queryKey })
     const refreshNotifications = () =>
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
@@ -45,7 +49,11 @@ export function useLiveSession() {
         void refreshNotifications()
       },
       'notification.created'(data) {
-        toast(String(data?.title ?? 'New notification'))
+        const now = Date.now()
+        if (data?.kind === 'security_alert' || now - lastToastAt >= TOAST_QUIET_MS) {
+          lastToastAt = now
+          toast(String(data?.title ?? 'New notification'))
+        }
         void refreshNotifications()
       },
       'notification.read'() {

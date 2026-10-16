@@ -4,6 +4,7 @@ import type { InboxGuard, Log } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
 import { FakeClock, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing/fakes'
 import { NotificationEvents } from '../contracts'
+import type { NotificationRepository } from '../domain/notification-repository'
 import { InvalidPushSubscriptionError, PushSubscription } from '../domain/push-subscription'
 import type { PushSubscriptionRepository } from '../domain/push-subscription-repository'
 import { DropPushSubscriptionsHandler } from './handlers/drop-push-subscriptions-handler'
@@ -201,12 +202,38 @@ describe('WebPushHandler', () => {
     },
     headers: {},
   })
+  // Only `createdAtBefore` matters to the handler: every notification id handed out so far, with its creation time.
+  let created_: { id: string; at: Date }[]
+  const notifications = {
+    async createdAtBefore(_user: string, id: string) {
+      return created_.filter((n) => n.id < id).sort((a, b) => (a.id < b.id ? 1 : -1))[0]?.at ?? null
+    },
+  } as unknown as NotificationRepository
+  const QUIET_MS = 30_000
   beforeEach(() => {
     repo = new InMemorySubscriptions()
     sender = new FakeSender()
     clock = new FakeClock()
-    handler = new WebPushHandler(repo, sender, new OncePerMessageInbox(), clock, log)
+    created_ = []
+    handler = new WebPushHandler(
+      repo,
+      notifications,
+      sender,
+      new OncePerMessageInbox(),
+      clock,
+      log,
+      QUIET_MS,
+    )
   })
+  /** A notification created `atMs` after the clock's start, stored (as the real flow does) before its event is handled. */
+  const arrive = (n: number, atMs: number, kind = 'welcome') => {
+    const at = new Date(clock.now().getTime() + atMs)
+    created_.push({ id: `n-${String(n).padStart(3, '0')}`, at })
+    return created(
+      { notificationId: `n-${String(n).padStart(3, '0')}`, kind, createdAt: at.toISOString() },
+      at,
+    )
+  }
 
   test('pushes to every browser of the user and to nobody else', async () => {
     repo.rows.push(sub(ALICE, 1), sub(ALICE, 2), sub(BOB, 3))
@@ -256,6 +283,30 @@ describe('WebPushHandler', () => {
     await handler.handle(message)
     await handler.handle(message)
     expect(sender.sent).toHaveLength(1)
+  })
+  test('a burst pushes once, then again in the next window', async () => {
+    repo.rows.push(sub(ALICE, 1))
+    for (let i = 0; i < 100; i++) await handler.handle(arrive(i, i * 100)) // 10s, one bucket
+    expect(sender.sent).toHaveLength(1)
+    expect(sender.sent[0]?.message.id).toBe('n-000')
+    await handler.handle(arrive(100, QUIET_MS + 1))
+    expect(sender.sent).toHaveLength(2)
+  })
+  test('a security alert is pushed even inside the quiet window', async () => {
+    repo.rows.push(sub(ALICE, 1))
+    await handler.handle(arrive(1, 0))
+    await handler.handle(arrive(2, 1000, 'security_alert'))
+    expect(sender.sent.map((s) => s.message.id)).toEqual(['n-001', 'n-002'])
+  })
+  test('a retried push reaches the same verdict (the first of a burst is still pushed)', async () => {
+    repo.rows.push(sub(ALICE, 1))
+    sender.outcomes.set(endpoint(1), 'retry')
+    const first = arrive(1, 0)
+    await arrive(2, 1000) // stored meanwhile
+    await expect(handler.handle(first)).rejects.toThrow()
+    sender.outcomes.clear()
+    await handler.handle(first)
+    expect(sender.sent).toHaveLength(2)
   })
   test('drops a push that is too old to matter', async () => {
     repo.rows.push(sub(ALICE, 1))

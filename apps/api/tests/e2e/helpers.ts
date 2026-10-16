@@ -15,6 +15,8 @@ export async function createTestApp(
     LOG_LEVEL: 'silent',
     // Generous mail rate limits so other tests are not deferred by the shared bucket.
     MAIL_RATE_PER_SECOND: '200',
+    // Tests sign in several times within seconds and expect a push for each.
+    PUSH_QUIET_WINDOW_SECONDS: '0',
     ...env,
   })
   const container = await createContainer(config, createLogger('silent'), overrides)

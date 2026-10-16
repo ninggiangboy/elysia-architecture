@@ -60,6 +60,16 @@ export class DrizzleNotificationRepository implements NotificationRepository {
     return row ? Notification.restore({ ...row, kind: row.kind as NotificationKind }) : null
   }
 
+  async createdAtBefore(userId: string, id: string): Promise<Date | null> {
+    const [row] = await this.database.executor
+      .select({ createdAt: notifications.createdAt })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), lt(notifications.id, id)))
+      .orderBy(desc(notifications.id))
+      .limit(1)
+    return row?.createdAt ?? null
+  }
+
   async list(query: ListQuery): Promise<Notification[]> {
     const rows = await this.database.executor
       .select()

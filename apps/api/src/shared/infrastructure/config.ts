@@ -95,6 +95,8 @@ const schema = z
     VAPID_PUBLIC_KEY: blank,
     VAPID_PRIVATE_KEY: blank,
     VAPID_SUBJECT: blank,
+    /** After a Web Push to a user, notifications in the same window of this length are stored but not pushed; 0 = push all. */
+    PUSH_QUIET_WINDOW_SECONDS: z.coerce.number().int().nonnegative().default(30),
 
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
     /** Messages claimed per relay batch. */

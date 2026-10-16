@@ -8,14 +8,11 @@ export interface NotificationDraft {
   body: string
   data?: Record<string, unknown>
   /**
-   * Fold repeats into one notification: while the user's latest notification with this `key` is unread and at most
+   * Fold repeats into one notification (no draft uses it yet): while the user's latest notification with this `key` is unread and at most
    * `withinMs` old, a new draft bumps its `count` and replaces its content instead of adding a row.
    */
   group?: { key: string; withinMs: number }
 }
-
-/** A burst of sign-ins (a bot, a user juggling devices) becomes one "New sign-in ×N" instead of N rows, pushes and toasts. */
-export const SIGN_IN_GROUP_WINDOW_MS = 10 * 60_000
 
 export const welcomeNotification = (p: { userId: string }): NotificationDraft => ({
   userId: p.userId,
@@ -82,5 +79,4 @@ export const newSignInNotification = (p: {
   title: 'New sign-in to your account',
   body: `${describeDevice(p.userAgent)}${p.ip ? ` (${p.ip})` : ''} signed in. If this was not you, sign that device out.`,
   data: { sessionId: p.sessionId, ip: p.ip, userAgent: p.userAgent, link: '/' },
-  group: { key: 'new_sign_in', withinMs: SIGN_IN_GROUP_WINDOW_MS },
 })
