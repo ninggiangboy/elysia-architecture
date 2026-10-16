@@ -105,14 +105,21 @@ test.describe
       await page
         .getByTestId('avatar-input')
         .setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: PNG })
+      // The picked photo opens in a crop dialog; nothing is uploaded until Save
+      const dialog = page.getByRole('dialog', { name: 'Profile picture' })
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('slider', { name: 'Zoom' }).fill('2')
+      await dialog.getByTestId('crop-frame').press('ArrowLeft')
+      await dialog.getByRole('button', { name: 'Save' }).click()
       await expect(page.getByText('Profile picture updated')).toBeVisible()
+      await expect(dialog).toBeHidden()
       const img = page.getByRole('img', { name: /Profile picture/ })
       await expect(img).toBeVisible()
       expect(await img.getAttribute('src')).toContain(':8333/')
-      // The image actually loads (and is decoded) from SeaweedFS
+      // The saved image is the 512px crop, and it actually loads (and is decoded) from SeaweedFS
       await expect
         .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth))
-        .toBe(1)
+        .toBe(512)
 
       await page.reload()
       await expect(page.getByRole('img', { name: /Profile picture/ })).toBeVisible()
@@ -122,25 +129,50 @@ test.describe
       await page
         .getByTestId('cover-input')
         .setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG })
+      const dialog = page.getByRole('dialog', { name: 'Cover image' })
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('button', { name: 'Save' }).click()
       await expect(page.getByText('Cover image updated')).toBeVisible()
+      await expect(dialog).toBeHidden()
       const img = page.getByRole('img', { name: 'Cover' })
       await expect(img).toBeVisible()
       expect(await img.getAttribute('src')).toContain(':8333/')
       await expect
         .poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth))
-        .toBe(1)
+        .toBe(1600)
 
       await page.reload()
       await expect(page.getByRole('img', { name: 'Cover' })).toBeVisible()
+    })
+
+    test('cancelling the crop dialog uploads nothing', async () => {
+      await page
+        .getByTestId('avatar-input')
+        .setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: PNG })
+      const dialog = page.getByRole('dialog', { name: 'Profile picture' })
+      await expect(dialog).toBeVisible()
+      await dialog.getByRole('button', { name: 'Cancel' }).click()
+      await expect(dialog).toBeHidden()
+      await expect(page.getByText('Profile picture updated')).toBeHidden()
     })
 
     test('rejects an oversized file on the client without calling the API', async () => {
       await page.getByTestId('avatar-input').setInputFiles({
         name: 'huge.png',
         mimeType: 'image/png',
-        buffer: Buffer.alloc(3 * 1024 * 1024),
+        buffer: Buffer.alloc(21 * 1024 * 1024),
       })
-      await expect(page.getByText('Image must be at most 2 MB')).toBeVisible()
+      await expect(page.getByText('Image must be at most 20 MB')).toBeVisible()
+    })
+
+    test('a file that is not a decodable image closes the dialog with an error', async () => {
+      await page.getByTestId('avatar-input').setInputFiles({
+        name: 'broken.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('not an image'),
+      })
+      await expect(page.getByText('Could not read this image')).toBeVisible()
+      await expect(page.getByRole('dialog')).toBeHidden()
     })
 
     test('change email: only takes effect after confirming from the new mailbox', async () => {

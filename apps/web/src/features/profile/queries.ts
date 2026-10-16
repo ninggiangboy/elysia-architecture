@@ -11,7 +11,7 @@ export const updateProfile = async (
   version: number,
 ) => unwrap(await http.api.me.profile.patch(changes, { headers: { 'if-match': String(version) } }))
 
-export const requestAvatarUpload = async (file: File) =>
+export const requestAvatarUpload = async (file: Blob) =>
   unwrap(
     await http.api.me.avatar['upload-url'].post({
       contentType: file.type,
@@ -21,7 +21,7 @@ export const requestAvatarUpload = async (file: File) =>
 
 export const setAvatar = async (key: string) => unwrap(await http.api.me.avatar.put({ key }))
 
-export const requestCoverUpload = async (file: File) =>
+export const requestCoverUpload = async (file: Blob) =>
   unwrap(
     await http.api.me.cover['upload-url'].post({
       contentType: file.type,

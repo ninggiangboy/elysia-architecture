@@ -113,7 +113,7 @@ Things worth trying:
 - **Manage devices** — see every signed-in device (user agent, IP) and sign out one of them or all the others; the affected browser is logged out instantly via realtime.
 - **Change email** — the change only takes effect once confirmed from the new inbox.
 - **Profile** — view the account and profile in a single call, and edit the profile with an optimistic lock (`If-Match`) so concurrent edits never silently overwrite each other.
-- **Avatar upload** — the browser uploads straight to S3 through a presigned URL; the server then validates the file, and the old avatar is cleaned up asynchronously. The profile cover image works the same way.
+- **Avatar upload** — the browser uploads straight to S3 through a presigned URL; the server then validates the file, and the old avatar is cleaned up asynchronously. The profile cover image works the same way. In the browser a picked photo opens in a crop dialog (drag to move, slider/wheel to zoom, framed exactly as it will show) and only the cropped result is uploaded.
 - **In-app notifications** — a bell with an unread count, cursor-paged history and mark-as-read (one or all) that stays in sync across the user's open devices.
 - **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.

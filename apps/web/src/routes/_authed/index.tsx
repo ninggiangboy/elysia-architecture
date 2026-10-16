@@ -91,7 +91,7 @@ function ProfileSkeleton() {
         <Skeleton className="h-4 w-72 max-w-full" />
       </div>
       <Card>
-        <Skeleton className="h-24 rounded-none sm:h-28" />
+        <Skeleton className="aspect-[4/1] rounded-none" />
         <CardContent className="flex items-end gap-5 pt-0">
           <Skeleton className="-mt-10 size-24 rounded-full border-4 border-card" />
           <div className="flex flex-1 flex-col gap-2 pb-1">
