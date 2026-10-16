@@ -1,6 +1,7 @@
 import type {
   Clock,
   IdGenerator,
+  InboxGuard,
   ObjectStat,
   ObjectStorage,
   OutboxWriter,
@@ -66,5 +67,27 @@ export class FakeStorage implements ObjectStorage {
     this.deleted.push(key)
     this.objects.delete(key)
     this.data.delete(key)
+  }
+  async deletePrefix(prefix: string) {
+    const keys = [...new Set([...this.objects.keys(), ...this.data.keys()])].filter((k) =>
+      k.startsWith(prefix),
+    )
+    for (const key of keys) await this.delete(key)
+    return keys.length
+  }
+}
+
+/** Runs `fn` once per (messageId, handler), like the real inbox. */
+export class InMemoryInbox implements InboxGuard {
+  private seen = new Set<string>()
+  async transactional(messageId: string, handler: string, fn: () => Promise<void>) {
+    const key = `${messageId}:${handler}`
+    if (this.seen.has(key)) return
+    // Like a real transaction: a handler that throws leaves no trace, so the redelivery runs it again.
+    await fn()
+    this.seen.add(key)
+  }
+  async afterSideEffect(messageId: string, handler: string, fn: () => Promise<void>) {
+    return this.transactional(messageId, handler, fn)
   }
 }

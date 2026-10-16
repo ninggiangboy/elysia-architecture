@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { ForbiddenError } from '#/shared/application/errors'
+import { StepUpPolicy } from '#/shared/application/step-up-policy'
 import { FakeClock } from '#/shared/testing/fakes'
 import { Passkey } from '../domain/passkey'
-import { StepUpPolicy } from './step-up-policy'
 
 const NOW = new Date('2026-01-01T00:00:00Z')
 const seconds = (d: Date) => d.getTime() / 1000

@@ -94,7 +94,7 @@ const securityAlert = (
   kind: 'security_alert',
   title,
   body,
-  data: { ...data, link: '/security' },
+  data: { link: '/security', ...data },
 })
 
 export const passkeyAddedNotification = (p: { userId: string; name: string }) =>
@@ -123,4 +123,44 @@ export const oauthUnlinkedNotification = (p: { userId: string; provider: string 
     p.userId,
     `${providerName(p.provider)} was disconnected`,
     `Your ${providerName(p.provider)} account can no longer sign in to your account.`,
+  )
+
+const day = (iso: string) => new Date(iso).toISOString().slice(0, 10)
+
+export const dataExportReadyNotification = (p: {
+  userId: string
+  expiresAt: string
+}): NotificationDraft => ({
+  userId: p.userId,
+  kind: 'data_export',
+  title: 'Your data export is ready',
+  body: `Your copy is ready to download until ${day(p.expiresAt)} (UTC). We also sent the link by email.`,
+  data: { link: '/privacy' },
+})
+
+export const dataExportFailedNotification = (p: { userId: string }): NotificationDraft => ({
+  userId: p.userId,
+  kind: 'data_export',
+  title: 'Your data export could not be prepared',
+  body: 'Something went wrong while collecting your data. Please try again.',
+  data: { link: '/privacy' },
+})
+
+export const accountDeletionScheduledNotification = (p: {
+  userId: string
+  scheduledFor: string
+}): NotificationDraft =>
+  securityAlert(
+    p.userId,
+    'Your account is scheduled for deletion',
+    `It will be erased on ${day(p.scheduledFor)} (UTC). If this was not you, cancel it now and sign out your other devices.`,
+    { link: '/privacy', deletionScheduledFor: p.scheduledFor },
+  )
+
+export const accountDeletionCancelledNotification = (p: { userId: string }): NotificationDraft =>
+  securityAlert(
+    p.userId,
+    'Account deletion cancelled',
+    'Your account will not be deleted. If this was not you, review your signed-in devices.',
+    { link: '/privacy' },
   )

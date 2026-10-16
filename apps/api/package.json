@@ -19,7 +19,9 @@
     "typecheck": "tsc --noEmit",
     "check:arch": "depcruise src --config .dependency-cruiser.cjs",
     "outbox:list": "bun --env-file=../../.env scripts/outbox.ts list",
-    "outbox:requeue": "bun --env-file=../../.env scripts/outbox.ts requeue"
+    "outbox:requeue": "bun --env-file=../../.env scripts/outbox.ts requeue",
+    "privacy:list": "bun --env-file=../../.env scripts/privacy.ts list",
+    "privacy:resume": "bun --env-file=../../.env scripts/privacy.ts resume"
   },
   "dependencies": {
     "@app/shared-types": "workspace:*",
@@ -33,6 +35,7 @@
     "arctic": "^3.7.0",
     "drizzle-orm": "^0.45.4",
     "elysia": "^1.4.0",
+    "fflate": "^0.8.3",
     "jose": "^6.1.0",
     "nodemailer": "^10.1.1",
     "pino": "^10.4.0",

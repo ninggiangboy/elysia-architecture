@@ -80,3 +80,54 @@ export function emailChangedNoticeMail(params: {
     ),
   }
 }
+
+const day = (iso: string) => `${new Date(iso).toISOString().slice(0, 10)} (UTC)`
+
+export function dataExportReadyMail(params: { url: string; expiresAt: string }): MailContent {
+  return {
+    subject: 'Your data export is ready',
+    text: `Your copy is ready. Download it before ${day(params.expiresAt)}:\n${params.url}\n\nThe file contains personal data: keep it somewhere safe and do not share the link. If you did not ask for it, someone may be using your account.`,
+    html: layout(
+      'Your data export is ready',
+      `Your copy is ready. The link works until ${escapeHtml(day(params.expiresAt))}. The file contains personal data: keep it somewhere safe and do not share the link. If you did not ask for it, someone may be using your account.`,
+      { label: 'Download', url: params.url },
+    ),
+  }
+}
+
+export function accountDeletionScheduledMail(params: {
+  scheduledFor: string
+  cancelUrl: string
+}): MailContent {
+  return {
+    subject: 'Your account is scheduled for deletion',
+    text: `Your account will be permanently erased on ${day(params.scheduledFor)}. Until then you can change your mind:\n${params.cancelUrl}\n\nIf you did not ask for this, cancel it and sign out your other devices.`,
+    html: layout(
+      'Account scheduled for deletion',
+      `Your account will be permanently erased on <b>${escapeHtml(day(params.scheduledFor))}</b>. Until then you can change your mind. If you did not ask for this, cancel it and sign out your other devices.`,
+      { label: 'Cancel the deletion', url: params.cancelUrl },
+    ),
+  }
+}
+
+export function accountDeletionCancelledMail(): MailContent {
+  return {
+    subject: 'Account deletion cancelled',
+    text: 'The deletion of your account was cancelled. Nothing was erased. If this was not you, review your signed-in devices.',
+    html: layout(
+      'Deletion cancelled',
+      'The deletion of your account was cancelled. Nothing was erased. If this was not you, review your signed-in devices.',
+    ),
+  }
+}
+
+export function accountDeletedMail(params: { email: string }): MailContent {
+  return {
+    subject: 'Your account has been deleted',
+    text: `The account ${params.email} and its data have been erased. This is the last message we will send you.`,
+    html: layout(
+      'Account deleted',
+      `The account <b>${escapeHtml(params.email)}</b> and its data have been erased. This is the last message we will send you.`,
+    ),
+  }
+}

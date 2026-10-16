@@ -49,6 +49,8 @@ export interface ObjectStorage {
   /** Creates or overwrites the object. */
   write(key: string, data: Uint8Array, contentType: string): Promise<void>
   delete(key: string): Promise<void>
+  /** Deletes every object whose key starts with `prefix`; returns how many. Idempotent: nothing to delete is fine. */
+  deletePrefix(prefix: string): Promise<number>
 }
 
 /** Consumer-side deduplication (inbox pattern). Each (messageId, handler) takes effect only once. */

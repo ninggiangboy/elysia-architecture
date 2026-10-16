@@ -9,12 +9,12 @@ out into its own service later **without rewriting domain or application code**.
 
 **Stack:** Elysia · Bun · Drizzle · Postgres · SeaweedFS (S3) · Mailpit — React 19 + Vite + TanStack Router/Query + Tailwind on the front.
 
-It is not a CRUD demo. Passwordless sign-in, rotating sessions, realtime, in-app + Web Push notifications, avatar upload and
-rate-limited mail are all there to exercise the architecture under real distributed-systems pressure (retries, duplicates,
+It is not a CRUD demo. Passwordless sign-in, rotating sessions, realtime, in-app + Web Push notifications, avatar upload,
+rate-limited mail and GDPR export/erasure across modules are all there to exercise the architecture under real distributed-systems pressure (retries, duplicates,
 races, N instances).
 
 ```
-apps/api              backend  (identity · profile · notification · realtime)
+apps/api              backend  (identity · profile · notification · privacy · realtime)
 apps/web              React SPA
 packages/shared-types constants shared by web ↔ api
 docs/architecture.md  the full write-up: principles, flows, trade-offs, module-splitting checklist
@@ -71,11 +71,18 @@ A token bucket + daily quota in Postgres shared across instances, adaptive back-
 (SES `454`, Gmail `550 5.4.5`), `RetryLaterError` so the relay defers without burning retry attempts, expired magic links skipped instead
 of sent dead, and permanent per-address failures dropped without poisoning the event. Includes an Amazon SES guide.
 
-### 9. End-to-end types, zero codegen
+### 9. Privacy: export and erase, across modules
+A multi-step job that runs *through* every module, with no module importing another. **Export:** `privacy` asks, each module writes
+its own part to S3 and answers, the parts are zipped, and the link goes out by mail and notification. **Account deletion:** a grace
+period the user can cancel in, then a saga by choreography — each module erases its own data and confirms; a silent module is
+re-asked (only it), then the job stalls for an operator instead of lying about being done. Progress streams to the browser as
+*replayable* realtime events, and the whole thing works unchanged when a module becomes a service (it only needs the two events).
+
+### 10. End-to-end types, zero codegen
 The web client is [Eden Treaty](https://elysiajs.com/eden/overview): types are inferred straight from the backend `App` type
 (the web app aliases `#/*` to `../api/src/*`). Change a route's schema and the frontend stops compiling.
 
-### 10. Observable and shippable
+### 11. Observable and shippable
 `x-request-id`/`x-correlation-id` ride AsyncLocalStorage into every pino log line **and** the outbox message headers, so an async
 handler's logs trace back to the request that caused them. Set `OTEL_EXPORTER_OTLP_ENDPOINT` and the same chain shows up as one
 OpenTelemetry trace in Jaeger — HTTP request → outbox relay → every handler, and onward through events a handler emits. Env-only config, `/health/live` + `/health/ready`, graceful shutdown
@@ -118,6 +125,8 @@ Things worth trying:
 - **Avatar upload** — the browser uploads straight to S3 through a presigned URL; the server then validates the file, and the old avatar is cleaned up asynchronously. The profile cover image works the same way. In the browser a picked photo opens in a crop dialog (drag to move, slider/wheel to zoom, framed exactly as it will show) and only the cropped result is uploaded.
 - **In-app notifications** — a bell whose badge counts what is new since you last opened it (separate from unread) and opens the inbox in a popover, cursor-paged history and mark-as-read (one or all) that stays in sync across the user's open devices.
 - **Web Push** — opt in per browser to receive the same notifications as system notifications while the app is closed, without a buzz per event when many arrive at once.
+- **Export your data** — one zip with what every module holds about you (profile, avatar, notifications, sign-in methods…), mailed as a link, with live progress. Asking for it needs a recent confirmation.
+- **Delete your account** — scheduled, with a grace period to cancel; then every module erases and confirms, and you get a last mail. Try both at `/privacy`.
 - **Live events** — a Server-Sent Events stream for session and notification updates, plus a test endpoint to fire your own event.
 - **Transactional mail** — magic-link, welcome and email-confirmation mails sent through the outbox, with provider-aware rate limiting and retries.
 - **Token verification for other services** — a public JWKS endpoint (`/.well-known/jwks.json`).

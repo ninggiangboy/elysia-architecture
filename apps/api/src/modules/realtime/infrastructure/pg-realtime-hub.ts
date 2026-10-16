@@ -7,6 +7,7 @@ import type {
   RealtimeGateway,
   RealtimeMessage,
   RealtimeRegistration,
+  ReplayBuffer,
 } from '../application/ports'
 import { events } from './persistence/schema'
 
@@ -55,7 +56,7 @@ export function parseEventId(raw: string | undefined): number | undefined {
  * client that reconnects in time still replays it. Past the replay window (or `MAX_REPLAY` events) clients refetch state.
  * LISTEN needs a direct Postgres connection (not PgBouncer in transaction mode).
  */
-export class PgRealtimeHub implements RealtimeGateway {
+export class PgRealtimeHub implements RealtimeGateway, ReplayBuffer {
   private byUser = new Map<string, Set<Subscriber>>()
   private listening?: Promise<{ unlisten(): Promise<void> }>
   private stopped = false
@@ -221,6 +222,14 @@ export class PgRealtimeHub implements RealtimeGateway {
     const rows = await this.database.db
       .delete(events)
       .where(lt(events.createdAt, olderThan))
+      .returning({ seq: events.seq })
+    return rows.length
+  }
+
+  async purgeUser(userId: string): Promise<number> {
+    const rows = await this.database.db
+      .delete(events)
+      .where(eq(events.userId, userId))
       .returning({ seq: events.seq })
     return rows.length
   }

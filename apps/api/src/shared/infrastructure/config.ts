@@ -133,6 +133,17 @@ const schema = z
      */
     REALTIME_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
 
+    /** Account deletion: time between asking and the erasure starting. The user can cancel in between. */
+    PRIVACY_DELETION_GRACE_PERIOD: duration('14d'),
+    /** How long a finished data export can be downloaded. At most 7 days: that is the longest an S3 presigned link can live. */
+    PRIVACY_EXPORT_TTL: duration('7d'),
+    /** How often the privacy jobs look for deletions whose grace period ended, silent modules and expired exports. */
+    PRIVACY_JOBS_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
+    /** A data export or an erasure with no progress for this long is re-sent to the modules that have not answered. */
+    PRIVACY_STALL_AFTER: duration('10m'),
+    /** Re-sends before giving up: an export then fails, an erasure waits for an operator (`privacy:resume`). */
+    PRIVACY_MAX_NUDGES: z.coerce.number().int().nonnegative().default(5),
+
     /** OTLP/HTTP endpoint of a collector (Jaeger: http://localhost:4318). Leave unset to turn tracing off. */
     OTEL_EXPORTER_OTLP_ENDPOINT: blank.pipe(z.url().optional()),
     OTEL_SERVICE_NAME: z.string().default('elysia-architecture-api'),
@@ -168,6 +179,12 @@ const schema = z
           message: `${name}_CLIENT_ID and ${name}_CLIENT_SECRET must be set together`,
         })
     }
+    if (env.PRIVACY_EXPORT_TTL > 7 * 86400)
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PRIVACY_EXPORT_TTL'],
+        message: 'must be at most 7d (the longest an S3 presigned link can live)',
+      })
     if (env.VAPID_SUBJECT && !/^(mailto:|https:\/\/)/.test(env.VAPID_SUBJECT))
       ctx.addIssue({
         code: 'custom',

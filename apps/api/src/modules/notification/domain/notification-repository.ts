@@ -28,6 +28,8 @@ export interface NotificationRepository {
   countUnread(userId: string): Promise<number>
   /** Unread notifications that made news (`notifiedAt`) after the user last opened the list: the badge. */
   countUnseen(userId: string): Promise<number>
+  /** When the user last opened the list, `null` if never. */
+  lastSeenAt(userId: string): Promise<Date | null>
   /** The user has now seen everything up to `now`. Never moves backwards. */
   markSeen(userId: string, now: Date): Promise<void>
   /**

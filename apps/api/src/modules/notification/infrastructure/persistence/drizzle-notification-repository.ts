@@ -115,6 +115,14 @@ export class DrizzleNotificationRepository implements NotificationRepository {
     return row?.value ?? 0
   }
 
+  async lastSeenAt(userId: string): Promise<Date | null> {
+    const [row] = await this.database.executor
+      .select({ at: inboxState.seenAt })
+      .from(inboxState)
+      .where(eq(inboxState.userId, userId))
+    return row?.at ?? null
+  }
+
   async markSeen(userId: string, now: Date): Promise<void> {
     await this.database.executor
       .insert(inboxState)

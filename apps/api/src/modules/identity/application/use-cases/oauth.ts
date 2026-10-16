@@ -5,6 +5,7 @@ import {
   ValidationError,
 } from '#/shared/application/errors'
 import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { StepUpPolicy } from '#/shared/application/step-up-policy'
 import { OAUTH_STATE_TTL_MS, type OAuthPurpose } from '../../domain/auth-challenge'
 import { Email } from '../../domain/email'
 import { isOAuthProvider, OAuthAccount, type OAuthProviderId } from '../../domain/oauth-account'
@@ -18,7 +19,6 @@ import type { OAuthGateway, OAuthProfile, TokenService } from '../ports'
 import { oauthAccountUnlinked } from '../security-events'
 import type { SessionMeta, SessionTokens } from '../session-issuer'
 import type { SessionStarter } from '../session-starter'
-import type { StepUpPolicy } from '../step-up-policy'
 
 const unavailable = () =>
   new NotFoundError('oauth_provider_unavailable', 'This sign-in method is not available')

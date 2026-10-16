@@ -67,4 +67,17 @@ export class S3ObjectStorage implements ObjectStorage {
   async delete(key: string): Promise<void> {
     await this.internal.file(key).delete()
   }
+
+  async deletePrefix(prefix: string): Promise<number> {
+    let deleted = 0
+    // Deleted keys drop out of the listing, so asking for the first page again each time walks the whole prefix.
+    for (;;) {
+      const page = await this.internal.list({ prefix, maxKeys: 500 })
+      const keys = (page.contents ?? []).map((object) => object.key)
+      if (keys.length === 0) return deleted
+      await Promise.all(keys.map((key) => this.internal.file(key).delete()))
+      deleted += keys.length
+      if (!page.isTruncated) return deleted
+    }
+  }
 }

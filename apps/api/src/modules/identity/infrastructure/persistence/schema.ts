@@ -10,7 +10,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { outboxTable } from '#/shared/infrastructure/outbox/tables'
+import { inboxTable, outboxTable } from '#/shared/infrastructure/outbox/tables'
 
 export const identitySchema = pgSchema('identity')
 
@@ -162,3 +162,4 @@ export const stepUpCodes = identitySchema.table(
 )
 
 export const outbox = outboxTable(identitySchema)
+export const inbox = inboxTable(identitySchema)

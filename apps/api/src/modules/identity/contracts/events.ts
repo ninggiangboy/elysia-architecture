@@ -14,6 +14,9 @@ export const IdentityEvents = {
   PasskeyRemoved: 'identity.passkey_removed.v1',
   OAuthAccountLinked: 'identity.oauth_account_linked.v1',
   OAuthAccountUnlinked: 'identity.oauth_account_unlinked.v1',
+  /** Answers to the privacy module's requests (see `privacy/contracts`). */
+  DataExported: 'identity.data_exported.v1',
+  UserDataErased: 'identity.user_data_erased.v1',
 } as const
 
 export interface MagicLinkRequestedPayload {

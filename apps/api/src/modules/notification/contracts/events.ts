@@ -6,6 +6,9 @@ export const NotificationEvents = {
   Created: 'notification.created.v1',
   Read: 'notification.read.v1',
   Seen: 'notification.seen.v1',
+  /** Answers to the privacy module's requests (see `privacy/contracts`). */
+  DataExported: 'notification.data_exported.v1',
+  UserDataErased: 'notification.user_data_erased.v1',
 } as const
 
 export interface NotificationCreatedPayload {

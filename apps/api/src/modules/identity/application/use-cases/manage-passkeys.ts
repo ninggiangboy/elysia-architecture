@@ -1,8 +1,8 @@
 import { NotFoundError } from '#/shared/application/errors'
 import type { Clock, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { StepUpPolicy } from '#/shared/application/step-up-policy'
 import type { PasskeyRepository } from '../../domain/repositories'
 import { passkeyRemoved } from '../security-events'
-import type { StepUpPolicy } from '../step-up-policy'
 import { type PasskeyView, toPasskeyView } from './passkey-registration'
 
 export class ListPasskeys {

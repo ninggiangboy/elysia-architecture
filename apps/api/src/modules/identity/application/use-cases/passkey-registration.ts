@@ -1,5 +1,6 @@
 import { ConflictError, NotFoundError, ValidationError } from '#/shared/application/errors'
 import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { StepUpPolicy } from '#/shared/application/step-up-policy'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import { MAX_PASSKEYS_PER_USER, Passkey } from '../../domain/passkey'
 import type {
@@ -8,7 +9,6 @@ import type {
   WebAuthnChallengeRepository,
 } from '../../domain/repositories'
 import type { WebAuthnResponse, WebAuthnService } from '../ports'
-import type { StepUpPolicy } from '../step-up-policy'
 
 export interface PasskeyView {
   id: string

@@ -1,11 +1,11 @@
 import { ConflictError, NotFoundError } from '#/shared/application/errors'
 import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { StepUpPolicy } from '#/shared/application/step-up-policy'
 import { DomainError } from '#/shared/domain/errors'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'
 import type { EmailChangeRequestRepository, UserRepository } from '../../domain/repositories'
 import type { TokenService } from '../ports'
-import type { StepUpPolicy } from '../step-up-policy'
 
 export class RequestEmailChange {
   constructor(

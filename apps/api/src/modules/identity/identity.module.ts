@@ -1,14 +1,27 @@
-import type { Clock, IdGenerator } from '#/shared/application/ports'
+import {
+  type AccountErasureRequestedPayload,
+  type DataExportRequestedPayload,
+  PrivacyEvents,
+} from '#/modules/privacy/contracts'
+import type {
+  Clock,
+  IdGenerator,
+  IntegrationEventHandler,
+  ObjectStorage,
+} from '#/shared/application/ports'
+import { EraseUserDataHandler, ExportUserDataHandler } from '#/shared/application/privacy'
+import { StepUpPolicy } from '#/shared/application/step-up-policy'
 import type { Config } from '#/shared/infrastructure/config'
 import type { Database } from '#/shared/infrastructure/db/database'
+import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import { IdentityDataExporter } from './application/identity-data-exporter'
 import { PasskeyAssertions } from './application/passkey-assertions'
 import type { OAuthGateway, WebAuthnService } from './application/ports'
 import { IdentityApiImpl } from './application/queries/identity-api-impl'
 import { SessionIssuer } from './application/session-issuer'
 import { SessionStarter } from './application/session-starter'
-import { StepUpPolicy } from './application/step-up-policy'
 import { ConfirmEmailChange } from './application/use-cases/confirm-email-change'
 import { Logout } from './application/use-cases/logout'
 import { ListPasskeys, RemovePasskey } from './application/use-cases/manage-passkeys'
@@ -40,10 +53,12 @@ import {
 } from './application/use-cases/step-up'
 import { VerifyMagicLink } from './application/use-cases/verify-magic-link'
 import type { AccessTokenVerifier } from './contracts/access-token-verifier'
+import { IdentityEvents } from './contracts/events'
 import type { IdentityApi } from './contracts/identity-api'
 import { DrizzleMagicLinkThrottle } from './infrastructure/drizzle-magic-link-throttle'
 import { JwtTokenService } from './infrastructure/jwt-token-service'
 import { ArcticOAuthGateway } from './infrastructure/oauth-gateway'
+import { DrizzleIdentityDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
 import {
   DrizzleEmailChangeRequestRepository,
   DrizzleMagicLinkRepository,
@@ -57,7 +72,7 @@ import {
   DrizzleStepUpCodeRepository,
   DrizzleWebAuthnChallengeRepository,
 } from './infrastructure/persistence/drizzle-security-repositories'
-import { outbox } from './infrastructure/persistence/schema'
+import { inbox, outbox } from './infrastructure/persistence/schema'
 import { SimpleWebAuthnService } from './infrastructure/simplewebauthn-service'
 import { identityRoutes } from './presentation/routes'
 
@@ -66,6 +81,8 @@ export interface IdentityModuleDeps {
   config: Config
   clock: Clock
   ids: IdGenerator
+  /** Where the data export is written. */
+  storage: ObjectStorage
   /** Replace the real WebAuthn / OAuth adapters (tests: a software authenticator, a fake provider). */
   webauthn?: WebAuthnService
   oauth?: OAuthGateway
@@ -76,11 +93,13 @@ export interface IdentityModule {
   routes: ReturnType<typeof identityRoutes>
   api: IdentityApi
   verifier: AccessTokenVerifier
+  /** Takes part in the privacy module's data export and account erasure. */
+  handlers: IntegrationEventHandler[]
   outbox: OutboxSource
 }
 
 export async function createIdentityModule(deps: IdentityModuleDeps): Promise<IdentityModule> {
-  const { database, config, clock, ids } = deps
+  const { database, config, clock, ids, storage } = deps
 
   const tokenService = await JwtTokenService.create(
     {
@@ -99,6 +118,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
   const emailChanges = new DrizzleEmailChangeRequestRepository(database)
   const refreshTokens = new DrizzleRefreshTokenRepository(database)
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
+  const inboxGuard = new DrizzleInboxGuard(database, inbox)
   const throttle = new DrizzleMagicLinkThrottle(database, {
     perEmail: config.MAGIC_LINK_MAX_PER_EMAIL,
     perIp: config.MAGIC_LINK_MAX_PER_IP,
@@ -260,6 +280,33 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
     routes,
     api: new IdentityApiImpl(users),
     verifier: tokenService,
+    handlers: [
+      new ExportUserDataHandler<DataExportRequestedPayload>(
+        {
+          name: 'identity.export-user-data',
+          module: 'identity',
+          requestType: PrivacyEvents.DataExportRequested,
+          answerType: IdentityEvents.DataExported,
+        },
+        new IdentityDataExporter(users, passkeys, oauthAccounts, refreshTokens, clock),
+        storage,
+        outboxWriter,
+        inboxGuard,
+        clock,
+      ),
+      new EraseUserDataHandler<AccountErasureRequestedPayload>(
+        {
+          name: 'identity.erase-user-data',
+          module: 'identity',
+          requestType: PrivacyEvents.AccountErasureRequested,
+          answerType: IdentityEvents.UserDataErased,
+        },
+        new DrizzleIdentityDataEraser(database),
+        outboxWriter,
+        inboxGuard,
+        clock,
+      ),
+    ],
     outbox: { name: 'identity', table: outbox },
   }
 }

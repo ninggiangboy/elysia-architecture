@@ -74,6 +74,9 @@ class InMemoryNotifications implements NotificationRepository {
       (n) => n.userId === userId && n.props.readAt === null && (!seen || n.props.notifiedAt > seen),
     ).length
   }
+  async lastSeenAt(userId: string) {
+    return this.seenAt.get(userId) ?? null
+  }
   async markSeen(userId: string, now: Date) {
     this.seenAt.set(userId, now)
   }

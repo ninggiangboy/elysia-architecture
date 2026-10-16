@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { Database } from '#/shared/infrastructure/db/database'
 import { migrateModule } from '#/shared/infrastructure/db/migrate'
 
-const MODULES = ['identity', 'profile', 'notification', 'realtime'] as const
+const MODULES = ['identity', 'profile', 'notification', 'privacy', 'realtime'] as const
 const root = join(import.meta.dir, '..')
 const command = process.argv[2]
 

@@ -1,4 +1,9 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
+import {
+  type AccountErasureRequestedPayload,
+  type DataExportRequestedPayload,
+  PrivacyEvents,
+} from '#/modules/privacy/contracts'
 import type {
   Clock,
   IdGenerator,
@@ -6,6 +11,7 @@ import type {
   Log,
   ObjectStorage,
 } from '#/shared/application/ports'
+import { EraseUserDataHandler, ExportUserDataHandler } from '#/shared/application/privacy'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
@@ -15,6 +21,7 @@ import { CreateProfileOnUserRegistered } from './application/handlers/create-pro
 import { DeleteOldAvatar } from './application/handlers/delete-old-avatar'
 import { DeleteOldCover } from './application/handlers/delete-old-cover'
 import { GenerateAvatarThumbnails } from './application/handlers/generate-avatar-thumbnails'
+import { ProfileDataExporter } from './application/profile-data-exporter'
 import { ProfileLoader } from './application/profile-loader'
 import { GetMe } from './application/use-cases/get-me'
 import { RequestAvatarUpload } from './application/use-cases/request-avatar-upload'
@@ -22,6 +29,8 @@ import { RequestCoverUpload } from './application/use-cases/request-cover-upload
 import { SetAvatar } from './application/use-cases/set-avatar'
 import { SetCover } from './application/use-cases/set-cover'
 import { UpdateProfile } from './application/use-cases/update-profile'
+import { ProfileEvents } from './contracts/events'
+import { DrizzleProfileDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
 import { DrizzleProfileRepository } from './infrastructure/persistence/drizzle-profile-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
 import { SharpImageResizer } from './infrastructure/sharp-image-resizer'
@@ -71,6 +80,31 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
       new DeleteOldAvatar(storage, inboxGuard),
       new DeleteOldCover(storage, inboxGuard),
       new GenerateAvatarThumbnails(storage, new SharpImageResizer(), inboxGuard, log),
+      new ExportUserDataHandler<DataExportRequestedPayload>(
+        {
+          name: 'profile.export-user-data',
+          module: 'profile',
+          requestType: PrivacyEvents.DataExportRequested,
+          answerType: ProfileEvents.DataExported,
+        },
+        new ProfileDataExporter(profiles),
+        storage,
+        outboxWriter,
+        inboxGuard,
+        clock,
+      ),
+      new EraseUserDataHandler<AccountErasureRequestedPayload>(
+        {
+          name: 'profile.erase-user-data',
+          module: 'profile',
+          requestType: PrivacyEvents.AccountErasureRequested,
+          answerType: ProfileEvents.UserDataErased,
+        },
+        new DrizzleProfileDataEraser(database, storage),
+        outboxWriter,
+        inboxGuard,
+        clock,
+      ),
     ],
     outbox: { name: 'profile', table: outbox },
   }

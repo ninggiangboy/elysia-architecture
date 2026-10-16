@@ -56,3 +56,9 @@ export interface RealtimeGateway {
    */
   register(connection: RealtimeConnection, lastEventId?: string): Promise<RealtimeRegistration>
 }
+
+/** The replay buffer, seen from the one place that must empty it for a user: account erasure. */
+export interface ReplayBuffer {
+  /** Deletes every stored event of the user; returns how many. */
+  purgeUser(userId: string): Promise<number>
+}

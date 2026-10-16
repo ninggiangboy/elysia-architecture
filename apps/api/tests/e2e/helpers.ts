@@ -20,7 +20,7 @@ export async function createTestApp(
     ...env,
   })
   const container = await createContainer(config, createLogger('silent'), overrides)
-  container.relay.start()
+  container.startWorker()
   const app = buildApp(container)
   return { app, container, config }
 }

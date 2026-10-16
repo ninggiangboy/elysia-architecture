@@ -1,0 +1,18 @@
+import { eq } from 'drizzle-orm'
+import type { DataEraser } from '#/shared/application/privacy'
+import type { Database } from '#/shared/infrastructure/db/database'
+import { erasePublishedOutbox } from '#/shared/infrastructure/outbox/erase-published'
+import { inboxState, notifications, outbox, pushSubscriptions } from './schema'
+
+/** Removes the user's notifications, their read marker and their push subscriptions (a subscription is a way to reach the person). */
+export class DrizzleNotificationDataEraser implements DataEraser {
+  constructor(private database: Database) {}
+
+  async erase(userId: string): Promise<void> {
+    const db = this.database.executor
+    await db.delete(notifications).where(eq(notifications.userId, userId))
+    await db.delete(inboxState).where(eq(inboxState.userId, userId))
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId))
+    await erasePublishedOutbox(this.database, outbox, userId)
+  }
+}

@@ -33,14 +33,17 @@
         Postgres (+ LISTEN/NOTIFY) · SeaweedFS (S3) · SMTP (Mailpit) · Web Push service
 ```
 
+`privacy` (schema `privacy`) is not drawn: it sits beside the others and talks to identity / profile / notification only through events (see *Privacy* below).
+
 ## Modules
 
 | Module | Owns | Publishes | Consumes | Talks to |
 | --- | --- | --- | --- | --- |
-| `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters, passkeys, OAuth links, WebAuthn challenges / OAuth states / step-up codes (all short-lived) | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked`, `step_up_code_requested`, `passkey_added`, `passkey_removed`, `oauth_account_linked`, `oauth_account_unlinked` | — | — |
-| `profile` | profiles (display name, avatar, cover image, optimistic-lock `version`) | `avatar_changed`, `cover_changed` | `user_registered` (create profile), `avatar_changed` (delete old file, make thumbnails), `cover_changed` (delete old file) | `IdentityApi.getAccount` (sync, for `GET /me`) |
-| `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read` | identity events (mail, in-app — including the security alerts for added/removed sign-in methods), `session_revoked` (drop push subscriptions), `created` (Web Push) | — |
-| `realtime` | `realtime.events` (replay buffer, opt-in events only) | — | `session_revoked`, `notification.created/read` → SSE | — |
+| `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters, passkeys, OAuth links, WebAuthn challenges / OAuth states / step-up codes (all short-lived) | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked`, `step_up_code_requested`, `passkey_added`, `passkey_removed`, `oauth_account_linked`, `oauth_account_unlinked`, `data_exported`, `user_data_erased` | `data_export_requested`, `account_erasure_requested` (privacy) | — |
+| `profile` | profiles (display name, avatar, cover image, optimistic-lock `version`) | `avatar_changed`, `cover_changed`, `data_exported`, `user_data_erased` | `user_registered` (create profile), `avatar_changed` (delete old file, make thumbnails), `cover_changed` (delete old file), `data_export_requested`, `account_erasure_requested` (privacy) | `IdentityApi.getAccount` (sync, for `GET /me`) |
+| `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read`, `data_exported`, `user_data_erased` | identity events (mail, in-app — including the security alerts for added/removed sign-in methods), `session_revoked` (drop push subscriptions), `created` (Web Push), privacy events (export ready/failed, deletion scheduled/cancelled/done → mail + in-app), `data_export_requested`, `account_erasure_requested` | — |
+| `privacy` | the *ledger* of two jobs: `export_requests` + `export_parts`, `account_deletions` + `deletion_steps` (never the data itself); archives in the bucket under `exports/<userId>/` | `data_export_requested`, `data_export_progressed`, `data_export_ready`, `data_export_failed`, `account_deletion_scheduled`, `account_deletion_cancelled`, `account_erasure_requested`, `account_erasure_progressed`, `account_deletion_stalled`, `account_deleted` | every participant's `<module>.data_exported` and `<module>.user_data_erased` (one consumer group per module and direction) | `IdentityApi.getAccount` (sync, only for the address to mail) |
+| `realtime` | `realtime.events` (replay buffer, opt-in events only) | — | `session_revoked`, `notification.created/read` → SSE; `privacy.*` job steps → SSE (replayed); `account_deleted` → purge the user's buffer | — |
 
 Event names are `<module>.<name>.v1` (see each module's `contracts/events.ts`). Contracts are the *only* thing another module may import.
 
@@ -159,7 +162,7 @@ A family **is** one signed-in device (its id is the `sid` claim), and each refre
 - Flow: use case → outbox (`identity.session_started.v1`, `identity.session_revoked.v1`) → relay → `RealtimePushHandler` → `NOTIFY realtime` (replayable events: plus an insert into `realtime.events` in the same tx) → every API instance that has a `LISTEN realtime` connection delivers to its own sockets. Postgres is the fan-out, so there is no Redis, no sticky sessions, and the relay may run in a different process from the API.
 - One transport, SSE (`GET /realtime/events`), carrying messages `{ id, type, data, at }`. It is consumed with `fetch` (not `EventSource`) so it can send `Authorization: Bearer`. Server → client only is all these use cases need; WebSocket was deliberately left out.
 - Remote logout is pushed to the revoked device (`session.revoked`) and the server then closes that session's connections, so the web app signs out immediately instead of after the 15-minute access token. Other devices of the user refresh their device list from the same event.
-- **Replay is opt-in per event** (`RealtimeEvent.replay`, default off). Most events here mean "something changed, refetch" and are neither stored nor given an id; clients refetch that state on every `ready`. Only events whose loss a refetch cannot repair set `replay: true` — today just `session.revoked`: a device that was offline when it was signed out reconnects with a still-valid access token and must learn it was signed out, not wait for the token to expire. Future candidates: chat messages, steps of a long job.
+- **Replay is opt-in per event** (`RealtimeEvent.replay`, default off). Most events here mean "something changed, refetch" and are neither stored nor given an id; clients refetch that state on every `ready`. Only events whose loss a refetch cannot repair set `replay: true` — today just `session.revoked`: a device that was offline when it was signed out reconnects with a still-valid access token and must learn it was signed out, not wait for the token to expire. The steps of the privacy jobs (`privacy.export.progress/ready/failed`, `privacy.deletion.progress`) are the second user: a client that was away must still learn how the job went. Future candidates: chat messages.
 - How it works: a replayable event is inserted into `realtime.events` and `NOTIFY`-ed in one transaction (publishers take a per-user advisory lock, so the global `seq` is in commit order per user); `seq` is the SSE `id:`. `ready` carries a `cursor` (the newest `seq` at connect time), so even a client that never saw a replayable event has something to send back as `Last-Event-ID`; each replayable event then moves it forward. On reconnect `ready` says `resumed: true` and the missed replayable events follow it in order before live delivery continues (the connection is subscribed before the buffer is read; the overlap is de-duplicated). Replaying an event that carries `closeSessionId` hangs up that session's connection like the live one would.
 - The buffer is trustworthy only if nothing after the cursor was pruned: the cursor must be ≤ the newest `seq` and ≥ the oldest stored `seq` − 1. Otherwise (no/malformed/future/too-old cursor, or more than 200 missed events) `resumed: false` and nothing is replayed — the client resyncs. The header is untrusted input, parsed as a plain integer, and rows are always filtered by the authenticated user. The buffer is pruned every minute to `REALTIME_REPLAY_WINDOW_SECONDS` (default 900, i.e. the access-token TTL: past it the device cannot refresh its session anyway).
 - Still best-effort for everything else: events older than 60 s when the relay delivers them are dropped, and a non-replayable event sent while a client is offline or an instance reconnects its LISTEN is not delivered — the refetch on `ready` covers it. Authentication is checked when the stream opens.
@@ -185,6 +188,53 @@ A family **is** one signed-in device (its id is the `sid` claim), and each refre
 
 **Cover image**: the same flow under `/me/cover` (up to 5 MB). Cover keys live in `<userId>/cover/`, which keeps them apart from avatars — `PUT /me/avatar` refuses a cover key, so each cleanup handler (`profile.cover_changed.v1` → delete the old file) can only ever delete its own kind of file.
 
+## Privacy: data export and account deletion
+
+Two jobs that run *through* every module. `privacy` owns the process and its progress; it never reads or deletes another module's data — it asks, and each module answers with an event. Splitting a module into a service changes nothing here: the service consumes the two request events and emits its two answers (see the checklist).
+
+```
+                        ┌─ identity.export-user-data ─┐
+privacy.data_export_    │  profile.export-user-data   │   <module>.data_exported       privacy.record-export-part:<module>
+requested ──────────────┼─ notification.export-…  ────┼──► (key of its JSON in S3) ──►  tick it off; the last one → export_collected
+                        └─────────────────────────────┘                                          │
+                                     writes under exports/<userId>/<exportId>/parts/              ▼
+                                                                     privacy.assemble-export → zip → data_export_ready ─► mail + in-app
+```
+
+**Export**
+- `POST /privacy/exports` (needs a recent confirmation, see step-up) inserts the job (`export_requests` with one `export_parts` row per participant) and `privacy.data_export_requested.v1` in one transaction. One export at a time per user (a partial unique index, so two clicks cannot both win).
+- Each participant's handler collects its data (`DataExporter`), writes `<uploadPrefix><module>.json` to the bucket and answers `<module>.data_exported.v1` carrying the key and any extra files to ship (profile: avatar and cover originals). The write comes first and is idempotent, so an answer always points at a file.
+- `RecordExportPart` ticks the module off **under a row lock** (`FOR UPDATE`): two modules answering at once are applied one after the other, so exactly one sees the set complete and starts the assembly. Every part emits `data_export_progressed` (`done` / `total`).
+- `AssembleExport` reads the parts, builds `README.txt`, `data/<module>.json` and `files/…` into a zip (`fflate`, in memory: the data is bounded), writes `archive.zip`, asks `IdentityApi.getAccount` for the address (not stored in privacy), presigns a link that lives `PRIVACY_EXPORT_TTL` (≤ 7 days, the S3 limit) and emits `data_export_ready`. Then the parts are deleted: they were a means.
+- The link goes in **the mail** (notification keeps `expiresAt` on it, so a late mail is skipped rather than sent dead) — the mailbox is the same root of trust as a magic link. The in-app notification only points to `/privacy`; it never holds the link. From the page `GET /privacy/exports/{id}/download` issues a fresh 15-minute link and, like the request, needs a recent confirmation: an access token alone cannot take the archive.
+- After `PRIVACY_EXPORT_TTL` the jobs mark the export `expired` and delete its folder.
+
+**Account deletion**
+
+```
+POST /privacy/deletion ─► scheduled (grace period PRIVACY_DELETION_GRACE_PERIOD, mail + notification, cancellable)
+                              │ jobs: scheduled_for reached
+                              ▼
+                   running ── account_erasure_requested{modules} ──► identity / profile / notification / privacy erase
+                       ▲                                              (data + published outbox rows + S3 prefix), each in ONE
+                       │ jobs: quiet for PRIVACY_STALL_AFTER           transaction with its <module>.user_data_erased
+                       │ → re-send to the modules still owed                         │
+                       │   (up to PRIVACY_MAX_NUDGES)                                ▼
+                    stalled ◄────────────────────────────  privacy.record-erasure:<module> ticks the step, emits
+                       │ privacy:resume                       account_erasure_progressed; the last one completes the job
+                       └─► running                            and emits account_deleted → goodbye mail, purge realtime buffer
+```
+
+- `POST /privacy/deletion` needs a recent confirmation (this closes the old trade-off: deletion is the sensitive action `StepUpPolicy` was kept for — the policy now lives in `shared/application` so privacy can use it). It only *schedules*: the row, the address (kept to say goodbye) and `account_deletion_scheduled`, which becomes a mail with a cancel link and a security-alert notification. Signing in during the grace period does **not** cancel it; `GET /privacy/deletion` is how a client finds out and offers to cancel (the web app's `/privacy` page does).
+- `DELETE /privacy/deletion` cancels while `scheduled`; once `running` it answers `409 deletion_in_progress` — erasing cannot be undone, and half-undoing it would be worse than finishing.
+- **The clock is a job, not an event.** `PrivacyJobs.runOnce` (a timer in the worker role, `PRIVACY_JOBS_INTERVAL_SECONDS`) starts due deletions, re-sends to silent modules and expires exports. Rows are claimed with `FOR UPDATE SKIP LOCKED`, so any number of instances can tick without repeating each other's work.
+- **Failures.** A handler that throws is retried by the relay with backoff like any other (the common case, handled below privacy). What the relay cannot see is a module that never answers (message dead-lettered, service down): after `PRIVACY_STALL_AFTER` without progress the request is re-sent **only to the modules still owed** (new message id → the inbox does not block the retry; the erasure is idempotent anyway), up to `PRIVACY_MAX_NUDGES`. Then the deletion becomes `stalled`, `account_deletion_stalled` is emitted and an `error` is logged — a person has to look (`bun run --filter @app/api privacy:list`; fix the cause, `outbox:requeue` if a message is dead, then `privacy:resume -- --id <uuid>`). A stalled job still accepts a late confirmation and completes by itself. To the user a stalled deletion looks like a running one. An export that never gets all its parts is *failed* instead (the user is told and may ask again): nothing was lost, only a copy not made.
+- **Each module's erasure** removes everything it holds about the user — profile, every file under `<userId>/` (including uploads never set as avatar), notifications and push subscriptions, sessions, passkeys, links, challenges — **and the published outbox messages about them** (they keep addresses and tokens until the relay's retention cleanup). Messages not yet published are left: they are still owed to their consumers. No event announces the erasure of sessions: a "signed out" notification for a deleted account would be new data about them. The module's own confirmation (ids and a time) stays in its outbox.
+- Privacy takes part in its own erasure (archives and their records; the addresses of earlier, cancelled deletions). The running deletion's row stays as proof the erasure happened, with the address scrubbed on completion.
+- Realtime has no outbox, so it cannot confirm; it purges the user's replay-buffer rows on `account_deleted` (best effort — the buffer expires in `REALTIME_REPLAY_WINDOW_SECONDS` anyway).
+
+**Progress in the browser.** The steps are replayable realtime events (`privacy.export.progress`, `privacy.export.ready/failed`, `privacy.deletion.progress`), the case the replay buffer was designed for: a tab that was away reconnects with `Last-Event-ID` and still gets how the job went. They carry counts and module names — never the download link, because the buffer is stored. `done` is a count, not a step number: delivery is not ordered across relay instances, so a client keeps the highest value (the web app simply refetches).
+
 ## Sending mail and rate limiting
 
 Mail goes through the outbox, so it never slows down or breaks a request. "Sending in a way the provider will not reject" has four layers:
@@ -204,7 +254,7 @@ OutboxRelay ─► MailEventHandler ─► ThrottledMailer ─► real Mailer (S
 4. **Pointless mail is not sent**: magic link / email-change links carry `expiresAt`; if a mail is deferred past that, it is skipped instead of sending a dead link. A permanent failure for one address (550/554) drops only that mail and logs `error`, without sending the whole event to dead or blocking other consumers.
 
 Dead-letter operations: `bun run --filter @app/api outbox:list` and `outbox:requeue [-- --id <uuid> | --type <event>]`.
-Requeue is safe because the inbox blocks handlers that already finished, so nothing is sent twice.
+Requeue is safe because the inbox blocks handlers that already finished, so nothing is sent twice. Privacy jobs that are waiting on a module: `privacy:list`, `privacy:resume` (see *Privacy*).
 
 ### Using Amazon SES
 
@@ -217,9 +267,9 @@ Requeue is safe because the inbox blocks handlers that already finished, so noth
 
 | Level | Command | What it proves |
 | --- | --- | --- |
-| Domain + use cases | `bun run test` | Business rules and orchestration against in-memory fakes (`shared/testing/fakes.ts`) — no I/O, runs in milliseconds. Possible only because use cases depend on ports. |
+| Domain + use cases | `bun run test` | Business rules and orchestration against in-memory fakes (`shared/testing/fakes.ts`) — no I/O, runs in milliseconds. Possible only because use cases depend on ports. Privacy's choreography runs here end to end with a hand-rolled relay, including a participant that "lives in another service" and one that fails or goes silent. |
 | Architecture | `bun run check:arch` | The layer/module rules above, via dependency-cruiser. |
-| API e2e | `bun run test:e2e` (api) | The real `buildApp` against real Postgres/S3/Mailpit: full flows, outbox retry and dead-letter, mail throttling, SSE, Web Push (with a fake push sender). |
+| API e2e | `bun run test:e2e` (api) | The real `buildApp` against real Postgres/S3/Mailpit: full flows, outbox retry and dead-letter, mail throttling, SSE, Web Push (with a fake push sender), privacy (a real zip from S3, erasure across modules, the jobs on the real tables). |
 | Web e2e | `bun run test:e2e` (web) | Playwright journeys: sign-in, profile, realtime sign-out, notifications. |
 | Hygiene | `quality:unused`, `quality:dup`, `lint` | knip (dead code/deps), jscpd (duplication), Biome (lint + format). |
 
@@ -233,14 +283,18 @@ GitHub Actions: **CI** (lint, typecheck, `check:arch`, unit, build; then e2e wit
 3. Put events and sync interfaces in `contracts/` only (versioned names, plain DTOs). Other modules import nothing else from it.
 4. Wire it in `bootstrap/container.ts` (subscribe its handlers to the bus, add its outbox to the `OutboxRelay`) and mount its routes in `app.ts`.
 5. Write handlers as idempotent integration-event handlers; the inbox guards them, but side effects outside the DB (mail, push) must tolerate a retry.
-6. `bun run check:arch` — if it fails, a boundary was crossed.
+6. If it holds anything about a person: take part in privacy — give it a `DataExporter` and a `DataEraser` and wire the two shared handlers (`ExportUserDataHandler`, `EraseUserDataHandler`, see `shared/application/privacy.ts`), then add its name to the participant lists in `bootstrap/container.ts`. An account is not "deleted" until every listed module has confirmed, so a module that is missing from the list is a module whose data survives.
+7. `bun run check:arch` — if it fails, a boundary was crossed.
 
 ## Deliberate trade-offs
 
 - **Step-up is stateless, so it cannot be revoked**: a confirmed access token keeps its `auth_time` for the whole `STEP_UP_TTL` even if the user signs the device out meanwhile (same ≤ 15-minute caveat as below), and a refresh drops it — the user simply confirms again. A passkey is the strong method; the emailed code is only as strong as the mailbox, and either can be picked, so owning a passkey does not force it.
 - **OAuth step-up is deliberately not offered**: the attacker who holds a victim's browser session usually also holds their Google/GitHub session, so a redirect through the provider proves nothing extra.
 - **Challenge / state tables are written by unauthenticated calls** (`/auth/passkey/options`, `/auth/oauth/*/start`): rows are pruned an hour after expiry on the next insert, but there is no per-IP limit here the way the magic link has. Put a rate limit on `/api/auth/*` at the proxy if the API is exposed.
-- **Account deletion is not implemented**, so the step-up guard is not applied to it yet; when it is added it should call `StepUpPolicy.assertFresh` first, like `RequestEmailChange`.
+- **Erasure races with events already in flight.** Events about the user that were emitted before the erasure but are handled after it can write a stray row (a notification, a push subscription). Handlers are not made to check "was this user erased": the window is the relay's lag, and the same goes for a still-valid access token (≤ 15 minutes) that writes after its account is gone (`GET /me` is 404, but `POST /notifications/seen` would still insert a row). Closing it fully needs a tombstone per module; the cost was judged higher than a user-id-and-timestamp row.
+- **Personal data lingers in outbox payloads until the relay's cleanup (7 days)** wherever a module did not erase it: the export link and the address in privacy's own events are erased with the account (privacy erases its published outbox rows), but an export link is valid for up to `PRIVACY_EXPORT_TTL` regardless, like the magic-link token below. The archive itself is deleted at expiry.
+- **A completed deletion leaves a ledger row** (ids, timestamps, no address) as proof that the erasure happened. Dropping it is a retention decision, not a technical one.
+- **The export is built in memory** (zip of JSON plus two images). Fine while the data per user is small; a module that can hold a lot per user should write several files and the assembler should stream.
 - **Logout (and remote logout of a device) does not revoke the access token immediately**: it stays valid for up to 15 minutes. Making it instant needs a denylist in a fast store (Redis) — the project deliberately avoids Redis.
 - **Magic-link rate limit in Postgres** (3/email, 10/IP per 15 minutes): correct with many instances, but a few extra requests can slip through under a race. Enough to stop spam; for something stricter, replace the adapter of the `MagicLinkThrottle` port.
 - **`x-forwarded-for` is trustworthy only behind a reverse proxy we control** (the nginx in compose sets it). Do not expose the API directly to the Internet while still trusting this header.
@@ -258,4 +312,5 @@ For example splitting out `notification` (the simplest) or `profile`:
 3. **Synchronous calls**: for a contract other modules call (e.g. `IdentityApi`), write `HttpIdentityApi implements IdentityApi` and change the wiring in the composition root. Add timeouts, retries and a circuit breaker.
 4. **Auth**: the new service verifies JWTs with identity's JWKS (`createRemoteJWKSet`) instead of the in-process `AccessTokenVerifier`.
 5. **Deployment**: reuse the image, set a suitable `APP_ROLES` (`api`, `worker`) and mount only that module's routes/handlers in the new composition root.
-6. **Verify**: `check:arch` must stay clean (no module imports another module's internals); rerun e2e over the network.
+6. **Privacy**: the new service still has to take part in the two jobs — consume `privacy.data_export_requested.v1` and `privacy.account_erasure_requested.v1`, and answer `<module>.data_exported.v1` / `<module>.user_data_erased.v1` (payloads in `privacy/contracts`). Nothing else changes: `privacy` keeps the module's name in its participant lists and does not care where the module runs. Two things to carry over: the service writes its export part to the **same bucket** under the `uploadPrefix` it is given (or `privacy` needs a transport for the bytes), and it must erase **idempotently** (the request is re-sent when it is slow). While the service is down a deletion waits, is re-sent, then stalls rather than completing — the right failure for "forget me". Keep it in the participant list until its data is really gone; removing it is what makes a deletion complete without it.
+7. **Verify**: `check:arch` must stay clean (no module imports another module's internals); rerun e2e over the network (privacy's export and deletion included — they are the test that every module still answers).

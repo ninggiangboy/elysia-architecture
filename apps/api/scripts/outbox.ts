@@ -1,9 +1,11 @@
 // Outbox dead-letter operations:
 //   bun scripts/outbox.ts list
-//   bun scripts/outbox.ts requeue [--module identity|profile] [--type <event type>] [--id <uuid>]
+//   bun scripts/outbox.ts requeue [--module identity|profile|notification|privacy] [--type <event type>] [--id <uuid>]
 // A handler that already finished a message is blocked by the inbox, so requeue does not send duplicates; only unfinished handlers run again.
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
+import { outbox as notificationOutbox } from '#/modules/notification/infrastructure/persistence/schema'
+import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'
 import { Database } from '#/shared/infrastructure/db/database'
 import type { OutboxTable } from '#/shared/infrastructure/outbox/tables'
@@ -11,6 +13,8 @@ import type { OutboxTable } from '#/shared/infrastructure/outbox/tables'
 const SOURCES: { name: string; table: OutboxTable }[] = [
   { name: 'identity', table: identityOutbox },
   { name: 'profile', table: profileOutbox },
+  { name: 'notification', table: notificationOutbox },
+  { name: 'privacy', table: privacyOutbox },
 ]
 
 const env = process.env as Record<string, string | undefined>
