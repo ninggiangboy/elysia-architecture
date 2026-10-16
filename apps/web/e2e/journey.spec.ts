@@ -53,7 +53,7 @@ test.describe
       await page.getByLabel('Display name').fill('Playwright Tester')
       await page.getByLabel('Bio').fill('Hello from the browser')
       // The profile row is created asynchronously after sign-up. If the page loaded before that (version 0), the first save
-      // gets a "changed elsewhere" notice, the page reloads the latest version, and saving again succeeds.
+      // conflicts, but only with default values this form did not change, so it is retried on the new version.
       await expect(async () => {
         await page.getByRole('button', { name: 'Save changes' }).click()
         await expect(page.getByText('Changes saved')).toBeVisible({ timeout: 3_000 })
@@ -63,6 +63,42 @@ test.describe
       await page.reload()
       await expect(page.getByTestId('display-name')).toHaveText('Playwright Tester')
       await expect(page.getByLabel('Bio')).toHaveValue('Hello from the browser')
+    })
+
+    test('a concurrent edit from another tab asks whether to load it or overwrite it', async () => {
+      const other = await page.context().newPage()
+      await other.goto('/')
+      const editElsewhere = async (name: string) => {
+        await other.getByLabel('Display name').fill(name)
+        await other.getByRole('button', { name: 'Save changes' }).click()
+        await expect(other.getByText('Changes saved')).toBeVisible()
+      }
+      const conflict = page.getByTestId('profile-conflict')
+
+      // Overwrite: our edit wins over the newer version.
+      await page.getByLabel('Display name').fill('Mine')
+      await editElsewhere('Theirs')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(conflict).toContainText('Theirs')
+      await expect(page.getByLabel('Display name')).toHaveValue('Mine') // edits are kept
+      await page.getByRole('button', { name: 'Overwrite with mine' }).click()
+      await expect(page.getByText('Changes saved')).toBeVisible()
+      await expect(conflict).toBeHidden()
+      await expect(page.getByTestId('display-name')).toHaveText('Mine')
+
+      // Load latest: our edit is dropped for the newer version.
+      await page.getByLabel('Display name').fill('Mine again')
+      await other.reload()
+      await editElsewhere('Theirs again')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await page.getByRole('button', { name: 'Load latest' }).click()
+      await expect(conflict).toBeHidden()
+      await expect(page.getByLabel('Display name')).toHaveValue('Theirs again')
+
+      await other.close()
+      await page.getByLabel('Display name').fill('Playwright Tester')
+      await page.getByRole('button', { name: 'Save changes' }).click()
+      await expect(page.getByText('Changes saved').first()).toBeVisible()
     })
 
     test('upload an avatar straight to object storage via a presigned URL', async () => {

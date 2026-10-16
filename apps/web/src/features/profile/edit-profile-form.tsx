@@ -8,7 +8,7 @@ import { Input, Textarea } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError, errorMessage } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { updateProfile } from './queries'
+import { meQuery, updateProfile } from './queries'
 
 interface Me {
   displayName: string
@@ -16,50 +16,83 @@ interface Me {
   version: number
 }
 
+interface Values {
+  displayName: string
+  bio: string
+}
+
+const toValues = (me: Me): Values => ({ displayName: me.displayName, bio: me.bio ?? '' })
+const sameValues = (a: Values, b: Values) => a.displayName === b.displayName && a.bio === b.bio
+// `profile_conflict`: the profile row was created (asynchronously, after sign-up) while we were editing the default one.
+const isConflict = (err: unknown) =>
+  err instanceof ApiError && (err.code === 'version_conflict' || err.code === 'profile_conflict')
+
 export function EditProfileForm({ me }: { me: Me }) {
   const queryClient = useQueryClient()
-  const [displayName, setDisplayName] = useState(me.displayName)
-  const [bio, setBio] = useState(me.bio ?? '')
+  // The server version the form is editing; `me` may move ahead of it (another tab, an avatar upload, a refetch).
+  const [base, setBase] = useState(me)
+  const [values, setValues] = useState(() => toValues(me))
+  const [conflict, setConflict] = useState(false)
+  const dirty = !sameValues(values, toValues(base))
 
-  // Re-sync the form when server data changes (after saving, or after a reload caused by a version conflict).
+  // Follow server changes without losing edits: reset an untouched form, and rebase an edited one when the fields
+  // it shows did not change (e.g. only the avatar did). A real conflict surfaces as a 409 on save.
   useEffect(() => {
-    setDisplayName(me.displayName)
-    setBio(me.bio ?? '')
-  }, [me.displayName, me.bio])
+    if (me.version === base.version) return
+    if (!dirty) {
+      setBase(me)
+      setValues(toValues(me))
+    } else if (sameValues(toValues(me), toValues(base))) {
+      setBase(me)
+    }
+  }, [me, base, dirty])
+
+  const loadLatest = () => {
+    setBase(me)
+    setValues(toValues(me))
+    setConflict(false)
+  }
 
   const save = useMutation({
-    mutationFn: () =>
-      updateProfile({ displayName, bio: bio.trim() === '' ? null : bio }, me.version),
+    mutationFn: (version: number) =>
+      updateProfile(
+        { displayName: values.displayName, bio: values.bio.trim() === '' ? null : values.bio },
+        version,
+      ),
     onSuccess: (data) => {
       queryClient.setQueryData(['me'], data)
+      setBase(data)
+      setValues(toValues(data))
+      setConflict(false)
       toast.success('Changes saved')
     },
-    onError: (err) => {
-      if (err instanceof ApiError && err.code === 'version_conflict') {
-        toast.error(
-          'Your profile was changed elsewhere. The latest data has been reloaded, please try again.',
-        )
-        void queryClient.invalidateQueries({ queryKey: ['me'] })
-      } else {
+    onError: async (err, version) => {
+      if (!isConflict(err)) {
         toast.error(errorMessage(err))
+        return
       }
+      const latest = await queryClient.fetchQuery({ ...meQuery, staleTime: 0 })
+      // Nothing this form shows was changed elsewhere, so saving on top overwrites nobody's edits.
+      if (latest.version !== version && sameValues(toValues(latest), toValues(base))) {
+        save.mutate(latest.version)
+        return
+      }
+      setConflict(true)
     },
   })
 
-  const dirty = displayName !== me.displayName || bio !== (me.bio ?? '')
-  const reset = () => {
-    setDisplayName(me.displayName)
-    setBio(me.bio ?? '')
-  }
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    save.mutate()
+    save.mutate(base.version)
   }
+  const set = (field: keyof Values) => (e: { target: { value: string } }) =>
+    setValues((v) => ({ ...v, [field]: e.target.value }))
 
   return (
     <Card>
       <form onSubmit={submit}>
         <CardContent className="flex flex-col gap-5">
+          {conflict && <ConflictNotice latest={toValues(me)} mine={values} />}
           <div className="flex flex-col gap-2">
             <Label htmlFor="displayName">Display name</Label>
             <Input
@@ -67,8 +100,8 @@ export function EditProfileForm({ me }: { me: Me }) {
               required
               autoComplete="nickname"
               maxLength={DISPLAY_NAME_MAX}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
+              value={values.displayName}
+              onChange={set('displayName')}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -77,43 +110,102 @@ export function EditProfileForm({ me }: { me: Me }) {
               <span
                 className={cn(
                   'text-xs tabular-nums text-muted-foreground',
-                  bio.length >= BIO_MAX && 'text-warning',
+                  values.bio.length >= BIO_MAX && 'text-warning',
                 )}
               >
-                {bio.length}/{BIO_MAX}
+                {values.bio.length}/{BIO_MAX}
               </span>
             </div>
             <Textarea
               id="bio"
               maxLength={BIO_MAX}
               placeholder="A sentence or two about yourself"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
+              value={values.bio}
+              onChange={set('bio')}
             />
           </div>
         </CardContent>
         <CardFooter>
-          <p className="text-xs text-muted-foreground">
-            {dirty ? 'You have unsaved changes.' : 'Up to date.'}
-          </p>
-          <div className="ml-auto flex gap-2">
-            {dirty && (
+          {conflict ? (
+            <div className="ml-auto flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                onClick={reset}
+                onClick={loadLatest}
                 disabled={save.isPending}
               >
-                Discard
+                Load latest
               </Button>
-            )}
-            <Button type="submit" size="sm" disabled={!dirty} loading={save.isPending}>
-              Save changes
-            </Button>
-          </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                onClick={() => save.mutate(me.version)}
+                loading={save.isPending}
+              >
+                Overwrite with mine
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {dirty ? 'You have unsaved changes.' : 'Up to date.'}
+              </p>
+              <div className="ml-auto flex gap-2">
+                {dirty && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setValues(toValues(base))}
+                    disabled={save.isPending}
+                  >
+                    Discard
+                  </Button>
+                )}
+                <Button type="submit" size="sm" disabled={!dirty} loading={save.isPending}>
+                  Save changes
+                </Button>
+              </div>
+            </>
+          )}
         </CardFooter>
       </form>
     </Card>
+  )
+}
+
+function ConflictNotice({ latest, mine }: { latest: Values; mine: Values }) {
+  const changed = [
+    {
+      label: 'Display name',
+      value: latest.displayName,
+      differs: latest.displayName !== mine.displayName,
+    },
+    { label: 'Bio', value: latest.bio, differs: latest.bio !== mine.bio },
+  ].filter((f) => f.differs)
+
+  return (
+    <div
+      role="alert"
+      data-testid="profile-conflict"
+      className="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm"
+    >
+      <p className="font-medium">Your profile was changed elsewhere while you were editing.</p>
+      {changed.length > 0 && (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          {changed.map((f) => (
+            <div key={f.label} className="contents">
+              <dt className="text-muted-foreground">{f.label} now</dt>
+              <dd className="min-w-0 break-words">{f.value || <em>empty</em>}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Load the latest version and drop your edits, or keep your edits and overwrite it.
+      </p>
+    </div>
   )
 }
