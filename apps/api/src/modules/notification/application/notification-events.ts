@@ -16,6 +16,7 @@ export function notificationCreated(n: Notification): DomainEvent {
     body: p.body,
     data: p.data,
     createdAt: p.createdAt.toISOString(),
+    count: p.count,
   }
   return {
     type: NotificationEvents.Created,

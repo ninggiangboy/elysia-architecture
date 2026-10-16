@@ -11,6 +11,8 @@ export interface NotificationView {
   body: string
   data: Record<string, unknown>
   read: boolean
+  /** > 1 when repeated events were folded into this notification. */
+  count: number
   createdAt: string
   readAt: string | null
 }
@@ -22,6 +24,7 @@ export const toView = (n: Notification): NotificationView => ({
   body: n.props.body,
   data: n.props.data,
   read: n.props.readAt !== null,
+  count: n.props.count,
   createdAt: n.props.createdAt.toISOString(),
   readAt: n.props.readAt?.toISOString() ?? null,
 })

@@ -27,20 +27,33 @@ export interface NotificationProps {
   data: Record<string, unknown>
   createdAt: Date
   readAt: Date | null
+  /** Events sharing a key (per user) fold into one unread notification while it is still unread. `null` = never folded. */
+  groupKey: string | null
+  /** How many events this notification stands for (1 unless folded). */
+  count: number
 }
 
 /** A message addressed to ONE user. Immutable once created; the only change is being marked read. */
 export class Notification {
   private constructor(readonly props: NotificationProps) {}
 
-  static create(input: Omit<NotificationProps, 'readAt'>): Notification {
+  static create(
+    input: Omit<NotificationProps, 'readAt' | 'groupKey' | 'count'> & { groupKey?: string | null },
+  ): Notification {
     const title = input.title.trim()
     const body = input.body.trim()
     if (!title || title.length > MAX_TITLE_LENGTH)
       throw new InvalidNotificationError(`Title must be 1-${MAX_TITLE_LENGTH} characters`)
     if (body.length > MAX_BODY_LENGTH)
       throw new InvalidNotificationError(`Body must be at most ${MAX_BODY_LENGTH} characters`)
-    return new Notification({ ...input, title, body, readAt: null })
+    return new Notification({
+      ...input,
+      title,
+      body,
+      readAt: null,
+      groupKey: input.groupKey ?? null,
+      count: 1,
+    })
   }
 
   static restore(props: NotificationProps): Notification {

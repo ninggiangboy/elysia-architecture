@@ -1,6 +1,10 @@
-import { and, count, desc, eq, isNull, lt } from 'drizzle-orm'
+import { and, count, desc, eq, gte, isNull, lt, sql } from 'drizzle-orm'
 import type { Database } from '#/shared/infrastructure/db/database'
-import { Notification, type NotificationKind } from '../../domain/notification'
+import {
+  Notification,
+  type NotificationKind,
+  type NotificationProps,
+} from '../../domain/notification'
 import type { ListQuery, NotificationRepository } from '../../domain/notification-repository'
 import { notifications } from './schema'
 
@@ -18,7 +22,42 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       data: p.data,
       createdAt: p.createdAt,
       readAt: p.readAt,
+      groupKey: p.groupKey,
+      count: p.count,
     })
+  }
+
+  async coalesce(
+    userId: string,
+    groupKey: string,
+    since: Date,
+    latest: Pick<NotificationProps, 'title' | 'body' | 'data'>,
+  ): Promise<Notification | null> {
+    const target = this.database.executor
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.userId, userId),
+          eq(notifications.groupKey, groupKey),
+          isNull(notifications.readAt),
+          gte(notifications.createdAt, since),
+        ),
+      )
+      .orderBy(desc(notifications.id))
+      .limit(1)
+      .for('update', { skipLocked: true })
+    const [row] = await this.database.executor
+      .update(notifications)
+      .set({
+        count: sql`${notifications.count} + 1`,
+        title: latest.title,
+        body: latest.body,
+        data: latest.data,
+      })
+      .where(eq(notifications.id, sql`(${target})`))
+      .returning()
+    return row ? Notification.restore({ ...row, kind: row.kind as NotificationKind }) : null
   }
 
   async list(query: ListQuery): Promise<Notification[]> {

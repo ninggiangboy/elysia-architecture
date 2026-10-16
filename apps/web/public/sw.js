@@ -18,6 +18,8 @@ self.addEventListener('push', (event) => {
       body: typeof message.body === 'string' ? message.body : '',
       // Same tag = a redelivered push replaces the notification instead of stacking a duplicate.
       tag: typeof message.id === 'string' ? message.id : undefined,
+      // A folded notification keeps its tag: replace the old one, but still alert for the new event.
+      renotify: typeof message.id === 'string',
       data: { link: typeof message.link === 'string' ? message.link : '/notifications' },
     }),
   )

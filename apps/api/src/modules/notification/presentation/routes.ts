@@ -51,6 +51,10 @@ const notificationBody = t.Object({
     description: 'Extra context for the client, e.g. `{ "link": "/" }`',
   }),
   read: t.Boolean(),
+  count: t.Integer({
+    minimum: 1,
+    description: 'How many events this stands for (repeats are folded while unread)',
+  }),
   createdAt: t.String({ format: 'date-time' }),
   readAt: t.Nullable(t.String({ format: 'date-time' })),
 })

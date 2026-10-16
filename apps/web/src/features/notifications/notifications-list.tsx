@@ -74,6 +74,9 @@ export function NotificationsList() {
                   </>
                 )}
                 {n.title}
+                {n.count > 1 && (
+                  <span className="ml-2 text-xs text-muted-foreground">×{n.count}</span>
+                )}
               </p>
               {n.body && <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>}
               <p className="mt-1 text-xs text-muted-foreground">{formatDate(n.createdAt)}</p>

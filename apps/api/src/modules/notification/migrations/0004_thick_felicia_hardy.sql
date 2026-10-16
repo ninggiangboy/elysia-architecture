@@ -1,0 +1,3 @@
+ALTER TABLE "notification"."notifications" ADD COLUMN "group_key" text;--> statement-breakpoint
+ALTER TABLE "notification"."notifications" ADD COLUMN "count" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+CREATE INDEX "notifications_group_idx" ON "notification"."notifications" USING btree ("user_id","group_key","id" DESC NULLS LAST) WHERE "notification"."notifications"."read_at" is null and "notification"."notifications"."group_key" is not null;

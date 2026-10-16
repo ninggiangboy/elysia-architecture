@@ -1,4 +1,4 @@
-import type { Notification } from './notification'
+import type { Notification, NotificationProps } from './notification'
 
 export interface ListQuery {
   userId: string
@@ -10,6 +10,16 @@ export interface ListQuery {
 
 export interface NotificationRepository {
   insert(notification: Notification): Promise<void>
+  /**
+   * Folds a new event into the user's latest UNREAD notification with the same `groupKey` created at or after `since`:
+   * `count` + 1 and the content replaced by the newest. Returns it, or `null` when there is none to fold into.
+   */
+  coalesce(
+    userId: string,
+    groupKey: string,
+    since: Date,
+    latest: Pick<NotificationProps, 'title' | 'body' | 'data'>,
+  ): Promise<Notification | null>
   /** Newest first. */
   list(query: ListQuery): Promise<Notification[]>
   countUnread(userId: string): Promise<number>

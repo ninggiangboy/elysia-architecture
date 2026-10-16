@@ -50,10 +50,15 @@ export const notifications = notificationSchema.table(
     data: jsonb('data').$type<Record<string, unknown>>().notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
     readAt: timestamp('read_at', { withTimezone: true }),
+    groupKey: text('group_key'),
+    count: integer('count').notNull().default(1),
   },
   (t) => [
     index('notifications_user_idx').on(t.userId, t.id.desc()),
     index('notifications_unread_idx').on(t.userId).where(sql`${t.readAt} is null`),
+    index('notifications_group_idx')
+      .on(t.userId, t.groupKey, t.id.desc())
+      .where(sql`${t.readAt} is null and ${t.groupKey} is not null`),
   ],
 )
 

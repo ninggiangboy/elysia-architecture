@@ -15,6 +15,7 @@ import { CreateNotificationHandler } from './handlers/create-notification-handle
 import {
   describeDevice,
   newSignInNotification,
+  SIGN_IN_GROUP_WINDOW_MS,
   suspiciousSessionNotification,
 } from './in-app-notifications'
 import { MarkAllNotificationsRead, MarkNotificationRead } from './use-cases/mark-read'
@@ -24,6 +25,25 @@ class InMemoryNotifications implements NotificationRepository {
   rows: Notification[] = []
   async insert(n: Notification) {
     this.rows.push(n)
+  }
+  async coalesce(
+    userId: string,
+    groupKey: string,
+    since: Date,
+    latest: Pick<Notification['props'], 'title' | 'body' | 'data'>,
+  ) {
+    const target = this.rows
+      .filter(
+        (n) =>
+          n.userId === userId &&
+          n.props.groupKey === groupKey &&
+          n.props.readAt === null &&
+          n.props.createdAt >= since,
+      )
+      .sort((a, b) => (a.id < b.id ? 1 : -1))[0]
+    if (!target) return null
+    Object.assign(target.props, latest, { count: target.props.count + 1 })
+    return target
   }
   async list(q: ListQuery) {
     return this.rows
@@ -143,6 +163,69 @@ describe('CreateNotificationHandler', () => {
     await handler.handle(envelope('m1', { userId: ALICE, reason: 'logout' }))
     expect(repo.rows).toHaveLength(0)
     expect(outbox.events).toHaveLength(0)
+  })
+})
+
+describe('CreateNotificationHandler with a group', () => {
+  const signIn = (n: number) =>
+    envelope(`m${n}`, { userId: ALICE, sessionId: `s${n}`, ip: null, userAgent: `UA ${n}` })
+  let repo: InMemoryNotifications
+  let outbox: InMemoryOutbox
+  let clock: FakeClock
+  let handler: CreateNotificationHandler<Parameters<typeof newSignInNotification>[0]>
+  beforeEach(() => {
+    repo = new InMemoryNotifications()
+    outbox = new InMemoryOutbox()
+    clock = new FakeClock()
+    handler = new CreateNotificationHandler(
+      'test.sign-in',
+      IdentityEvents.SessionStarted,
+      newSignInNotification,
+      repo,
+      outbox,
+      new InMemoryInbox(),
+      new SequentialIds(),
+      clock,
+    )
+  })
+
+  test('a burst folds into one notification with a count, announced each time under the same id', async () => {
+    for (const n of [1, 2, 3]) await handler.handle(signIn(n))
+    expect(repo.rows).toHaveLength(1)
+    expect(repo.rows[0]?.props).toMatchObject({ count: 3, groupKey: 'new_sign_in' })
+    expect(repo.rows[0]?.props.data).toMatchObject({ sessionId: 's3' })
+    const ids = outbox.events.map((e) => e.payload.notificationId)
+    expect(ids).toEqual([repo.rows[0]?.id, repo.rows[0]?.id, repo.rows[0]?.id])
+    expect(outbox.events.map((e) => e.payload.count)).toEqual([1, 2, 3])
+  })
+
+  test('a redelivered event is not counted twice', async () => {
+    await handler.handle(signIn(1))
+    await handler.handle(signIn(2))
+    await handler.handle(signIn(2))
+    expect(repo.rows[0]?.props.count).toBe(2)
+  })
+
+  test('starts a new notification once the old one was read', async () => {
+    await handler.handle(signIn(1))
+    await repo.markRead(ALICE, repo.rows[0]?.id as string, clock.now())
+    await handler.handle(signIn(2))
+    expect(repo.rows).toHaveLength(2)
+  })
+
+  test('starts a new notification once the window has passed', async () => {
+    await handler.handle(signIn(1))
+    clock.advance(SIGN_IN_GROUP_WINDOW_MS + 1)
+    await handler.handle(signIn(2))
+    expect(repo.rows).toHaveLength(2)
+  })
+
+  test('never folds across users', async () => {
+    await handler.handle(signIn(1))
+    await handler.handle(
+      envelope('mb', { userId: BOB, sessionId: 'sb', ip: null, userAgent: null }),
+    )
+    expect(repo.rows).toHaveLength(2)
   })
 })
 

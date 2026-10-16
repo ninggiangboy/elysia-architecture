@@ -182,12 +182,16 @@ describe('web push', () => {
       await login(api, email)
       await eventually(async () => sender.to(endpoint).length >= 1, 10_000, 'first attempt')
       await login(api, email)
+      // Repeated sign-ins fold into ONE notification, so wait for its count rather than for a third row.
       await eventually(
-        async () =>
-          (await api('GET', '/api/notifications/unread-count', { token: me.accessToken })).json
-            .count >= 3,
+        async () => {
+          const list = await api('GET', '/api/notifications', { token: me.accessToken })
+          return list.json.items.some(
+            (n: { kind: string; count: number }) => n.kind === 'new_sign_in' && n.count >= 2,
+          )
+        },
         10_000,
-        'third notification',
+        'second sign-in folded into the first',
       )
       await Bun.sleep(500)
       expect(sender.to(endpoint)).toHaveLength(1) // deleted after the first 410, never tried again

@@ -15,6 +15,8 @@ export interface NotificationCreatedPayload {
   body: string
   data: Record<string, unknown>
   createdAt: string
+  /** How many events the notification stands for; > 1 when repeats were folded into it. Absent in older events. */
+  count?: number
 }
 
 export interface NotificationReadPayload {
