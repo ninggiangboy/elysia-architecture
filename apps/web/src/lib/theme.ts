@@ -34,22 +34,42 @@ export interface ThemeOrigin {
   y: number
 }
 
-/** Swaps the theme with a circle growing from `origin` where the browser supports view transitions; otherwise it just swaps. */
+/** Share of the mask's radius that is fully opaque; the rest is the soft edge of the reveal. */
+const SOLID = 0.55
+const REVEAL_MS = 650
+const EASING = 'cubic-bezier(0.4, 0, 0.2, 1)'
+
+/** Swaps the theme with a soft-edged, blurred circle growing from `origin` where the browser supports view transitions; otherwise it just swaps. */
 function applyAnimated(theme: ResolvedTheme, origin: ThemeOrigin) {
   if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
     apply(theme)
     return
   }
   const { x, y } = origin
-  const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+  // The mask must be big enough that its opaque core reaches the farthest corner of the viewport.
+  const reach = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))
+  const size = (2 * reach) / SOLID
+  const mask = `radial-gradient(circle closest-side, #000 ${SOLID * 100}%, transparent 100%)`
   const transition = document.startViewTransition(() => apply(theme))
   transition.ready
-    .then(() =>
-      document.documentElement.animate(
-        { clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-        { duration: 450, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' },
-      ),
-    )
+    .then(() => {
+      const root = document.documentElement
+      root.animate(
+        {
+          maskImage: [mask, mask],
+          maskRepeat: ['no-repeat', 'no-repeat'],
+          maskSize: ['0px 0px', `${size}px ${size}px`],
+          maskPosition: [`${x}px ${y}px`, `${x - size / 2}px ${y - size / 2}px`],
+          filter: ['blur(14px)', 'blur(0px)'],
+        },
+        { duration: REVEAL_MS, easing: EASING, pseudoElement: '::view-transition-new(root)' },
+      )
+      // The old theme softens as it is covered, so the two blur into each other.
+      root.animate(
+        { filter: ['blur(0px)', 'blur(8px)'] },
+        { duration: REVEAL_MS, easing: EASING, pseudoElement: '::view-transition-old(root)' },
+      )
+    })
     // A skipped transition (e.g. the tab was hidden) rejects; the theme is applied either way.
     .catch(() => {})
 }

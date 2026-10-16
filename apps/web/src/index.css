@@ -111,7 +111,7 @@ body {
   mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 40%, transparent 100%);
 }
 
-/* Theme switch (src/lib/theme.ts): the new theme is revealed by a growing circle, so neither snapshot cross-fades on its own. */
+/* Theme switch (src/lib/theme.ts): the new theme is revealed by a growing, blurred circle with a soft edge, so neither snapshot cross-fades on its own. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
