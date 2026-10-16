@@ -75,7 +75,8 @@ The web client is [Eden Treaty](https://elysiajs.com/eden/overview): types are i
 
 ### 10. Observable and shippable
 `x-request-id`/`x-correlation-id` ride AsyncLocalStorage into every pino log line **and** the outbox message headers, so an async
-handler's logs trace back to the request that caused them. Env-only config, `/health/live` + `/health/ready`, graceful shutdown
+handler's logs trace back to the request that caused them. Set `OTEL_EXPORTER_OTLP_ENDPOINT` and the same chain shows up as one
+OpenTelemetry trace in Jaeger — HTTP request → outbox relay → every handler, and onward through events a handler emits. Env-only config, `/health/live` + `/health/ready`, graceful shutdown
 (HTTP → relay → pool), PgBouncer-friendly (`DB_PREPARE=false`), OpenAPI/Scalar docs, multi-stage Dockerfiles.
 CI runs typecheck, Biome, architecture check, unit + e2e (Postgres/S3/Mailpit, then Playwright), knip, jscpd, gitleaks, Trivy and CodeQL.
 
@@ -84,7 +85,7 @@ CI runs typecheck, Biome, architecture check, unit + e2e (Postgres/S3/Mailpit, t
 Requirements: Bun ≥ 1.4, Docker.
 
 ```bash
-bun run setup        # .env + install + JWT/VAPID keys + start Postgres/Mailpit/SeaweedFS + migrate
+bun run setup        # .env + install + JWT/VAPID keys + start Postgres/Mailpit/SeaweedFS/Jaeger + migrate
 bun run dev          # api :3000 + web :5173
 ```
 
@@ -96,6 +97,7 @@ Sign in: enter any email at `/login` → open Mailpit → click the link in the 
 | http://localhost:5173/docs | API docs (Scalar) inside the web app; dev builds only |
 | http://localhost:3000/api/openapi | OpenAPI spec (only when `NODE_ENV=development`, which `bun run dev` sets) |
 | http://localhost:8025 | Mailpit — magic link, welcome and email-confirmation mails |
+| http://localhost:16686 | Jaeger — traces (set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in `.env` to export them) |
 | http://localhost:8333 | SeaweedFS S3 (key `app-access-key` / `app-secret-key`, bucket `avatars`) |
 | localhost:5433 | Postgres (`app`/`app`, db `app`) — 5433 to avoid clashing with a local 5432 (`POSTGRES_PORT`) |
 

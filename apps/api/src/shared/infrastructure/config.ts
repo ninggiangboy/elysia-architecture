@@ -117,6 +117,10 @@ const schema = z
      */
     REALTIME_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
 
+    /** OTLP/HTTP endpoint of a collector (Jaeger: http://localhost:4318). Leave unset to turn tracing off. */
+    OTEL_EXPORTER_OTLP_ENDPOINT: blank.pipe(z.url().optional()),
+    OTEL_SERVICE_NAME: z.string().default('elysia-architecture-api'),
+
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
     /** Messages claimed per relay batch. */
     OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().default(200),

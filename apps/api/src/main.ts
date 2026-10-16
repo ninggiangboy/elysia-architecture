@@ -4,6 +4,7 @@ import { superviseWorkers } from '#/bootstrap/cluster'
 import { createContainer } from '#/bootstrap/container'
 import { loadConfig } from '#/shared/infrastructure/config'
 import { createLogger } from '#/shared/infrastructure/logger'
+import { initTracing } from '#/shared/infrastructure/telemetry/tracing'
 
 const config = loadConfig()
 const logger = createLogger(config.LOG_LEVEL)
@@ -12,6 +13,13 @@ const logger = createLogger(config.LOG_LEVEL)
 if (config.APP_WORKERS > 1 && cluster.isPrimary) {
   process.exit(await superviseWorkers(config.APP_WORKERS, logger))
 }
+
+const tracing = config.OTEL_EXPORTER_OTLP_ENDPOINT
+  ? initTracing({
+      serviceName: config.OTEL_SERVICE_NAME,
+      endpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT,
+    })
+  : null
 
 const clustered = config.WORKER_SLOT !== undefined
 const container = await createContainer(config, logger)
@@ -42,6 +50,8 @@ async function shutdown(signal: string) {
   await container.modules.realtime.stop()
   await app?.stop()
   await container.close()
+  // Last, so the spans of the final relay batch and of in-flight requests are flushed too.
+  await tracing?.shutdown()
   process.exit(0)
 }
 process.on('SIGTERM', () => void shutdown('SIGTERM'))

@@ -1,5 +1,6 @@
 import type { IntegrationEventHandler, MessagePublisher } from '#/shared/application/ports'
 import type { Logger } from '#/shared/infrastructure/logger'
+import { SpanKind, withSpan } from '#/shared/infrastructure/telemetry/tracing'
 import type { Envelope } from './envelope'
 import { RetryLaterError } from './errors'
 
@@ -21,7 +22,23 @@ export class InProcessMessageBus implements MessagePublisher {
 
   async publish(message: Envelope): Promise<void> {
     const handlers = this.handlers.get(message.type) ?? []
-    const results = await Promise.allSettled(handlers.map((h) => h.handle(message)))
+    const results = await Promise.allSettled(
+      handlers.map((h) =>
+        withSpan(
+          `handle ${h.name}`,
+          {
+            kind: SpanKind.CONSUMER,
+            attributes: {
+              'messaging.system': 'outbox',
+              'messaging.message.id': message.id,
+              'messaging.destination.name': message.type,
+              'messaging.consumer.group.name': h.name,
+            },
+          },
+          () => h.handle(message),
+        ),
+      ),
+    )
     const errors: unknown[] = []
     results.forEach((result, i) => {
       if (result.status === 'rejected') {

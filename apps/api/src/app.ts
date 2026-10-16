@@ -6,6 +6,7 @@ import { API_PREFIX } from '#/shared/http/constants'
 import { errorHandlerPlugin } from '#/shared/http/error-handler.plugin'
 import { openapiDocumentation } from '#/shared/http/openapi'
 import { requestContextPlugin } from '#/shared/http/request-context.plugin'
+import { tracingPlugin } from '#/shared/http/tracing.plugin'
 
 const withTimeout = <T>(promise: Promise<T>, ms: number) =>
   Promise.race([
@@ -58,6 +59,7 @@ function healthRoutes(container: Container) {
 export function buildApp(container: Container) {
   return new Elysia({ prefix: API_PREFIX })
     .use(requestContextPlugin)
+    .use(tracingPlugin)
     .use(errorHandlerPlugin(container.logger))
     .use(cors({ origin: container.config.CORS_ORIGINS, credentials: true }))
     .use(

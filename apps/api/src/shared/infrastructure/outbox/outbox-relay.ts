@@ -3,6 +3,12 @@ import type { MessagePublisher } from '#/shared/application/ports'
 import { withAdvisoryXactLock } from '#/shared/infrastructure/db/advisory-lock'
 import type { Database } from '#/shared/infrastructure/db/database'
 import type { Logger } from '#/shared/infrastructure/logger'
+import {
+  contextFromTraceparent,
+  recordSpanError,
+  SpanKind,
+  withSpan,
+} from '#/shared/infrastructure/telemetry/tracing'
 import type { Envelope, MessageHeaders } from '#/shared/messaging/envelope'
 import { RetryLaterError } from '#/shared/messaging/errors'
 import type { OutboxTable } from './tables'
@@ -161,12 +167,35 @@ export class OutboxRelay {
       payload: row.payload,
       headers: row.headers as MessageHeaders,
     }
-    try {
-      await this.publisher.publish(envelope)
-    } catch (err) {
-      await this.safely(row, () => this.recordFailure(source, row, err))
-      return
-    }
+    // Continues the trace of whatever wrote the event (a request, or a handler that emitted a follow-up event).
+    const published = await withSpan(
+      `outbox.relay ${row.type}`,
+      {
+        kind: SpanKind.CONSUMER,
+        parent: contextFromTraceparent(row.headers.traceparent),
+        attributes: {
+          'messaging.system': 'outbox',
+          'messaging.message.id': row.id,
+          'messaging.destination.name': row.type,
+          'outbox.source': source.name,
+          'outbox.attempt': row.attempts,
+          'app.correlation_id': row.headers.correlationId,
+        },
+      },
+      async (span) => {
+        try {
+          await this.publisher.publish(envelope)
+          return true
+        } catch (err) {
+          // Deferred by a rate limit is the system working as designed; only real failures mark the span.
+          if (!isDeferral(err)) recordSpanError(span, err)
+          else span.setAttribute('outbox.deferred', true)
+          await this.safely(row, () => this.recordFailure(source, row, err))
+          return false
+        }
+      },
+    )
+    if (!published) return
     // Published but not yet marked: if marking fails the lease expires and the message is redelivered (at-least-once).
     await this.safely(row, () =>
       this.database.db
@@ -269,6 +298,11 @@ export class OutboxRelay {
       })
     }
   }
+}
+
+function isDeferral(err: unknown): boolean {
+  const errors = flattenErrors(err)
+  return errors.length > 0 && errors.every((e) => e instanceof RetryLaterError)
 }
 
 /** Bus that collects errors from several handlers into an AggregateError. */

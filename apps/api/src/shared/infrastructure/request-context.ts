@@ -1,9 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
+import type { Context } from '@opentelemetry/api'
 
 export interface RequestContext {
   requestId: string
   correlationId: string
   userId?: string
+  /** OTel context holding the request's span (set by the tracing plugin; new spans and outbox writes hang under it). */
+  otel?: Context
 }
 
 const storage = new AsyncLocalStorage<RequestContext>()

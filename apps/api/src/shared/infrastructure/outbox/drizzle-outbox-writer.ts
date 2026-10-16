@@ -2,6 +2,7 @@ import type { OutboxWriter } from '#/shared/application/ports'
 import type { DomainEvent } from '#/shared/domain/domain-event'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { requestContext } from '#/shared/infrastructure/request-context'
+import { currentTraceparent } from '#/shared/infrastructure/telemetry/tracing'
 import type { OutboxTable } from './tables'
 
 export class DrizzleOutboxWriter implements OutboxWriter {
@@ -23,6 +24,9 @@ export class DrizzleOutboxWriter implements OutboxWriter {
     const headers: Record<string, string> = ctx
       ? { correlationId: ctx.correlationId, causationId: ctx.requestId }
       : {}
+    // Same for the trace: the relay continues from this span, which may run long after the request has ended.
+    const traceparent = currentTraceparent()
+    if (traceparent) headers.traceparent = traceparent
     await this.database.executor.insert(this.table).values(
       events.map((e) => ({
         id: this.newId(),
