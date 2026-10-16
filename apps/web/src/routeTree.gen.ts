@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as AuthedPrivacyRouteImport } from './routes/_authed/privacy'
 import { Route as AuthedRealtimeRouteImport } from './routes/_authed/realtime'
 import { Route as AuthedSecurityRouteImport } from './routes/_authed/security'
 import { Route as AccountConfirmEmailRouteImport } from './routes/account.confirm-email'
@@ -37,6 +38,11 @@ const LoginRoute = LoginRouteImport.update({
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedPrivacyRoute = AuthedPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedRealtimeRoute = AuthedRealtimeRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof AuthedPrivacyRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/security': typeof AuthedSecurityRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof AuthedPrivacyRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/security': typeof AuthedSecurityRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/_authed/privacy': typeof AuthedPrivacyRoute
   '/_authed/realtime': typeof AuthedRealtimeRoute
   '/_authed/security': typeof AuthedSecurityRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
     | '/'
     | '/docs'
     | '/login'
+    | '/privacy'
     | '/realtime'
     | '/security'
     | '/account/confirm-email'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
   to:
     | '/docs'
     | '/login'
+    | '/privacy'
     | '/realtime'
     | '/security'
     | '/account/confirm-email'
@@ -134,6 +145,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/docs'
     | '/login'
+    | '/_authed/privacy'
     | '/_authed/realtime'
     | '/_authed/security'
     | '/account/confirm-email'
@@ -182,6 +194,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/privacy': {
+      id: '/_authed/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof AuthedPrivacyRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/realtime': {
       id: '/_authed/realtime'
       path: '/realtime'
@@ -228,6 +247,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedRouteChildren {
+  AuthedPrivacyRoute: typeof AuthedPrivacyRoute
   AuthedRealtimeRoute: typeof AuthedRealtimeRoute
   AuthedSecurityRoute: typeof AuthedSecurityRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
@@ -235,6 +255,7 @@ interface AuthedRouteChildren {
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedPrivacyRoute: AuthedPrivacyRoute,
   AuthedRealtimeRoute: AuthedRealtimeRoute,
   AuthedSecurityRoute: AuthedSecurityRoute,
   AuthedIndexRoute: AuthedIndexRoute,

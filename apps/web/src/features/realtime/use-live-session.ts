@@ -16,8 +16,11 @@ const TOAST_QUIET_MS = 30_000
  *  - this device was signed out remotely → sign out here immediately instead of waiting for the access token to expire;
  *  - another device signed out → refresh the device list;
  *  - a notification arrived or was read elsewhere → patch it into the cached list and refresh the badge (no list refetch);
- *  - every (re)connect refetches both, because those events are not replayed; only `session.revoked` is, so a device that
- *    was offline when it was signed out finds out as soon as it reconnects.
+ *  - steps of a long job (`privacy.*`: the data export, the account erasure) refetch the job's state; those events ARE
+ *    replayed, so a tab that was away still sees how the job went. `done` in them is a count, never a step number:
+ *    delivery order is not guaranteed;
+ *  - every (re)connect refetches both, because those events are not replayed; only `session.revoked` and the `privacy.*`
+ *    steps are, so a device that was offline when it was signed out finds out as soon as it reconnects.
  */
 export function useLiveSession() {
   const queryClient = useQueryClient()
@@ -35,6 +38,7 @@ export function useLiveSession() {
     const refreshDevices = () => queryClient.invalidateQueries({ queryKey: sessionsQuery.queryKey })
     const refreshNotifications = () =>
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    const refreshPrivacy = () => queryClient.invalidateQueries({ queryKey: ['privacy'] })
 
     const signOutHere = () => {
       toast.warning('This device was signed out from another device')
@@ -49,6 +53,25 @@ export function useLiveSession() {
         ownSessionId = data?.sessionId
         void refreshDevices()
         void refreshNotifications()
+        void refreshPrivacy()
+      },
+      'privacy.export.progress': () => void refreshPrivacy(),
+      'privacy.export.failed': () => void refreshPrivacy(),
+      'privacy.export.ready'() {
+        toast.success('Your data export is ready')
+        void refreshPrivacy()
+      },
+      'privacy.deletion.changed': () => void refreshPrivacy(),
+      'privacy.deletion.progress'(data) {
+        void refreshPrivacy()
+        // The last part erased: the account is gone, so is this session's reason to exist.
+        if (data && data.done === data.total) {
+          toast.success('Your account has been deleted')
+          void forgetPush()
+          clearSession()
+          queryClient.clear()
+          void navigate({ to: '/login' })
+        }
       },
       'notification.created'(data) {
         const now = Date.now()

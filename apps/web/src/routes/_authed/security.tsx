@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { PageHeader, Section } from '@/components/layout/page-header'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConnectedAccounts } from '@/features/account/connected-accounts'
@@ -35,6 +35,14 @@ function SecurityPage() {
         description="Sign in with Google or GitHub. We only match an account by an email the provider has verified."
       >
         <ConnectedAccounts />
+      </Section>
+      <Section
+        title="Your data"
+        description="Take a copy with you, or have your account and everything in it erased."
+      >
+        <Link to="/privacy" className="text-sm font-medium text-primary hover:underline">
+          Export or delete your data
+        </Link>
       </Section>
     </>
   )
