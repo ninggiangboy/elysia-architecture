@@ -1,29 +1,48 @@
 # Architecture
 
+## Design goals
+
+1. **Boundaries that are enforced, not just documented** — layer and module rules fail CI (`check:arch`).
+2. **Distributed-ready from day one** — N stateless instances today, any module extractable into a service tomorrow, without rewriting domain/application.
+3. **Reliable async by default** — state change and event are one transaction (outbox); consumers are idempotent (inbox).
+4. **Few moving parts** — Postgres is the only stateful dependency besides object storage and an SMTP relay; no Redis, no broker until you need one.
+
 ## Big picture
 
 ```
-        ┌────────────── apps/web (React) ──────────────┐
-        │  Eden Treaty client (types inferred from App)│
-        └───────────────┬──────────────────────────────┘
+        ┌─────────────────────── apps/web (React) ───────────────────────┐
+        │  Eden Treaty client (types inferred from the API's App type)    │
+        │  SSE stream · service worker (Web Push)                         │
+        └───────────────┬─────────────────────────────────────────────────┘
                         │ /api  (same origin: Vite proxy / nginx)
-┌───────────────────────▼───────────────────────────────────────────────┐
-│ apps/api  (stateless · N instances)                                   │
-│                                                                       │
-│  presentation ─► application ─► domain          (per module)          │
-│                       │  ▲                                            │
-│                  ports│  │adapters (infrastructure)                   │
-│                       ▼  │                                            │
-│   identity ── contracts ──► profile ── contracts ──► (identity)       │
-│      │ outbox                  │ outbox ▲ inbox                       │
-│      ▼                         ▼        │                             │
-│  schema identity          schema profile        schema notification   │
-│                                                    ▲ inbox            │
-│          OutboxRelay ──► MessagePublisher ─────────┘                  │
-│                          (InProcessMessageBus)                        │
-└───────────────────────────────────────────────────────────────────────┘
-        Postgres · SeaweedFS(S3) · SMTP(Mailpit)
+┌───────────────────────▼───────────────────────────────────────────────────┐
+│ apps/api  (stateless · N instances · APP_ROLES=api,relay)                 │
+│                                                                           │
+│  presentation ─► application ─► domain             (per module)           │
+│                       │  ▲                                                │
+│                  ports│  │adapters (infrastructure)                       │
+│                       ▼  │                                                │
+│  identity ──contracts──► profile        notification        realtime      │
+│  (schema identity)       (schema        (schema             (no tables)   │
+│     │ outbox              profile)       notification)         ▲          │
+│     │                      │ outbox        │ outbox · inbox    │ NOTIFY   │
+│     ▼                      ▼               ▼                   │ realtime │
+│  OutboxRelay ──► MessagePublisher (InProcessMessageBus) ───────┘          │
+│                  each (module, handler.name) = one consumer group         │
+└───────────────────────────────────────────────────────────────────────────┘
+        Postgres (+ LISTEN/NOTIFY) · SeaweedFS (S3) · SMTP (Mailpit) · Web Push service
 ```
+
+## Modules
+
+| Module | Owns | Publishes | Consumes | Talks to |
+| --- | --- | --- | --- | --- |
+| `identity` | users, magic links, refresh-token families (= devices), email-change requests, throttle counters | `magic_link_requested`, `user_registered`, `email_change_requested`, `email_changed`, `session_started`, `session_revoked` | — | — |
+| `profile` | profiles (display name, avatar, optimistic-lock `version`) | `avatar_changed` | `user_registered` (create profile), `avatar_changed` (delete old file) | `IdentityApi.getAccount` (sync, for `GET /me`) |
+| `notification` | in-app notifications, push subscriptions, mail send-rate state | `created`, `read` | identity events (mail, in-app), `session_revoked` (drop push subscriptions), `created` (Web Push) | — |
+| `realtime` | nothing (no tables) | — | `session_revoked`, `notification.created/read` → SSE | — |
+
+Event names are `<module>.<name>.v1` (see each module's `contracts/events.ts`). Contracts are the *only* thing another module may import.
 
 ## Layers and dependency rules
 
@@ -56,7 +75,7 @@ Goal: run N instances, and split any module into its own service **without rewri
 
 1. **Stateless.** No state kept in RAM between requests. Auth uses JWT, rate limits live in the DB, files go straight to S3 via presigned URLs. No sticky sessions needed.
 2. **Module = future service.**
-   - Each module has its own Postgres schema (`identity`, `profile`, `notification`), its own migrations, and its own outbox/inbox.
+   - Each module that persists data has its own Postgres schema (`identity`, `profile`, `notification`), its own migrations, and its own outbox/inbox. `realtime` owns no tables — it is a pure delivery edge.
    - No cross-module FKs or JOINs. `profile.profiles.user_id` only holds the user's id value.
    - All modules share ONE pool and one `UnitOfWork` (`Database`, reads `DATABASE_URL`); modules differ only by Postgres schema. A transaction can span several modules, but keep it within one module so splitting into services later needs no rewrite.
 3. **Communicate only through `contracts/`.**
@@ -73,7 +92,7 @@ Goal: run N instances, and split any module into its own service **without rewri
 7. **Process roles.** `APP_ROLES=api,relay` (default). To split out a worker: run the same image with `APP_ROLES=relay`.
 8. **Verify tokens anywhere.** The ES256 access token carries a `kid`; the public key is at `/api/.well-known/jwks.json`. Other services verify without a shared secret, and keys can be rotated.
 9. **Observable.** `x-request-id`/`x-correlation-id` live in AsyncLocalStorage, are attached to every log line (pino JSON) and written into the outbox message `headers`, so logs of async handlers can be traced back to the original request.
-10. **Operations.** Configuration through env only; `/health/live` and `/health/ready` (DB ping); graceful shutdown (stop accepting requests → stop the relay → close the pool); migrations are a separate job; `DB_PREPARE=false` to run behind PgBouncer.
+10. **Operations.** Configuration through env only; `/health/live` and `/health/ready` (DB ping); graceful shutdown (close live SSE streams → stop accepting requests → stop the relay and wait for the running batch → close the pool); migrations are a separate job; `DB_PREPARE=false` to run behind PgBouncer.
 
 ## Typical flows
 
@@ -141,6 +160,28 @@ Requeue is safe because the inbox blocks handlers that already finished, so noth
   Set `MAIL_RATE_PER_SECOND` to the account's *maximum send rate* and `MAIL_DAILY_QUOTA` to its *24-hour sending quota* (sandbox: 1/second, 200/day). The `454` error is recognised as a rate limit; `554 Message rejected` (e.g. recipient not verified in the sandbox) is permanent.
 - **Use the SES API (AWS SDK)** when you need a configuration set, tags or bounce tracking: write `SesMailer implements Mailer`, map `ThrottlingException`/`Maximum sending rate exceeded`/`Daily message quota exceeded` → `MailRateLimitedError`, and `MessageRejected`/`MailFromDomainNotVerified` → `MailPermanentError`; pass it to `createContainer(config, logger, { mailer })`. The bucket, deferral, expiry and dead-letter behaviour stay the same.
 - SES bounces/complaints arrive via SNS: add an endpoint/handler that records bounced addresses and blocks resending (a suppression list) — not in the project yet.
+
+## Testing and CI
+
+| Level | Command | What it proves |
+| --- | --- | --- |
+| Domain + use cases | `bun run test` | Business rules and orchestration against in-memory fakes (`shared/testing/fakes.ts`) — no I/O, runs in milliseconds. Possible only because use cases depend on ports. |
+| Architecture | `bun run check:arch` | The layer/module rules above, via dependency-cruiser. |
+| API e2e | `bun run test:e2e` (api) | The real `buildApp` against real Postgres/S3/Mailpit: full flows, outbox retry and dead-letter, mail throttling, SSE, Web Push (with a fake push sender). |
+| Web e2e | `bun run test:e2e` (web) | Playwright journeys: sign-in, profile, realtime sign-out, notifications. |
+| Hygiene | `quality:unused`, `quality:dup`, `lint` | knip (dead code/deps), jscpd (duplication), Biome (lint + format). |
+
+GitHub Actions: **CI** (lint, typecheck, `check:arch`, unit, build; then e2e with the compose infra and Playwright; image scan with Trivy),
+**Code quality** (coverage, knip, jscpd, Biome annotations) and **Security** (gitleaks, Trivy filesystem/IaC, CodeQL).
+
+## Adding a module
+
+1. Create `modules/<name>/{domain,application,infrastructure,presentation,contracts}` plus `<name>.module.ts` (a factory returning `routes`, `handlers` and, if it publishes events, its `outbox`).
+2. If it persists data: a Drizzle `schema.ts` in its own Postgres schema; add its name to `MODULES` in `scripts/db.ts` so `db:generate`/`db:migrate` pick it up (`drizzle.config.ts` takes the module from the `MODULE` env var; each module gets its own `drizzle_<name>` history table).
+3. Put events and sync interfaces in `contracts/` only (versioned names, plain DTOs). Other modules import nothing else from it.
+4. Wire it in `bootstrap/container.ts` (subscribe its handlers to the bus, add its outbox to the `OutboxRelay`) and mount its routes in `app.ts`.
+5. Write handlers as idempotent integration-event handlers; the inbox guards them, but side effects outside the DB (mail, push) must tolerate a retry.
+6. `bun run check:arch` — if it fails, a boundary was crossed.
 
 ## Deliberate trade-offs
 
