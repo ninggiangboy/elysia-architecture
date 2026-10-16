@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+import nodemailer, { type Mail } from 'nodemailer'
 import { MailPermanentError, MailRateLimitedError } from '#/shared/application/mail-errors'
 import type { Mailer } from '#/shared/application/ports'
 import { classifySmtpError } from './classify-smtp-error'
@@ -18,7 +18,7 @@ export interface SmtpOptions {
  * (host `email-smtp.<region>.amazonaws.com`, port 587, `requireTls`, user/password are the SES SMTP credentials).
  */
 export class SmtpMailer implements Mailer {
-  private transport: nodemailer.Transporter
+  private transport: Mail
 
   constructor(
     options: SmtpOptions,

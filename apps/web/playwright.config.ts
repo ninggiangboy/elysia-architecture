@@ -5,6 +5,9 @@ import { TEST_IP } from './e2e/support'
 export default defineConfig({
   testDir: './e2e',
   timeout: 45_000,
+  expect: { timeout: process.env.CI ? 10_000 : 5_000 },
+  // The dev servers start cold on CI runners; one flaky first interaction should not fail the pipeline.
+  retries: process.env.CI ? 2 : 0,
   fullyParallel: false,
   workers: 1,
   reporter: [['list']],

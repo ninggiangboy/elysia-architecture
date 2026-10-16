@@ -48,6 +48,12 @@ jobs:
       - run: bunx playwright install --with-deps chromium
         working-directory: apps/web
       - run: bun run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: apps/web/test-results
+          if-no-files-found: ignore
       - name: Dump infra logs on failure
         if: failure()
         run: docker compose logs --no-color --tail=200
@@ -73,7 +79,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
       - name: Scan image (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: elysia-architecture-${{ matrix.app }}:ci
           severity: CRITICAL,HIGH
