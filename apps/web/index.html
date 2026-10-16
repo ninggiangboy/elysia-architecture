@@ -4,19 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8f8fa" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090c" />
+    <meta name="theme-color" content="#f8f8fa" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Elysia Architecture</title>
     <style>
-      /* Painted before the bundle arrives, so the first frame already has the app's background (keep in sync with --background in src/index.css). */
+      /* Painted before the bundle arrives, so the first frame already has the app's background (keep in sync with --background in src/index.css and THEME_COLORS in src/lib/theme.ts). */
       html {
         background: #f8f8fa;
       }
-      @media (prefers-color-scheme: dark) {
-        html {
-          background: #09090c;
-        }
+      html[data-theme='dark'] {
+        background: #09090c;
       }
       /* Boot splash, replaced by the first render. It only fades in when loading is slow, so a fast load goes straight to the page. */
       .boot {
@@ -49,6 +46,18 @@
         }
       }
     </style>
+    <script>
+      // Apply the saved (or system) theme before the first paint, so a dark page never flashes light (keep in sync with src/lib/theme.ts).
+      ;(function () {
+        var saved = null
+        try {
+          saved = localStorage.getItem('theme')
+        } catch (e) {}
+        var dark = saved === 'dark' || (saved !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#09090c' : '#f8f8fa'
+      })()
+    </script>
     <script>
       // Fetch the runtime config while the bundle downloads instead of after it (see src/lib/config.ts).
       window.__config = fetch('/config.json', { cache: 'no-store' })

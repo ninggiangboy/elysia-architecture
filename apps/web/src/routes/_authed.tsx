@@ -3,6 +3,7 @@ import { createFileRoute, Link, Outlet, redirect, useNavigate } from '@tanstack/
 import { LogOut, Radio, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { Logo } from '@/components/layout/logo'
+import { ThemeToggle } from '@/components/layout/theme-toggle'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/features/auth/queries'
@@ -82,6 +83,7 @@ function AuthedLayout() {
           </nav>
 
           <div className="ml-auto flex h-14 items-center gap-1.5">
+            <ThemeToggle />
             <NotificationBell />
             <div className="mx-1.5 hidden h-6 w-px bg-border sm:block" />
             <div className="hidden min-w-0 items-center gap-2.5 sm:flex">

@@ -5,21 +5,27 @@ import { Toaster } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { useTheme } from '@/lib/theme'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  component: () => (
+  component: RootLayout,
+  notFoundComponent: NotFound,
+})
+
+function RootLayout() {
+  const { resolved } = useTheme()
+  return (
     <>
       <Outlet />
       <Toaster
-        theme="system"
+        theme={resolved}
         position="bottom-right"
         richColors
         toastOptions={{ className: 'font-sans' }}
       />
     </>
-  ),
-  notFoundComponent: NotFound,
-})
+  )
+}
 
 function NotFound() {
   return (
