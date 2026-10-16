@@ -41,12 +41,12 @@ const schema = z
       .default('api,relay')
       .transform(csv)
       .pipe(z.array(z.enum(['api', 'relay'])).min(1)),
-    /** Cluster mode: number of worker processes sharing `PORT` (`auto` = one per CPU). 1 = single process, no supervisor. */
+    /** Cluster mode: number of worker processes sharing `PORT` (`auto` = 3/4 of the CPUs, min 1, leaving headroom for Postgres and the OS). 1 = single process, no supervisor. */
     APP_WORKERS: z
       .string()
       .default('1')
       .transform((v, ctx) => {
-        if (v === 'auto') return availableParallelism()
+        if (v === 'auto') return Math.max(1, Math.floor((availableParallelism() * 3) / 4))
         const n = Number(v)
         if (Number.isInteger(n) && n >= 1) return n
         ctx.addIssue({ code: 'custom', message: 'must be a positive integer or "auto"' })
