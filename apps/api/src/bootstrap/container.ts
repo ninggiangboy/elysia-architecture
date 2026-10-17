@@ -143,6 +143,11 @@ export async function createContainer(
       dailyQuota: config.MAIL_DAILY_QUOTA,
     },
     webPush,
+    retention: {
+      maxAgeMs: config.NOTIFICATION_RETENTION * 1000,
+      batchSize: 1000,
+      intervalMs: config.NOTIFICATION_PRUNE_INTERVAL_SECONDS * 1000,
+    },
   })
 
   const billing = createBillingModule({
@@ -237,11 +242,13 @@ export async function createContainer(
     await relay.pause()
     await privacy.stopJobs()
     await billing.stopJobs()
+    await notification.stopJobs()
   }
   const resumeWorker = () => {
     relay.resume()
     privacy.startJobs()
     billing.startJobs()
+    notification.startJobs()
   }
 
   return {
@@ -256,7 +263,7 @@ export async function createContainer(
     relay,
     maintenance,
     /**
-     * Starts what a worker-role process runs: the outbox relay, and the timers behind the privacy and billing jobs.
+     * Starts what a worker-role process runs: the outbox relay, and the timers behind the privacy, billing and notification jobs.
      * Follows maintenance mode from then on: paused while it is on (right away if it already is), running again when it ends.
      */
     startWorker() {
@@ -265,6 +272,7 @@ export async function createContainer(
       else {
         privacy.startJobs()
         billing.startJobs()
+        notification.startJobs()
       }
       relay.start()
       // One transition at a time: on → off → on in quick succession must not interleave.
@@ -279,6 +287,7 @@ export async function createContainer(
     },
     async close() {
       maintenance.stop()
+      await notification.stopJobs()
       await billing.stopJobs()
       await privacy.stopJobs()
       await relay.stop()

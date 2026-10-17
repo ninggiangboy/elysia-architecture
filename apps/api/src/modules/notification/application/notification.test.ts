@@ -19,6 +19,7 @@ import {
   renderNotification,
   suspiciousSessionNotification,
 } from './in-app-notifications'
+import { PruneOldNotifications } from './prune-notifications'
 import {
   MarkAllNotificationsRead,
   MarkNotificationRead,
@@ -30,6 +31,15 @@ class InMemoryNotifications implements NotificationRepository {
   rows: Notification[] = []
   async insert(n: Notification) {
     this.rows.push(n)
+  }
+  locked: string[] = []
+  async lockGroup(userId: string, groupKey: string) {
+    this.locked.push(`${userId}:${groupKey}`)
+  }
+  async deleteCreatedBefore(cutoff: Date, limit: number) {
+    const doomed = this.rows.filter((n) => n.props.createdAt < cutoff).slice(0, limit)
+    this.rows = this.rows.filter((n) => !doomed.includes(n))
+    return doomed.length
   }
   async coalesce(
     userId: string,
@@ -228,6 +238,23 @@ describe('CreateNotificationHandler with a group', () => {
     const ids = outbox.events.map((e) => e.payload.notificationId)
     expect(ids).toEqual([repo.rows[0]?.id, repo.rows[0]?.id, repo.rows[0]?.id])
     expect(outbox.events.map((e) => e.payload.count)).toEqual([1, 2, 3])
+  })
+
+  test('takes the group lock before looking for a row to fold into, and only for grouped drafts', async () => {
+    await handler.handle(signIn(1))
+    expect(repo.locked).toEqual([`${ALICE}:new_sign_in`])
+    const plain = new CreateNotificationHandler(
+      'test.plain',
+      IdentityEvents.SessionStarted,
+      newSignInNotification,
+      repo,
+      outbox,
+      new InMemoryInbox(),
+      new SequentialIds(),
+      clock,
+    )
+    await plain.handle(signIn(2))
+    expect(repo.locked).toHaveLength(1)
   })
 
   test('a repeat folded into a notification that was already seen makes news again', async () => {
@@ -462,5 +489,51 @@ describe('new sign-in notification', () => {
     expect(renderNotification(template as string, data ?? {}, 'en')?.body).toStartWith(
       'an unknown device signed in',
     )
+  })
+})
+
+describe('PruneOldNotifications', () => {
+  const DAY = 86_400_000
+  const log = { info() {}, warn() {}, error() {} }
+  const make = (id: string, createdAt: Date) =>
+    Notification.create({
+      id,
+      userId: ALICE,
+      kind: 'welcome',
+      title: 'Hi',
+      body: '',
+      data: {},
+      createdAt,
+    })
+  let repo: InMemoryNotifications
+  let clock: FakeClock
+  beforeEach(() => {
+    repo = new InMemoryNotifications()
+    clock = new FakeClock()
+  })
+  const pruner = (batchSize = 100) =>
+    new PruneOldNotifications(repo, { maxAgeMs: 90 * DAY, batchSize }, clock, log)
+
+  test('deletes what is past the retention, read or not, and keeps the rest', async () => {
+    const now = clock.now().getTime()
+    await repo.insert(make('old-unread', new Date(now - 91 * DAY)))
+    const readOne = make('old-read', new Date(now - 100 * DAY))
+    readOne.props.readAt = clock.now()
+    await repo.insert(readOne)
+    await repo.insert(make('edge', new Date(now - 90 * DAY)))
+    await repo.insert(make('fresh', new Date(now - DAY)))
+    expect(await pruner().runOnce()).toBe(2)
+    expect(repo.rows.map((n) => n.id)).toEqual(['edge', 'fresh'])
+  })
+
+  test('works through a backlog in batches', async () => {
+    const old = new Date(clock.now().getTime() - 120 * DAY)
+    for (let i = 0; i < 7; i++) await repo.insert(make(`n${i}`, old))
+    expect(await pruner(3).runOnce()).toBe(7)
+    expect(repo.rows).toHaveLength(0)
+  })
+
+  test('has nothing to do on a clean table', async () => {
+    expect(await pruner().runOnce()).toBe(0)
   })
 })

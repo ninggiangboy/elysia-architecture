@@ -77,9 +77,26 @@ export class FakeStorage implements ObjectStorage {
   }
 }
 
+/** What `InMemoryInbox.crashAfterNextSideEffect` throws: the process died, nothing past that point ran. */
+export class SimulatedCrash extends Error {
+  constructor() {
+    super('simulated crash between the side effect and the inbox write')
+  }
+}
+
 /** Runs `fn` once per (messageId, handler), like the real inbox. */
 export class InMemoryInbox implements InboxGuard {
   private seen = new Set<string>()
+  private crashNext = false
+
+  /**
+   * The next `afterSideEffect` runs its `fn` and then "dies" (throws `SimulatedCrash`) before the inbox write,
+   * the one window where the real guard delivers twice. The redelivery therefore runs `fn` again.
+   */
+  crashAfterNextSideEffect() {
+    this.crashNext = true
+  }
+
   async transactional(messageId: string, handler: string, fn: () => Promise<void>) {
     const key = `${messageId}:${handler}`
     if (this.seen.has(key)) return
@@ -87,7 +104,16 @@ export class InMemoryInbox implements InboxGuard {
     await fn()
     this.seen.add(key)
   }
+
+  /** Like the real guard: the side effect first, the inbox record after it — so it is not atomic with it. */
   async afterSideEffect(messageId: string, handler: string, fn: () => Promise<void>) {
-    return this.transactional(messageId, handler, fn)
+    const key = `${messageId}:${handler}`
+    if (this.seen.has(key)) return
+    await fn()
+    if (this.crashNext) {
+      this.crashNext = false
+      throw new SimulatedCrash()
+    }
+    this.seen.add(key)
   }
 }

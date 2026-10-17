@@ -26,7 +26,7 @@ Tests sit next to the code (`src/**/*.test.ts`). `apps/api/src/shared/testing/fa
 | `InMemoryOutbox` | Collects events; `types()` for assertions |
 | `PassthroughUnitOfWork` | Runs the function, no transaction |
 | `FakeStorage` | Tracks metadata and bytes separately, plus a `deleted` log |
-| `InMemoryInbox` | Marks a key as processed only after `fn` succeeds, like a rolled-back transaction |
+| `InMemoryInbox` | Marks a key as processed only after `fn` succeeds, like a rolled-back transaction. `crashAfterNextSideEffect()` makes the next `afterSideEffect` "die" after the effect and before the record, so a test can see the redelivery repeat it |
 
 Repositories are faked inline per test file (for example `MemUsers` in `identity.use-cases.test.ts`), which keeps each fake as small as its test. `shared/testing` is the only part of `shared` allowed to import modules.
 

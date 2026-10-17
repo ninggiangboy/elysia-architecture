@@ -53,7 +53,7 @@ export class StepUpPolicy {
 
 - **In the use case, not the route.** A new route that reuses the use case cannot forget the check.
 - **Passkey step-up.** The challenge purpose is `step_up` and it is bound to the user. The assertion must come from one of *that user's* passkeys.
-- **Emailed code.** 6 digits, valid 10 minutes, replaced by the next request, 5 wrong guesses, 5 requests per 15 minutes, hashed together with the user id. Verified with the attempt-limited consume from [Atomic single-use tokens](atomic-single-use-tokens.md).
+- **Emailed code.** 6 digits, valid 10 minutes, replaced by the next request, 5 wrong guesses, 5 requests per 15 minutes, stored as an HMAC (server secret) of the user id and the code: a low-entropy code must not be kept as a plain hash. Verified with the attempt-limited consume from [Atomic single-use tokens](atomic-single-use-tokens.md).
 - **Elevating** re-signs an access token for the same `sid` with `authTime: now`. No new session, no new refresh token.
 - **Client.** `withStepUp(action)` wraps a mutation. On `step_up_required` it awaits a promise-based dialog shared by all waiting actions, retries once, and treats cancellation as a quiet `StepUpCancelled`.
 

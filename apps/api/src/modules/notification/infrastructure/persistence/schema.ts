@@ -59,6 +59,7 @@ export const notifications = notificationSchema.table(
   },
   (t) => [
     index('notifications_user_idx').on(t.userId, t.id.desc()),
+    index('notifications_created_idx').on(t.createdAt),
     index('notifications_unread_idx').on(t.userId).where(sql`${t.readAt} is null`),
     index('notifications_group_idx')
       .on(t.userId, t.groupKey, t.id.desc())

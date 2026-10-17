@@ -6,6 +6,7 @@ const base = {
   DATABASE_URL: 'postgres://x',
   JWT_PRIVATE_KEY: 'k',
   JWT_PUBLIC_KEY: 'k',
+  STEP_UP_CODE_SECRET: 'x'.repeat(32),
   S3_ENDPOINT: 'http://localhost:8333',
   S3_BUCKET: 'b',
   S3_ACCESS_KEY_ID: 'a',

@@ -54,7 +54,7 @@ const now = sql`now()`   // one clock: the database's
 
 **Claim-and-work in one transaction** (privacy jobs): inside `uow.run`, `claimDue()` selects `FOR UPDATE SKIP LOCKED`, the job mutates the rows and writes outbox events, and the commit releases them.
 
-**Pick-one-target** (notification folding): `UPDATE … WHERE id = (SELECT id … ORDER BY id DESC LIMIT 1 FOR UPDATE SKIP LOCKED)` updates the newest matching row unless someone else is already updating it.
+**Pick-one-target** (notification folding): `UPDATE … WHERE id = (SELECT id … ORDER BY id DESC LIMIT 1 FOR UPDATE SKIP LOCKED)` updates the newest matching row unless someone else is already updating it. It cannot stop two events from both inserting when no row exists yet; a per-group advisory lock taken first does that.
 
 ## Edge cases and pitfalls
 

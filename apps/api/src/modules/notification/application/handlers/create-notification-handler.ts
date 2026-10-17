@@ -35,6 +35,8 @@ export class CreateNotificationHandler<TPayload> implements IntegrationEventHand
     if (!draft) return
     await this.inbox.transactional(message.id, this.name, async () => {
       if (draft.group) {
+        // Without it, two instances folding the first two events of a group both find nothing and both insert.
+        await this.notifications.lockGroup(draft.userId, draft.group.key)
         const now = this.clock.now()
         const since = new Date(now.getTime() - draft.group.withinMs)
         const folded = await this.notifications.coalesce(

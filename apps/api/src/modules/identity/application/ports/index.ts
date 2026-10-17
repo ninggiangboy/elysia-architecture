@@ -6,6 +6,11 @@ export interface TokenService {
   /** Unguessable random token + hash to store in the DB. */
   newOpaqueToken(): { token: string; hash: string }
   hashOpaqueToken(token: string): string
+  /**
+   * Keyed hash (HMAC under a server secret) for values with little entropy, such as a 6-digit code:
+   * a plain hash of those falls to brute force the moment the table leaks.
+   */
+  keyedHash(input: string): string
   /** Random one-time code of `digits` decimal digits (for a code the user types in). */
   newNumericCode(digits: number): string
   signAccessToken(claims: {

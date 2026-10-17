@@ -72,7 +72,9 @@ const [row] = await ex.update(notifications)
   .where(eq(notifications.id, sql`(${target})`)).returning()
 ```
 
-Commit `13c8285` used it for repeated sign-ins; `2fd3abc` replaced that with alert throttling (below) and left folding as a capability. Two instances racing on one user can still insert two rows.
+Before looking for a row to fold into, the handler takes `lockGroup(userId, groupKey)`: `pg_advisory_xact_lock(hashtext('notification-group:<user>:<key>'))`, held until the inbox transaction commits. `SKIP LOCKED` alone cannot serialise two events racing on a group with **no row yet**: both find nothing and both insert. With the lock the second one waits, then sees the first one's row and folds into it. `tests/e2e/notification-folding.e2e.test.ts` fires eight at once and expects one row with `count = 8` (without the lock it gets eight rows).
+
+Commit `13c8285` used it for repeated sign-ins; `2fd3abc` replaced that with alert throttling (below) and left folding as a capability.
 
 ### Adding a notification
 
@@ -80,7 +82,9 @@ Commit `13c8285` used it for repeated sign-ins; `2fd3abc` replaced that with ale
 2. Register one `inApp(...)` handler in `notification.module.ts`.
 3. Add the template to both web catalogs and to `features/notifications/text.ts`.
 
-Retention of old notifications is not implemented yet.
+### Retention
+
+`PruneOldNotifications` deletes notifications older than `NOTIFICATION_RETENTION` (default `90d`), read or not, in batches of 1000 (`FOR UPDATE SKIP LOCKED`, so two instances take different rows). A timer started by `startJobs` runs it every `NOTIFICATION_PRUNE_INTERVAL_SECONDS` (default 3600), in worker processes and paused during maintenance like the other jobs. An index on `created_at` keeps each pass off a full scan. `prune()` is exposed on the module for tests and operators.
 
 ## Web Push
 

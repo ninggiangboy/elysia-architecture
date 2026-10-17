@@ -60,6 +60,7 @@ import {
 } from './application/in-app-notifications'
 import { NotificationDataExporter } from './application/notification-data-exporter'
 import type { WebPushSender } from './application/ports'
+import { PruneOldNotifications, type RetentionPolicy } from './application/prune-notifications'
 import {
   accountDeletedMail,
   accountDeletionCancelledMail,
@@ -108,6 +109,10 @@ export interface NotificationModuleDeps {
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
   /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
   webPush?: { sender: WebPushSender; publicKey: string; quietWindowMs?: number }
+  retention: RetentionPolicy & {
+    /** How often the timer behind `startJobs` looks for notifications past the retention. */
+    intervalMs: number
+  }
 }
 
 export interface NotificationModule {
@@ -115,6 +120,10 @@ export interface NotificationModule {
   routes: ReturnType<typeof notificationRoutes>
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
+  /** One retention pass. Runs on a timer (`startJobs`); exposed for tests and operators. */
+  prune(): Promise<number>
+  startJobs(): void
+  stopJobs(): Promise<void>
 }
 
 const minutesUntil = (iso: string) =>
@@ -132,6 +141,7 @@ export function createNotificationModule({
   identity,
   sending,
   webPush,
+  retention,
 }: NotificationModuleDeps): NotificationModule {
   const guard = new DrizzleInboxGuard(database, inbox)
   const locales = new IdentityLocaleResolver(identity)
@@ -161,6 +171,18 @@ export function createNotificationModule({
       ids,
       clock,
     )
+  const pruner = new PruneOldNotifications(notifications, retention, clock, log)
+  let timer: ReturnType<typeof setInterval> | undefined
+  let running: Promise<unknown> | undefined
+  const tick = () => {
+    // A slow pass is not overlapped by the next one; two instances may still tick together, SKIP LOCKED keeps them apart.
+    running ??= pruner
+      .runOnce()
+      .catch((err) => log.error({ err }, 'notification retention failed'))
+      .finally(() => {
+        running = undefined
+      })
+  }
   const link = (path: string, token: string) =>
     `${webAppUrl.replace(/\/$/, '')}${path}?token=${encodeURIComponent(token)}`
 
@@ -181,6 +203,17 @@ export function createNotificationModule({
       webPushPublicKey: webPush?.publicKey ?? null,
     }),
     outbox: { name: 'notification', table: outbox },
+    prune: () => pruner.runOnce(),
+    startJobs() {
+      if (timer) return
+      timer = setInterval(tick, retention.intervalMs)
+      timer.unref()
+    },
+    async stopJobs() {
+      if (timer) clearInterval(timer)
+      timer = undefined
+      await running
+    },
     handlers: [
       ...(webPush
         ? [

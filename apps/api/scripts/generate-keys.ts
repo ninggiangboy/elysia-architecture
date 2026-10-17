@@ -1,5 +1,6 @@
-// Generates the dev keys (JWT ES256 pair + Web Push VAPID pair) and writes them to the monorepo root .env.
+// Generates the dev keys (JWT ES256 pair + Web Push VAPID pair + step-up code secret) and writes them to the monorepo root .env.
 
+import { randomBytes } from 'node:crypto'
 import { exportPKCS8, exportSPKI, generateKeyPair } from 'jose'
 import webpush from 'web-push'
 
@@ -21,6 +22,10 @@ if (!/^VAPID_PRIVATE_KEY=.+$/m.test(existing)) {
   entries.VAPID_PRIVATE_KEY = vapid.privateKey
   entries.VAPID_SUBJECT = 'mailto:dev@example.test'
 }
+
+// The secret behind the hashed step-up codes: keep an existing one (changing it voids the codes in flight).
+if (!/^STEP_UP_CODE_SECRET=.+$/m.test(existing))
+  entries.STEP_UP_CODE_SECRET = randomBytes(32).toString('hex')
 
 let content = (await Bun.file(envPath).exists()) ? await Bun.file(envPath).text() : ''
 for (const [key, value] of Object.entries(entries)) {

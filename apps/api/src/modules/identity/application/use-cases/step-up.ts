@@ -82,9 +82,9 @@ export class RequestStepUpCode {
   }
 }
 
-/** The code is only meaningful for the user it was mailed to. */
+/** Keyed (a 6-digit code is brute-forced in a second from a plain hash) and bound to the user it was mailed to. */
 const hashCode = (tokens: TokenService, userId: string, code: string) =>
-  tokens.hashOpaqueToken(`${userId}:${code}`)
+  tokens.keyedHash(`${userId}:${code}`)
 
 export class VerifyStepUpCode {
   constructor(

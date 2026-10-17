@@ -8,7 +8,7 @@ import {
   SignJWT,
 } from 'jose'
 import type { IdGenerator } from '#/shared/application/ports'
-import { randomDigits, randomToken, sha256Hex } from '#/shared/infrastructure/crypto'
+import { hmacSha256Hex, randomDigits, randomToken, sha256Hex } from '#/shared/infrastructure/crypto'
 import type { TokenService } from '../application/ports'
 import type { AccessTokenClaims, AccessTokenVerifier } from '../contracts/access-token-verifier'
 
@@ -19,6 +19,8 @@ export interface JwtOptions {
   issuer: string
   audience: string
   accessTtlSeconds: number
+  /** Key of `keyedHash`. Changing it invalidates every code issued under the old one. */
+  hashSecret: string
 }
 
 const ALG = 'ES256'
@@ -48,6 +50,10 @@ export class JwtTokenService implements TokenService, AccessTokenVerifier {
 
   hashOpaqueToken(token: string): string {
     return sha256Hex(token)
+  }
+
+  keyedHash(input: string): string {
+    return hmacSha256Hex(this.options.hashSecret, input)
   }
 
   newNumericCode(digits: number): string {

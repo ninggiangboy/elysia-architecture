@@ -110,6 +110,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
       issuer: config.JWT_ISSUER,
       audience: config.JWT_AUDIENCE,
       accessTtlSeconds: config.ACCESS_TOKEN_TTL,
+      hashSecret: config.STEP_UP_CODE_SECRET,
     },
     ids,
   )

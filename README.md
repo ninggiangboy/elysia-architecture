@@ -168,7 +168,7 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 | `bun run deploy` | Release with a soft stop: maintenance on → drain → migrate → restart → health check → maintenance off ([Operations](docs/architecture/03-runtime-and-operations.md#deploys-bun-run-deploy)) |
 | `bun run deploy maintenance on\|off\|status` | Flip maintenance mode by hand (503 for everything but `/health/*`, relay and jobs paused) |
 | `bun run --filter @app/api outbox:list` / `outbox:requeue` | List / requeue events that ended up in the dead-letter queue |
-| `bun run --filter @app/api keys:generate` | Generate JWT (ES256) and VAPID keys into `.env`. The JWT pair is regenerated on every run; an existing VAPID pair is kept, because replacing it unsubscribes every browser |
+| `bun run --filter @app/api keys:generate` | Generate JWT (ES256) and VAPID keys and the step-up code secret into `.env`. The JWT pair is regenerated on every run; an existing VAPID pair and step-up secret are kept (replacing the first unsubscribes every browser, the second voids the codes in flight) |
 | `bun run stripe:listen` / `stripe:secret` | Forward Stripe's webhooks to the API (also part of `bun run dev` when a Stripe key is set) / print the webhook signing secret |
 | `bun run test:stripe` | Pay with Stripe's test cards against the running stack and check the wallet |
 | `bun run infra:down` | Stop the containers (add `-v` to `docker compose down` to delete data) |

@@ -136,7 +136,7 @@ The access token itself stays valid until it expires (≤ 15 min). Making it ins
 - It reads the header from `request.headers`, because a route that declares a `headers` schema strips undeclared headers.
 - `TokenVerifier` is defined in `shared`, so `shared` does not import identity.
 
-`bun run keys:generate` writes the ES256 pair (regenerated on every run) and a VAPID pair (only if missing) into the root `.env`.
+`bun run keys:generate` writes the ES256 pair (regenerated on every run) a VAPID pair and `STEP_UP_CODE_SECRET` (both only if missing) into the root `.env`.
 
 ## Passkeys (WebAuthn)
 
@@ -234,7 +234,7 @@ sequenceDiagram
   B->>I: retry DELETE once
 ```
 
-- **Emailed code.** Hashed together with the user id (`hash(userId:code)`), valid 10 minutes, replaced by the next request.
+- **Emailed code.** Stored as `HMAC-SHA256(STEP_UP_CODE_SECRET, userId:code)`, so a leaked table cannot be brute-forced offline (a plain hash of 6 digits falls in a second). Bound to the user, valid 10 minutes, replaced by the next request.
   - At most 5 wrong guesses: each miss increments `attempts`, and the consuming `UPDATE` requires `attempts < 5`.
   - At most 5 requests per 15 minutes.
   - It proves control of the mailbox, the same root of trust as a magic link: weaker than a passkey, but it still stops anyone who holds only the session.

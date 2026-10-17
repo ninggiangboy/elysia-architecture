@@ -45,12 +45,7 @@
 
 ## Known gaps
 
-| # | Gap | Where | Effect | Suggested fix |
-| --- | --- | --- | --- | --- |
-| 1 | `InMemoryInbox.afterSideEffect` behaves like `transactional` | `shared/testing/fakes.ts` | Unit tests never exercise "the process died between the side effect and the inbox write" | A fake mode that runs `fn` and "crashes" before recording |
-| 2 | Step-up codes are unsalted SHA-256 of `userId:code` | `identity/application/use-cases/step-up.ts` | Fine against cross-user reuse, but a DB leak makes a live 6-digit code trivial to brute-force. The 10-minute TTL and 5 attempts are the real protection. | HMAC with a server secret (needs a new secret in config) |
-| 3 | Notification folding can still insert two rows when two instances race on one user | `DrizzleNotificationRepository` | Folding is unused today | Serialise per user (an advisory lock), as realtime does |
-| 4 | Old notifications are never deleted | `notification` module | The table grows forever | A retention job, like the realtime prune |
+None open at the moment.
 
 When one of these is fixed, delete its row.
 
@@ -60,6 +55,10 @@ Found while writing these docs and fixed in the same change, with tests:
 
 - **The relay restores the request context.** Handlers log with the original `correlationId`, and their follow-up events carry it, with `causationId` = the message that caused them (`OutboxRelay.process`; e2e *the correlation id survives the relay*).
 - **The claim uses one clock**, the database's `now()`, for due-ness, lease expiry and the lease itself (`OutboxRelay.drain`).
+- **Step-up codes are stored as an HMAC** under `STEP_UP_CODE_SECRET`, not a plain SHA-256 (`TokenService.keyedHash`; `crypto.test.ts`).
+- **`InMemoryInbox` simulates the crash window** between a side effect and the inbox write (`crashAfterNextSideEffect`; `fakes.test.ts`).
+- **Notification folding is serialised per group** with an advisory lock, so racing events cannot insert two rows (e2e *notification-folding*, which fails without the lock).
+- **Old notifications are deleted** by a retention job (`NOTIFICATION_RETENTION`, default 90d).
 - **The outbox CLI knows `billing`**, and `requeue` clears `last_error` (`apps/api/scripts/outbox.ts`).
 - **The `UnitOfWork` comment** now matches `Database`: a transaction *can* span modules, and by convention stays in one.
 - **429 answers carry `Retry-After`**, computed from when the oldest counted request leaves the window (`TooManyRequestsError.retryAfterSeconds`, magic-link throttle, step-up codes).

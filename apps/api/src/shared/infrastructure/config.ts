@@ -80,6 +80,9 @@ const schema = z
     /** How long after signing in (or confirming again) sensitive actions — change email, add/remove a sign-in method — are allowed. */
     STEP_UP_TTL: duration('5m'),
 
+    /** Key for hashing the emailed step-up codes (HMAC). Generate one with `bun run keys:generate`; changing it invalidates the codes in flight (they live 10 minutes). */
+    STEP_UP_CODE_SECRET: z.string().min(32),
+
     /** WebAuthn relying party. Defaults follow WEB_APP_URL; set them when the web app is served from a different host than users type. */
     WEBAUTHN_RP_ID: blank,
     WEBAUTHN_RP_NAME: z.string().default('Elysia Architecture'),
@@ -133,6 +136,11 @@ const schema = z
      * Keep it at least ACCESS_TOKEN_TTL: after that a device that missed its sign-out can no longer refresh its session anyway.
      */
     REALTIME_REPLAY_WINDOW_SECONDS: z.coerce.number().int().positive().default(900),
+
+    /** In-app notifications older than this are deleted (read or not). */
+    NOTIFICATION_RETENTION: duration('90d'),
+    /** How often notifications past the retention are looked for. */
+    NOTIFICATION_PRUNE_INTERVAL_SECONDS: z.coerce.number().int().positive().default(3600),
 
     /** Account deletion: time between asking and the erasure starting. The user can cancel in between. */
     PRIVACY_DELETION_GRACE_PERIOD: duration('14d'),

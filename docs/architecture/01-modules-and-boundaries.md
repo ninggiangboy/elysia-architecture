@@ -87,7 +87,7 @@ export interface ProfileModule {
 
 - `deps` holds `database`, `clock`, `ids`, `log`, `storage`, and **only the contracts** of other modules (`identity: IdentityApi`, `verifier: TokenVerifier`).
 - Inside, the factory builds its repositories, a `DrizzleOutboxWriter(database, outbox, () => ids.next())`, a `DrizzleInboxGuard(database, inbox)`, and passes `database` as the `UnitOfWork`.
-- Optional members cover modules with clocks of their own: `startJobs`/`stopJobs` (privacy, billing), `prune`/`stop` (realtime).
+- Optional members cover modules with clocks of their own: `startJobs`/`stopJobs` (privacy, billing, notification), `prune`/`stop` (realtime).
 - Variations:
   - `createIdentityModule` is `async` because it imports the signing keys.
   - `realtime` has no outbox and no inbox.

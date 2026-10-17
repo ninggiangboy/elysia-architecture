@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNull, lt, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm'
 import type { Database } from '#/shared/infrastructure/db/database'
 import {
   Notification,
@@ -27,6 +27,13 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       groupKey: p.groupKey,
       count: p.count,
     })
+  }
+
+  async lockGroup(userId: string, groupKey: string): Promise<void> {
+    // Waits (unlike the try-lock jobs use) because the loser must then see the winner's row; hashtext collisions only cost a wait.
+    await this.database.executor.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`notification-group:${userId}:${groupKey}`}))`,
+    )
   }
 
   async coalesce(
@@ -164,5 +171,21 @@ export class DrizzleNotificationRepository implements NotificationRepository {
       .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)))
       .returning({ id: notifications.id })
     return updated.length
+  }
+
+  async deleteCreatedBefore(cutoff: Date, limit: number): Promise<number> {
+    // SKIP LOCKED: two instances pruning at once take different rows instead of waiting for each other.
+    const batch = this.database.executor
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(lt(notifications.createdAt, cutoff))
+      .orderBy(notifications.createdAt)
+      .limit(limit)
+      .for('update', { skipLocked: true })
+    const deleted = await this.database.executor
+      .delete(notifications)
+      .where(inArray(notifications.id, batch))
+      .returning({ id: notifications.id })
+    return deleted.length
   }
 }
