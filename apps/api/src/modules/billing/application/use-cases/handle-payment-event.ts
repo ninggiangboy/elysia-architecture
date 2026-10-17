@@ -8,6 +8,7 @@ import type {
 } from '../../domain/billing-repository'
 import { SETTLEABLE_FROM } from '../../domain/top-up'
 import { topUpFailed, topUpSucceeded } from '../billing-events'
+import type { DocumentIssuer } from '../document-issuer'
 import type { PaymentAdjustmentEvent, PaymentEvent, PaymentOutcomeEvent } from '../ports'
 
 /**
@@ -27,7 +28,8 @@ const SIGN: Record<PaymentAdjustmentEvent['adjustment'], 1 | -1> = {
  * Applies what the provider says about a payment. The webhook is delivered at least once and in no promised order, so
  * every step is a conditional move: a repeat, or a late "failed" after "succeeded", finds the top-up already settled and
  * changes nothing. Money is added to the wallet in the same transaction that settles the top-up, so it is added once.
- * Refunds and disputes are booked once per provider id (unique in the ledger) in the same way.
+ * Refunds and disputes are booked once per provider id (unique in the ledger) in the same way. The documents
+ * (receipt, credit note) are issued in that same transaction, so a wallet never moves without its paper.
  *
  * Whatever happens, the event is written to the audit trail; money that cannot be explained becomes an anomaly.
  */
@@ -41,6 +43,7 @@ export class HandlePaymentEvent {
     private ids: IdGenerator,
     private clock: Clock,
     private log: Log,
+    private documents: DocumentIssuer,
   ) {}
 
   async execute(event: PaymentEvent): Promise<PaymentEventResult> {
@@ -96,6 +99,7 @@ export class HandlePaymentEvent {
       event.outcome === 'failed' ? event.failureReason : null,
     )
     if (!settled) return 'ignored'
+    if (event.outcome === 'canceled') await this.documents.canceled(topUp, now)
     if (!props.userId) {
       if (event.outcome === 'succeeded')
         await this.anomaly(
@@ -120,6 +124,7 @@ export class HandlePaymentEvent {
         createdAt: now,
       })
       if (balance === null) return 'ignored'
+      await this.documents.paid(topUp, now)
       await this.outbox.add([
         topUpSucceeded(
           {
@@ -190,6 +195,9 @@ export class HandlePaymentEvent {
       createdAt: now,
     })
     if (balance === null) return 'ignored'
+    if (event.adjustment === 'chargeback_reversal')
+      await this.documents.voidCreditNote(event.reference, now)
+    else await this.documents.creditNote(topUp, event, now)
     if (balance < 0)
       await this.anomaly(
         'negative_balance',

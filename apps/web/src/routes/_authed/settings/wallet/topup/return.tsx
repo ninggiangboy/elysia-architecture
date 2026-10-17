@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { Section } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { topUpQuery } from '@/features/billing/queries'
+import { receiptOfTopUpQuery, topUpQuery } from '@/features/billing/queries'
 import { formatMoney } from '@/lib/format'
 
 /** Where Stripe sends the buyer back to (and where a card payment that settled in place ends up). */
@@ -91,6 +91,12 @@ function TopUpReturn() {
     refetchInterval: (query) => (query.state.data?.status === 'pending' ? POLL_MS : false),
   })
 
+  // The receipt is issued in the same step that credits the wallet, so it is there as soon as the top-up has succeeded.
+  const { data: receipt } = useQuery({
+    ...receiptOfTopUpQuery(id),
+    enabled: data?.status === 'succeeded',
+  })
+
   useEffect(() => {
     const timer = setTimeout(() => setSlow(true), SLOW_AFTER_MS)
     return () => clearTimeout(timer)
@@ -119,6 +125,13 @@ function TopUpReturn() {
             {retry && (
               <Button asChild variant="outline" size="sm">
                 <Link to="/settings/wallet/topup">{t('billing.return.tryAgain')}</Link>
+              </Button>
+            )}
+            {receipt && (
+              <Button asChild variant="outline" size="sm">
+                <Link to="/settings/wallet/documents/$id" params={{ id: receipt.id }}>
+                  {t('billing.return.viewReceipt')}
+                </Link>
               </Button>
             )}
             <Button asChild size="sm">

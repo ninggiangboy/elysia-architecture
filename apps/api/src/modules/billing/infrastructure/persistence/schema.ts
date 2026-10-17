@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgSchema,
   primaryKey,
   text,
@@ -12,6 +13,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { inboxTable, outboxTable } from '#/shared/infrastructure/outbox/tables'
+import type { DocumentLine, Party } from '../../domain/document'
 
 export const billingSchema = pgSchema('billing')
 
@@ -131,4 +133,57 @@ export const paymentAnomalies = billingSchema.table(
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
   },
   (t) => [uniqueIndex('payment_anomalies_kind_idx').on(t.paymentIntentId, t.kind)],
+)
+
+/**
+ * Invoices, receipts and credit notes: issued once, never edited (only an invoice's or a credit note's `status` moves).
+ * Seller, buyer and lines are snapshots of the moment of issuing. `user_id` is nullable for the same reason as in
+ * `top_ups`: erasing an account keeps the document and drops the person from it.
+ */
+export const documents = billingSchema.table(
+  'documents',
+  {
+    id: uuid('id').primaryKey(),
+    kind: text('kind').notNull(),
+    number: text('number').notNull(),
+    status: text('status').notNull(),
+    topUpId: uuid('top_up_id').notNull(),
+    userId: uuid('user_id'),
+    currency: text('currency').notNull(),
+    amount: bigint('amount', { mode: 'number' }).notNull(),
+    /** The invoice a receipt or a credit note belongs to. */
+    invoiceId: uuid('invoice_id'),
+    /** The provider's refund or dispute id behind a credit note. */
+    reference: text('reference'),
+    seller: jsonb('seller').$type<Party>().notNull(),
+    buyer: jsonb('buyer').$type<Party>().notNull(),
+    lines: jsonb('lines').$type<DocumentLine[]>().notNull(),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull(),
+    settledAt: timestamp('settled_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('documents_number_idx').on(t.number),
+    // A top-up has one invoice and one receipt, however often its webhook is delivered.
+    uniqueIndex('documents_top_up_idx')
+      .on(t.topUpId, t.kind)
+      .where(sql`${t.kind} in ('invoice', 'receipt')`),
+    uniqueIndex('documents_reference_idx')
+      .on(t.kind, t.reference)
+      .where(sql`${t.reference} is not null`),
+    index('documents_user_idx').on(t.userId, t.id.desc()),
+    check('documents_amount_positive', sql`${t.amount} > 0`),
+    check('documents_kind_known', sql`${t.kind} in ('invoice', 'receipt', 'credit_note')`),
+    check('documents_status_known', sql`${t.status} in ('open', 'paid', 'void', 'issued')`),
+  ],
+)
+
+/** The last number handed out per kind and year. Row-locked while a document is stored, so numbers have no gaps. */
+export const documentCounters = billingSchema.table(
+  'document_counters',
+  {
+    kind: text('kind').notNull(),
+    year: integer('year').notNull(),
+    last: integer('last').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.kind, t.year] })],
 )

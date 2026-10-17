@@ -3,14 +3,31 @@ import type { Database } from '#/shared/infrastructure/db/database'
 import type {
   AnomalyKind,
   Balance,
+  DocumentRepository,
   LedgerEntryRecord,
   LedgerEntryType,
   LedgerRepository,
   PaymentAuditRepository,
   TopUpRepository,
 } from '../../domain/billing-repository'
+import { BillingDocument, type DocumentKind, type DocumentStatus } from '../../domain/document'
 import { TopUp, type TopUpStatus } from '../../domain/top-up'
-import { ledgerEntries, paymentAnomalies, paymentEvents, topUps, walletBalances } from './schema'
+import {
+  documentCounters,
+  documents,
+  ledgerEntries,
+  paymentAnomalies,
+  paymentEvents,
+  topUps,
+  walletBalances,
+} from './schema'
+
+const toDocument = (row: typeof documents.$inferSelect) =>
+  BillingDocument.restore({
+    ...row,
+    kind: row.kind as DocumentKind,
+    status: row.status as DocumentStatus,
+  })
 
 const toTopUp = (row: typeof topUps.$inferSelect) =>
   TopUp.restore({ ...row, status: row.status as TopUpStatus })
@@ -221,5 +238,108 @@ export class DrizzlePaymentAuditRepository implements PaymentAuditRepository {
         createdAt: anomaly.now,
       })
       .onConflictDoNothing()
+  }
+}
+
+export class DrizzleDocumentRepository implements DocumentRepository {
+  constructor(private database: Database) {}
+
+  async nextSequence(kind: DocumentKind, year: number): Promise<number> {
+    const [row] = await this.database.executor
+      .insert(documentCounters)
+      .values({ kind, year, last: 1 })
+      .onConflictDoUpdate({
+        target: [documentCounters.kind, documentCounters.year],
+        set: { last: sql`${documentCounters.last} + 1` },
+      })
+      .returning({ last: documentCounters.last })
+    if (!row) throw new Error('the document counter returned nothing')
+    return row.last
+  }
+
+  async insert(document: BillingDocument): Promise<void> {
+    await this.database.executor.insert(documents).values(document.props)
+  }
+
+  async findById(id: string): Promise<BillingDocument | null> {
+    const [row] = await this.database.executor.select().from(documents).where(eq(documents.id, id))
+    return row ? toDocument(row) : null
+  }
+
+  async findForTopUp(
+    topUpId: string,
+    kind: 'invoice' | 'receipt',
+  ): Promise<BillingDocument | null> {
+    const [row] = await this.database.executor
+      .select()
+      .from(documents)
+      .where(and(eq(documents.topUpId, topUpId), eq(documents.kind, kind)))
+    return row ? toDocument(row) : null
+  }
+
+  async findByReference(kind: 'credit_note', reference: string): Promise<BillingDocument | null> {
+    const [row] = await this.database.executor
+      .select()
+      .from(documents)
+      .where(and(eq(documents.kind, kind), eq(documents.reference, reference)))
+    return row ? toDocument(row) : null
+  }
+
+  async settleInvoice(
+    topUpId: string,
+    from: readonly DocumentStatus[],
+    to: DocumentStatus,
+    now: Date,
+  ): Promise<BillingDocument | null> {
+    const [row] = await this.database.executor
+      .update(documents)
+      .set({ status: to, settledAt: now })
+      .where(
+        and(
+          eq(documents.topUpId, topUpId),
+          eq(documents.kind, 'invoice'),
+          inArray(documents.status, [...from]),
+        ),
+      )
+      .returning()
+    return row ? toDocument(row) : null
+  }
+
+  async voidCreditNote(reference: string, now: Date): Promise<BillingDocument | null> {
+    const [row] = await this.database.executor
+      .update(documents)
+      .set({ status: 'void', settledAt: now })
+      .where(
+        and(
+          eq(documents.kind, 'credit_note'),
+          eq(documents.reference, reference),
+          eq(documents.status, 'issued'),
+        ),
+      )
+      .returning()
+    return row ? toDocument(row) : null
+  }
+
+  async list(query: {
+    userId: string
+    kind?: DocumentKind
+    topUpId?: string
+    before?: string
+    limit: number
+  }): Promise<BillingDocument[]> {
+    const rows = await this.database.executor
+      .select()
+      .from(documents)
+      .where(
+        and(
+          eq(documents.userId, query.userId),
+          query.kind ? eq(documents.kind, query.kind) : undefined,
+          query.topUpId ? eq(documents.topUpId, query.topUpId) : undefined,
+          query.before ? lt(documents.id, query.before) : undefined,
+        ),
+      )
+      .orderBy(desc(documents.id))
+      .limit(query.limit)
+    return rows.map(toDocument)
   }
 }

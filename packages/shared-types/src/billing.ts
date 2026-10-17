@@ -16,3 +16,16 @@ export const TOPUP_CURRENCY_CODES = Object.keys(TOPUP_CURRENCIES) as TopUpCurren
 export const TOPUP_STATUSES = ['pending', 'succeeded', 'failed', 'canceled'] as const
 
 export type TopUpStatus = (typeof TOPUP_STATUSES)[number]
+
+/**
+ * The documents billing issues for a top-up. An `invoice` is issued when the top-up starts (`open`), becomes `paid` when
+ * the payment succeeds (and a `receipt` is issued with it) or `void` when it is canceled. A `credit_note` follows a refund
+ * or a dispute; it is `void` again when the dispute is won.
+ */
+export const DOCUMENT_KINDS = ['invoice', 'receipt', 'credit_note'] as const
+
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number]
+
+export const DOCUMENT_STATUSES = ['open', 'paid', 'void', 'issued'] as const
+
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number]

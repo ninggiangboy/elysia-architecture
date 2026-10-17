@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { FileText, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Section } from '@/components/layout/page-header'
 import { PageSkeleton } from '@/components/layout/page-skeleton'
@@ -44,6 +44,17 @@ function WalletPage() {
         description={t('billing.transactions.historyDescription')}
       >
         <TransactionsList />
+      </Section>
+      <Section
+        stacked
+        title={t('billing.documents.title')}
+        description={t('billing.documents.description')}
+      >
+        <Button asChild variant="outline" size="sm" className="w-fit">
+          <Link to="/settings/wallet/documents">
+            <FileText aria-hidden /> {t('billing.documents.open')}
+          </Link>
+        </Button>
       </Section>
     </>
   )

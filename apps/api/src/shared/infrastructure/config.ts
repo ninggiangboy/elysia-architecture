@@ -156,6 +156,12 @@ const schema = z
     BILLING_RECONCILE_MAX_AGE: duration('3d'),
     /** Signing secret of the webhook endpoint (`whsec_…`); `bun run stripe:secret` prints the one the Stripe CLI uses locally. */
     STRIPE_WEBHOOK_SECRET: blank,
+    /** Who issues the invoices, receipts and credit notes. Written onto each document when it is issued. */
+    SELLER_NAME: z.string().min(1).default('Elysia Architecture'),
+    SELLER_ADDRESS: blank,
+    /** VAT number, MST or the like. */
+    SELLER_TAX_ID: blank,
+    SELLER_EMAIL: blank,
     /** Currencies a wallet can be topped up in, comma separated (the ranges are in `@app/shared-types`). */
     TOPUP_CURRENCIES: z
       .string()

@@ -9,19 +9,23 @@ import { BillingEvents } from '../contracts/events'
 import type {
   AnomalyKind,
   Balance,
+  DocumentRepository,
   LedgerEntryRecord,
   LedgerEntryType,
   LedgerRepository,
   PaymentAuditRepository,
   TopUpRepository,
 } from '../domain/billing-repository'
+import type { BillingDocument, DocumentKind, DocumentStatus } from '../domain/document'
 import { TopUp, type TopUpStatus } from '../domain/top-up'
 import { FakePaymentGateway } from '../infrastructure/fake-payment-gateway'
 import { BillingDataExporter } from './billing-data-exporter'
 import { CurrencyPolicy } from './currency-policy'
+import { DocumentIssuer } from './document-issuer'
 import { CreateTopUp } from './use-cases/create-top-up'
 import { HandlePaymentEvent } from './use-cases/handle-payment-event'
 import { GetTopUp, GetWallet, ListTransactions } from './use-cases/read-billing'
+import { GetDocument, ListDocuments } from './use-cases/read-documents'
 import { ReconcileTopUps } from './use-cases/reconcile-top-ups'
 
 class InMemoryTopUps implements TopUpRepository {
@@ -135,8 +139,97 @@ class InMemoryAudit implements PaymentAuditRepository {
   }
 }
 
+class InMemoryDocuments implements DocumentRepository {
+  rows: BillingDocument[] = []
+  counters = new Map<string, number>()
+  async nextSequence(kind: DocumentKind, year: number) {
+    const key = `${kind}:${year}`
+    const next = (this.counters.get(key) ?? 0) + 1
+    this.counters.set(key, next)
+    return next
+  }
+  async insert(document: BillingDocument) {
+    // The unique indexes of the real table.
+    const p = document.props
+    const clash = this.rows.some(
+      (d) =>
+        d.props.number === p.number ||
+        (p.kind !== 'credit_note' && d.props.kind === p.kind && d.props.topUpId === p.topUpId) ||
+        (p.reference && d.props.kind === p.kind && d.props.reference === p.reference),
+    )
+    if (clash) throw new Error('duplicate document')
+    this.rows.push(document)
+  }
+  async findById(id: string) {
+    return this.rows.find((d) => d.id === id) ?? null
+  }
+  async findForTopUp(topUpId: string, kind: 'invoice' | 'receipt') {
+    return this.rows.find((d) => d.props.topUpId === topUpId && d.props.kind === kind) ?? null
+  }
+  async findByReference(kind: 'credit_note', reference: string) {
+    return this.rows.find((d) => d.props.kind === kind && d.props.reference === reference) ?? null
+  }
+  private move(
+    match: (d: BillingDocument) => boolean,
+    from: readonly DocumentStatus[],
+    to: DocumentStatus,
+    now: Date,
+  ) {
+    const found = this.rows.find((d) => match(d) && from.includes(d.props.status))
+    if (!found) return null
+    found.props.status = to
+    found.props.settledAt = now
+    return found
+  }
+  async settleInvoice(
+    topUpId: string,
+    from: readonly DocumentStatus[],
+    to: DocumentStatus,
+    now: Date,
+  ) {
+    return this.move(
+      (d) => d.props.kind === 'invoice' && d.props.topUpId === topUpId,
+      from,
+      to,
+      now,
+    )
+  }
+  async voidCreditNote(reference: string, now: Date) {
+    return this.move(
+      (d) => d.props.kind === 'credit_note' && d.props.reference === reference,
+      ['issued'],
+      'void',
+      now,
+    )
+  }
+  async list(q: {
+    userId: string
+    kind?: DocumentKind
+    topUpId?: string
+    before?: string
+    limit: number
+  }) {
+    return this.rows
+      .filter(
+        (d) =>
+          d.props.userId === q.userId &&
+          (!q.kind || d.props.kind === q.kind) &&
+          (!q.topUpId || d.props.topUpId === q.topUpId) &&
+          (!q.before || d.id < q.before),
+      )
+      .sort((a, b) => (a.id < b.id ? 1 : -1))
+      .slice(0, q.limit)
+  }
+}
+
 const silentLog = { info() {}, warn() {}, error() {} }
 const ALICE = '00000000-0000-7000-8000-00000000a11c'
+const SELLER = {
+  name: 'Acme Ltd',
+  email: 'billing@acme.test',
+  address: '1 Main St',
+  taxId: 'VN123',
+}
 const BOB = '00000000-0000-7000-8000-0000000000b0'
 
 const policy = new CurrencyPolicy([
@@ -148,6 +241,8 @@ let topUps: InMemoryTopUps
 let ledger: InMemoryLedger
 let outbox: InMemoryOutbox
 let audit: InMemoryAudit
+let documents: InMemoryDocuments
+let issuer: DocumentIssuer
 let gateway: FakePaymentGateway
 let ids: SequentialIds
 let clock: FakeClock
@@ -159,10 +254,25 @@ beforeEach(() => {
   ledger = new InMemoryLedger()
   outbox = new InMemoryOutbox()
   audit = new InMemoryAudit()
+  documents = new InMemoryDocuments()
+  issuer = new DocumentIssuer(
+    documents,
+    SELLER,
+    { lookup: async () => ({ name: 'Alice Nguyen', email: 'alice@example.com' }) },
+    new SequentialIds(),
+  )
   gateway = new FakePaymentGateway()
   ids = new SequentialIds()
   clock = new FakeClock()
-  createTopUp = new CreateTopUp(policy, gateway, topUps, ids, clock)
+  createTopUp = new CreateTopUp(
+    policy,
+    gateway,
+    topUps,
+    ids,
+    clock,
+    issuer,
+    new PassthroughUnitOfWork(),
+  )
   handle = new HandlePaymentEvent(
     topUps,
     ledger,
@@ -172,6 +282,7 @@ beforeEach(() => {
     ids,
     clock,
     silentLog,
+    issuer,
   )
 })
 
@@ -300,7 +411,15 @@ describe('CreateTopUp', () => {
   })
 
   test('refuses when payments are not configured', async () => {
-    const off = new CreateTopUp(policy, undefined, topUps, ids, clock)
+    const off = new CreateTopUp(
+      policy,
+      undefined,
+      topUps,
+      ids,
+      clock,
+      issuer,
+      new PassthroughUnitOfWork(),
+    )
     await expect(
       off.execute({ userId: ALICE, currency: 'usd', amount: 1000 }),
     ).rejects.toMatchObject({ code: 'billing_disabled' })
@@ -688,14 +807,213 @@ describe('BillingDataExporter', () => {
     const theirs = await start(BOB, 'usd', 5000)
     await handle.execute(gateway.eventFor(theirs.paymentIntentId, 'succeeded'))
 
-    const { data } = await new BillingDataExporter(topUps, ledger).collect(ALICE)
+    const { data } = await new BillingDataExporter(topUps, ledger, documents).collect(ALICE)
     const exported = data as {
       balances: Balance[]
       topUps: { status: string; amount: number }[]
       ledger: { amount: number }[]
+      documents: { kind: string }[]
     }
     expect(exported.balances).toEqual([{ currency: 'usd', amount: 1000 }])
     expect(exported.topUps.map((t) => t.status).sort()).toEqual(['pending', 'succeeded'])
     expect(exported.ledger).toEqual([expect.objectContaining({ amount: 1000 })])
+    // An invoice for each of Alice's two top-ups, and the receipt of the paid one; none of Bob's.
+    expect(exported.documents.map((d) => d.kind).sort()).toEqual(['invoice', 'invoice', 'receipt'])
+  })
+})
+
+describe('Documents', () => {
+  const docs = (userId = ALICE, kind?: DocumentKind) =>
+    new ListDocuments(documents).execute({ userId, kind }).then((r) => r.items)
+
+  test('starting a top-up issues an open invoice with the seller and the buyer on it', async () => {
+    const { topUpId } = await start(ALICE, 'usd', 2000)
+    const [invoice, ...rest] = await docs()
+    expect(rest).toEqual([])
+    expect(invoice).toMatchObject({
+      kind: 'invoice',
+      number: 'INV-2026-000001',
+      status: 'open',
+      topUpId,
+      currency: 'usd',
+      amount: 2000,
+      seller: SELLER,
+      buyer: { name: 'Alice Nguyen', email: 'alice@example.com', address: null, taxId: null },
+      lines: [{ description: 'Wallet top-up', quantity: 1, unitAmount: 2000, amount: 2000 }],
+    })
+  })
+
+  test('the buyer can name a company and a tax id', async () => {
+    await createTopUp.execute({
+      userId: ALICE,
+      currency: 'usd',
+      amount: 1000,
+      billing: { name: ' Acme Corp ', taxId: 'VN999', address: '' },
+    })
+    const [invoice] = await docs()
+    expect(invoice?.buyer).toEqual({
+      name: 'Acme Corp',
+      email: 'alice@example.com',
+      address: null,
+      taxId: 'VN999',
+    })
+  })
+
+  test('a replayed start does not issue a second invoice', async () => {
+    const key = 'same-click-1'
+    await createTopUp.execute({ userId: ALICE, currency: 'usd', amount: 1000, idempotencyKey: key })
+    await createTopUp.execute({ userId: ALICE, currency: 'usd', amount: 1000, idempotencyKey: key })
+    expect(await docs()).toHaveLength(1)
+  })
+
+  test('numbers are consecutive per kind', async () => {
+    await start(ALICE)
+    await start(BOB)
+    expect((await docs(ALICE))[0]?.number).toBe('INV-2026-000001')
+    expect((await docs(BOB))[0]?.number).toBe('INV-2026-000002')
+  })
+
+  test('a successful payment marks the invoice paid and issues one receipt, however often it is delivered', async () => {
+    const { paymentIntentId, topUpId } = await start(ALICE, 'usd', 1000)
+    const succeeded = gateway.eventFor(paymentIntentId, 'succeeded')
+    await handle.execute(succeeded)
+    await handle.execute(succeeded)
+    await handle.execute(gateway.eventFor(paymentIntentId, 'succeeded'))
+
+    const [invoice] = await docs(ALICE, 'invoice')
+    const [receipt, ...rest] = await docs(ALICE, 'receipt')
+    expect(rest).toEqual([])
+    expect(invoice).toMatchObject({ status: 'paid', settledAt: clock.now().toISOString() })
+    expect(receipt).toMatchObject({
+      number: 'RCT-2026-000001',
+      status: 'issued',
+      topUpId,
+      invoiceId: invoice?.id,
+      amount: 1000,
+      buyer: invoice?.buyer,
+      seller: SELLER,
+    })
+  })
+
+  test('a declined card leaves the invoice open: the same payment can still be completed', async () => {
+    const { paymentIntentId } = await start()
+    await handle.execute(gateway.eventFor(paymentIntentId, 'failed'))
+    expect((await docs(ALICE, 'invoice'))[0]?.status).toBe('open')
+    expect(await docs(ALICE, 'receipt')).toEqual([])
+    await handle.execute(gateway.eventFor(paymentIntentId, 'succeeded'))
+    expect((await docs(ALICE, 'invoice'))[0]?.status).toBe('paid')
+    expect(await docs(ALICE, 'receipt')).toHaveLength(1)
+  })
+
+  test('a canceled payment voids the invoice and issues no receipt', async () => {
+    const { paymentIntentId } = await start()
+    await handle.execute(gateway.eventFor(paymentIntentId, 'canceled'))
+    expect((await docs(ALICE, 'invoice'))[0]?.status).toBe('void')
+    expect(await docs(ALICE, 'receipt')).toEqual([])
+  })
+
+  test('a payment that does not match its top-up gets no receipt', async () => {
+    const { paymentIntentId } = await start(ALICE, 'usd', 1000)
+    await handle.execute({ ...gateway.eventFor(paymentIntentId, 'succeeded'), amount: 999 })
+    expect((await docs(ALICE, 'invoice'))[0]?.status).toBe('open')
+    expect(await docs(ALICE, 'receipt')).toEqual([])
+  })
+
+  test('a top-up that began before invoices existed is billed, already paid, when it succeeds', async () => {
+    const { paymentIntentId, topUpId } = await start()
+    documents.rows = [] // as if the invoice had never been issued
+    await handle.execute(gateway.eventFor(paymentIntentId, 'succeeded'))
+    const [invoice] = await docs(ALICE, 'invoice')
+    expect(invoice).toMatchObject({ topUpId, status: 'paid' })
+    expect(await docs(ALICE, 'receipt')).toHaveLength(1)
+  })
+
+  describe('credit notes', () => {
+    const paid = async (amount = 1000) => {
+      const { paymentIntentId, topUpId } = await start(ALICE, 'usd', amount)
+      await handle.execute(gateway.eventFor(paymentIntentId, 'succeeded'))
+      return { paymentIntentId, topUpId }
+    }
+
+    test('a refund issues a credit note against the invoice, once', async () => {
+      const { paymentIntentId, topUpId } = await paid()
+      const refund = gateway.adjustmentFor(paymentIntentId, 'refund', 're_1', 400)
+      await handle.execute(refund)
+      await handle.execute(refund)
+      const [invoice] = await docs(ALICE, 'invoice')
+      const notes = await docs(ALICE, 'credit_note')
+      expect(notes).toEqual([
+        expect.objectContaining({
+          number: 'CN-2026-000001',
+          status: 'issued',
+          topUpId,
+          invoiceId: invoice?.id,
+          amount: 400,
+        }),
+      ])
+    })
+
+    test('a second partial refund is its own credit note', async () => {
+      const { paymentIntentId } = await paid()
+      await handle.execute(gateway.adjustmentFor(paymentIntentId, 'refund', 're_1', 400))
+      await handle.execute(gateway.adjustmentFor(paymentIntentId, 'refund', 're_2', 100))
+      expect((await docs(ALICE, 'credit_note')).map((n) => n.amount).sort()).toEqual([100, 400])
+    })
+
+    test('a lost dispute issues a credit note, a won one voids it', async () => {
+      const { paymentIntentId } = await paid()
+      await handle.execute(gateway.adjustmentFor(paymentIntentId, 'chargeback', 'dp_1'))
+      expect((await docs(ALICE, 'credit_note'))[0]).toMatchObject({
+        status: 'issued',
+        amount: 1000,
+      })
+      await handle.execute(gateway.adjustmentFor(paymentIntentId, 'chargeback_reversal', 'dp_1'))
+      expect((await docs(ALICE, 'credit_note'))[0]?.status).toBe('void')
+    })
+
+    test('a refund that waits for its payment issues nothing until it applies', async () => {
+      const { paymentIntentId } = await start()
+      const refund = gateway.adjustmentFor(paymentIntentId, 'refund', 're_1', 400)
+      expect(await handle.execute(refund)).toBe('deferred')
+      expect(await docs(ALICE, 'credit_note')).toEqual([])
+    })
+  })
+
+  describe('reading', () => {
+    test("someone else's document is not found", async () => {
+      await start(ALICE)
+      const [mine] = await docs(ALICE)
+      await expect(
+        new GetDocument(documents).execute({ userId: BOB, documentId: mine?.id as string }),
+      ).rejects.toMatchObject({ code: 'document_not_found' })
+      expect(
+        await new GetDocument(documents).execute({ userId: ALICE, documentId: mine?.id as string }),
+      ).toMatchObject({ number: 'INV-2026-000001' })
+    })
+
+    test('lists newest first with a cursor, and filters by top-up', async () => {
+      const first = await start(ALICE)
+      await start(ALICE)
+      await handle.execute(gateway.eventFor(first.paymentIntentId, 'succeeded'))
+      const all = await docs()
+      expect(all.map((d) => d.kind)).toEqual(['receipt', 'invoice', 'invoice'])
+
+      const page = await new ListDocuments(documents).execute({ userId: ALICE, limit: 2 })
+      expect(page.items).toHaveLength(2)
+      expect(page.nextCursor).toBe(page.items[1]?.id ?? null)
+      const rest = await new ListDocuments(documents).execute({
+        userId: ALICE,
+        limit: 2,
+        before: page.nextCursor as string,
+      })
+      expect(rest.items).toHaveLength(1)
+      expect(rest.nextCursor).toBeNull()
+
+      const ofFirst = await new ListDocuments(documents).execute({
+        userId: ALICE,
+        topUpId: first.topUpId,
+      })
+      expect(ofFirst.items.map((d) => d.kind)).toEqual(['receipt', 'invoice'])
+    })
   })
 })

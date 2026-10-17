@@ -346,6 +346,96 @@ describe('webhook delivery', () => {
   })
 })
 
+describe('invoices and receipts', () => {
+  const documents = async (token: string, query = '') =>
+    (await api('GET', `/api/billing/documents${query}`, { token })).json.items as {
+      id: string
+      kind: string
+      number: string
+      status: string
+      topUpId: string
+      invoiceId: string | null
+      amount: number
+      buyer: { name: string | null; email: string | null; taxId: string | null }
+      seller: { name: string }
+    }[]
+
+  test('an invoice is issued with the top-up, the receipt when it is paid', async () => {
+    const email = uniqueEmail('invoice')
+    const token = (await login(api, email)).accessToken
+    const res = await api('POST', '/api/billing/topups', {
+      token,
+      body: {
+        currency: 'usd',
+        amount: 2500,
+        billing: { name: 'Acme Corp', taxId: 'VN0312345678', address: '1 Main St' },
+      },
+    })
+    expect(res.status).toBe(200)
+    const topUpId = res.json.topUpId as string
+    const intent = [...gateway.intents.values()].find((i) => i.topUpId === topUpId)
+
+    const [invoice, ...others] = await documents(token)
+    expect(others).toEqual([])
+    expect(invoice).toMatchObject({
+      kind: 'invoice',
+      status: 'open',
+      topUpId,
+      amount: 2500,
+      buyer: { name: 'Acme Corp', email, taxId: 'VN0312345678' },
+    })
+    expect(invoice?.number).toMatch(/^INV-\d{4}-\d{6}$/)
+
+    // Paid — delivered at the same moment several times: still one receipt.
+    const event = gateway.eventFor(intent?.id as string, 'succeeded')
+    await Promise.all(Array.from({ length: 5 }, () => webhook(event)))
+
+    const receipts = await documents(token, '?kind=receipt')
+    expect(receipts).toHaveLength(1)
+    expect(receipts[0]).toMatchObject({ invoiceId: invoice?.id, amount: 2500, status: 'issued' })
+    expect(receipts[0]?.number).toMatch(/^RCT-\d{4}-\d{6}$/)
+    expect((await documents(token, '?kind=invoice'))[0]?.status).toBe('paid')
+    expect(await documents(token, `?topUpId=${topUpId}`)).toHaveLength(2)
+
+    const one = await api('GET', `/api/billing/documents/${receipts[0]?.id}`, { token })
+    expect(one.status).toBe(200)
+    expect(one.json).toMatchObject({
+      number: receipts[0]?.number,
+      seller: { name: expect.any(String) },
+    })
+  })
+
+  test('a refund is a credit note, a canceled payment a void invoice', async () => {
+    const token = (await login(api, uniqueEmail('credit'))).accessToken
+    const paid = await startTopUp(token, 'usd', 4000)
+    await webhook(gateway.eventFor(paid.paymentIntentId, 'succeeded'))
+    const reference = `re_${crypto.randomUUID()}`
+    const refund = gateway.adjustmentFor(paid.paymentIntentId, 'refund', reference, 1000)
+    await webhook(refund)
+    await webhook(refund)
+    const notes = await documents(token, '?kind=credit_note')
+    expect(notes).toHaveLength(1)
+    expect(notes[0]).toMatchObject({ amount: 1000, status: 'issued', topUpId: paid.topUpId })
+
+    const abandoned = await startTopUp(token, 'usd', 700)
+    await webhook(gateway.eventFor(abandoned.paymentIntentId, 'canceled'))
+    const voided = (await documents(token, `?topUpId=${abandoned.topUpId}`))[0]
+    expect(voided).toMatchObject({ kind: 'invoice', status: 'void' })
+  })
+
+  test("someone else's document does not exist, and reading needs a session", async () => {
+    const alice = (await login(api, uniqueEmail('doc-a'))).accessToken
+    const bob = (await login(api, uniqueEmail('doc-b'))).accessToken
+    await startTopUp(alice)
+    const [mine] = await documents(alice)
+    expect((await api('GET', `/api/billing/documents/${mine?.id}`, { token: bob })).status).toBe(
+      404,
+    )
+    expect(await documents(bob)).toEqual([])
+    expect((await api('GET', '/api/billing/documents')).status).toBe(401)
+  })
+})
+
 describe('a lost webhook', () => {
   test('is made up for by asking Stripe, once, whichever comes first', async () => {
     const token = (await login(api, uniqueEmail('lost'))).accessToken
@@ -426,5 +516,14 @@ describe('privacy', () => {
         sql`select count(*)::int as n from billing.wallet_balances where user_id = ${me.userId}`,
       ),
     ).toBe(0)
+    // The invoice and the receipt stay, but nobody is named on them any more.
+    const docs = await db.execute<{ kind: string; user_id: string | null; buyer: unknown }>(
+      sql`select kind, user_id, buyer from billing.documents where top_up_id = ${topUpId} order by kind`,
+    )
+    expect([...docs].map((d) => d.kind)).toEqual(['invoice', 'receipt'])
+    for (const d of docs) {
+      expect(d.user_id).toBeNull()
+      expect(d.buyer).toEqual({ name: null, email: null, address: null, taxId: null })
+    }
   })
 })

@@ -55,3 +55,17 @@ export interface PaymentGateway {
 }
 
 export class InvalidWebhookError extends Error {}
+
+/** What billing needs to know about who is paying, to put on a document. */
+export interface BuyerDirectory {
+  /** Never throws: a name or an email that cannot be found is `null`, and the document is issued without it. */
+  lookup(userId: string): Promise<{ name: string | null; email: string | null }>
+}
+
+/** What the buyer typed when starting a top-up, for the invoice. All optional. */
+export interface BuyerDetails {
+  /** A company name, to bill that instead of the person. */
+  name?: string
+  taxId?: string
+  address?: string
+}

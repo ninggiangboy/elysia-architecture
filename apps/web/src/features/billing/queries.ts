@@ -1,3 +1,4 @@
+import type { DocumentKind } from '@app/shared-types'
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import { http, unwrap } from '@/lib/api'
 
@@ -28,6 +29,39 @@ export const transactionsQuery = infiniteQueryOptions({
   getNextPageParam: (page) => page.nextCursor ?? undefined,
 })
 
+const fetchDocuments = async (kind: DocumentKind | undefined, before?: string) =>
+  unwrap(await http.api.billing.documents.get({ query: { kind, before } }))
+
+type DocumentsPage = Awaited<ReturnType<typeof fetchDocuments>>
+export type BillingDocument = DocumentsPage['items'][number]
+
+/** Invoices, receipts and credit notes, newest first; `kind` narrows it to one of them. */
+export const documentsQuery = (kind?: DocumentKind) =>
+  infiniteQueryOptions({
+    queryKey: ['billing', 'documents', kind ?? 'all'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => fetchDocuments(kind, pageParam),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+  })
+
+export const documentQuery = (id: string) =>
+  queryOptions({
+    queryKey: ['billing', 'document', id],
+    queryFn: async () => unwrap(await http.api.billing.documents({ id }).get()),
+  })
+
+/** The receipt of a top-up, once it is paid; `null` until then. */
+export const receiptOfTopUpQuery = (topUpId: string) =>
+  queryOptions({
+    queryKey: ['billing', 'receipt-of', topUpId],
+    queryFn: async () =>
+      unwrap(
+        await http.api.billing.documents.get({
+          query: { topUpId, kind: 'receipt', limit: 1 },
+        }),
+      ).items[0] ?? null,
+  })
+
 export const topUpQuery = (id: string) =>
   queryOptions({
     queryKey: ['billing', 'topup', id],
@@ -42,6 +76,8 @@ export const createTopUp = async (input: {
   currency: string
   amount: number
   idempotencyKey: string
+  /** Who the invoice is made out to, when not the account holder. */
+  billing?: { name?: string; taxId?: string; address?: string }
 }) => {
   const { idempotencyKey, ...body } = input
   return unwrap(

@@ -43,6 +43,14 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
   await expect(page.getByTestId('no-balance')).toBeVisible()
   await expect(page.getByTestId('no-transactions')).toBeVisible()
 
+  // Invoices and receipts are a step off the wallet too; a new account has none yet.
+  await page.getByRole('link', { name: 'View invoices & receipts' }).click()
+  await expect(page).toHaveURL(/\/settings\/wallet\/documents$/)
+  await expect(page.getByTestId('no-documents')).toBeVisible()
+  await page.getByTestId('documents-filter-receipt').click()
+  await expect(page.getByTestId('no-documents')).toBeVisible()
+  await page.goBack()
+
   await page.getByRole('main').getByRole('link', { name: 'Top up' }).click()
   await expect(page).toHaveURL(/\/settings\/wallet\/topup$/)
   await expect(page.getByTestId('no-balance')).toBeVisible()

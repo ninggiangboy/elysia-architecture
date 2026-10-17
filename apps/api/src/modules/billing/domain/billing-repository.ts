@@ -1,3 +1,4 @@
+import type { BillingDocument, DocumentKind, DocumentStatus } from './document'
 import type { TopUp, TopUpStatus } from './top-up'
 
 /**
@@ -106,4 +107,38 @@ export interface PaymentAuditRepository {
     detail: string
     now: Date
   }): Promise<void>
+}
+
+export interface DocumentRepository {
+  /**
+   * The next number of this kind in this year (1, 2, 3 …). It locks the counter until the transaction ends, so numbers
+   * are consecutive: call it inside the unit of work that stores the document, and only when one will be stored.
+   */
+  nextSequence(kind: DocumentKind, year: number): Promise<number>
+  insert(document: BillingDocument): Promise<void>
+  findById(id: string): Promise<BillingDocument | null>
+  /** The invoice or receipt of a top-up (a top-up has at most one of each). */
+  findForTopUp(topUpId: string, kind: 'invoice' | 'receipt'): Promise<BillingDocument | null>
+  /** The credit note for this refund or dispute. */
+  findByReference(kind: 'credit_note', reference: string): Promise<BillingDocument | null>
+  /**
+   * Moves the top-up's invoice to `to` only if it is currently in one of `from`. Returns it as it now is, or `null` when
+   * it was not in a state to move (already settled, or there is none).
+   */
+  settleInvoice(
+    topUpId: string,
+    from: readonly DocumentStatus[],
+    to: DocumentStatus,
+    now: Date,
+  ): Promise<BillingDocument | null>
+  /** Voids the credit note booked for this dispute, if it is still issued. */
+  voidCreditNote(reference: string, now: Date): Promise<BillingDocument | null>
+  /** Newest first. `before` is the id of the last item of the previous page. */
+  list(query: {
+    userId: string
+    kind?: DocumentKind
+    topUpId?: string
+    before?: string
+    limit: number
+  }): Promise<BillingDocument[]>
 }

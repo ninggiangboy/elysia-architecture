@@ -23,6 +23,7 @@ import { DeleteOldCover } from './application/handlers/delete-old-cover'
 import { GenerateAvatarThumbnails } from './application/handlers/generate-avatar-thumbnails'
 import { ProfileDataExporter } from './application/profile-data-exporter'
 import { ProfileLoader } from './application/profile-loader'
+import { ProfileApiImpl } from './application/queries/profile-api-impl'
 import { GetMe } from './application/use-cases/get-me'
 import { RequestAvatarUpload } from './application/use-cases/request-avatar-upload'
 import { RequestCoverUpload } from './application/use-cases/request-cover-upload'
@@ -30,6 +31,7 @@ import { SetAvatar } from './application/use-cases/set-avatar'
 import { SetCover } from './application/use-cases/set-cover'
 import { UpdateProfile } from './application/use-cases/update-profile'
 import { ProfileEvents } from './contracts/events'
+import type { ProfileApi } from './contracts/profile-api'
 import { DrizzleProfileDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
 import { DrizzleProfileRepository } from './infrastructure/persistence/drizzle-profile-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
@@ -52,6 +54,7 @@ export interface ProfileModule {
   routes: ReturnType<typeof profileRoutes>
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
+  api: ProfileApi
 }
 
 export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
@@ -107,5 +110,6 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
       ),
     ],
     outbox: { name: 'profile', table: outbox },
+    api: new ProfileApiImpl(profiles),
   }
 }

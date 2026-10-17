@@ -1,3 +1,4 @@
+import { DOCUMENT_KINDS, DOCUMENT_STATUSES } from '@app/shared-types'
 import { Elysia, t } from 'elysia'
 import { ConflictError, NotFoundError, ValidationError } from '#/shared/application/errors'
 import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
@@ -13,6 +14,7 @@ import {
   type ListTransactions,
   MAX_PAGE_SIZE,
 } from '../application/use-cases/read-billing'
+import type { GetDocument, ListDocuments } from '../application/use-cases/read-documents'
 
 export interface BillingRouteDeps {
   verifier: TokenVerifier
@@ -24,6 +26,8 @@ export interface BillingRouteDeps {
     getTopUp: GetTopUp
     getWallet: GetWallet
     listTransactions: ListTransactions
+    getDocument: GetDocument
+    listDocuments: ListDocuments
     handlePaymentEvent: HandlePaymentEvent
   }
 }
@@ -49,6 +53,36 @@ const transactionBody = t.Object({
   failureReason: t.Nullable(t.String()),
   createdAt: t.String({ format: 'date-time' }),
   updatedAt: t.String({ format: 'date-time' }),
+})
+
+const party = t.Object({
+  name: t.Nullable(t.String()),
+  email: t.Nullable(t.String()),
+  address: t.Nullable(t.String()),
+  taxId: t.Nullable(t.String()),
+})
+
+const documentBody = t.Object({
+  id: t.String({ format: 'uuid' }),
+  kind: t.UnionEnum([...DOCUMENT_KINDS]),
+  number: t.String({ examples: ['INV-2026-000001'] }),
+  status: t.UnionEnum([...DOCUMENT_STATUSES]),
+  topUpId: t.String({ format: 'uuid' }),
+  invoiceId: t.Nullable(t.String({ format: 'uuid' })),
+  currency: t.String(),
+  amount: t.Integer(),
+  seller: party,
+  buyer: party,
+  lines: t.Array(
+    t.Object({
+      description: t.String(),
+      quantity: t.Integer(),
+      unitAmount: t.Integer(),
+      amount: t.Integer(),
+    }),
+  ),
+  issuedAt: t.String({ format: 'date-time' }),
+  settledAt: t.Nullable(t.String({ format: 'date-time' })),
 })
 
 const NOT_AVAILABLE = ['billing_disabled'] as const
@@ -99,10 +133,33 @@ export const billingRoutes = ({
           currency: body.currency,
           amount: body.amount,
           idempotencyKey: headers['idempotency-key'],
+          billing: body.billing,
         }),
       {
         auth: true,
-        body: t.Object(money),
+        body: t.Object({
+          ...money,
+          billing: t.Optional(
+            t.Object(
+              {
+                name: t.Optional(
+                  t.String({
+                    maxLength: 120,
+                    description: 'A company to bill instead of the person',
+                  }),
+                ),
+                taxId: t.Optional(
+                  t.String({ maxLength: 40, description: 'VAT number, MST or the like' }),
+                ),
+                address: t.Optional(t.String({ maxLength: 300 })),
+              },
+              {
+                description:
+                  'Who the invoice is made out to; the profile name is used when omitted',
+              },
+            ),
+          ),
+        }),
         headers: t.Object({
           'idempotency-key': t.Optional(
             t.String({
@@ -117,7 +174,7 @@ export const billingRoutes = ({
         detail: {
           summary: 'Start a top-up',
           description:
-            'Creates a payment with Stripe. The browser completes it with the returned `clientSecret` (Payment Element); the wallet is credited when Stripe confirms, not when this returns. Safe to retry with the same `Idempotency-Key`.',
+            'Creates a payment with Stripe and issues the invoice for it. The browser completes it with the returned `clientSecret` (Payment Element); the wallet is credited when Stripe confirms, not when this returns. Safe to retry with the same `Idempotency-Key`.',
         },
         response: {
           200: t.Object({
@@ -196,6 +253,72 @@ export const billingRoutes = ({
             nextCursor: t.Nullable(t.String({ format: 'uuid' })),
           }),
           400: validationError(),
+        },
+      },
+    )
+    .get(
+      '/documents',
+      ({ auth, query }) =>
+        uc.listDocuments.execute({
+          userId: auth.userId,
+          kind: query.kind,
+          topUpId: query.topUpId,
+          before: query.before,
+          limit: query.limit,
+        }),
+      {
+        auth: true,
+        query: t.Object({
+          // Not `UnionEnum`: it would default to its first member when the query has no `kind`.
+          kind: t.Optional(
+            t.Union([t.Literal('invoice'), t.Literal('receipt'), t.Literal('credit_note')]),
+          ),
+          topUpId: t.Optional(
+            t.String({ format: 'uuid', description: 'Only the documents of this top-up' }),
+          ),
+          limit: t.Optional(
+            t.Integer({
+              minimum: 1,
+              maximum: MAX_PAGE_SIZE,
+              default: DEFAULT_PAGE_SIZE,
+              description: 'Page size',
+            }),
+          ),
+          before: t.Optional(
+            t.String({
+              format: 'uuid',
+              description: '`nextCursor` of the previous page, to fetch older documents',
+            }),
+          ),
+        }),
+        detail: {
+          summary: 'My invoices, receipts and credit notes',
+          description:
+            'Newest first, paginated with a cursor. An invoice exists from the moment a top-up starts; its receipt appears when the payment succeeds.',
+        },
+        response: {
+          200: t.Object({
+            items: t.Array(documentBody),
+            nextCursor: t.Nullable(t.String({ format: 'uuid' })),
+          }),
+          400: validationError(),
+        },
+      },
+    )
+    .get(
+      '/documents/:id',
+      ({ auth, params }) => uc.getDocument.execute({ userId: auth.userId, documentId: params.id }),
+      {
+        auth: true,
+        params: t.Object({ id: t.String({ format: 'uuid' }) }),
+        detail: {
+          summary: 'Look at an invoice, receipt or credit note',
+          description:
+            "The document as it was issued: seller, buyer and lines are frozen, only an invoice's or a credit note's status moves.",
+        },
+        response: {
+          200: documentBody,
+          404: errorResponse(404, 'document_not_found'),
         },
       },
     )

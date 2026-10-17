@@ -185,15 +185,27 @@ function AmountStep({ onStarted }: { onStarted: (started: Started) => void }) {
   const rule = config.currencies.find((c) => c.code === currency) ?? config.currencies[0]
   const [preset, setPreset] = useState<number | null>(rule?.presets[1] ?? null)
   const [custom, setCustom] = useState('')
+  const [company, setCompany] = useState(false)
+  const [companyName, setCompanyName] = useState('')
+  const [taxId, setTaxId] = useState('')
+  const [address, setAddress] = useState('')
 
   const amount = custom !== '' ? parseMoney(custom, currency) : preset
   const valid = rule !== undefined && amount !== null && amount >= rule.min && amount <= rule.max
 
   // One key per currency and amount: pressing "continue" again for the same choice must not open a second payment.
-  const attempt = useRef<{ currency: string; amount: number; key: string } | null>(null)
+  // The invoice details are part of the choice too: the server keeps the first ones it saw for a key.
+  const billing = company
+    ? {
+        name: companyName.trim() || undefined,
+        taxId: taxId.trim() || undefined,
+        address: address.trim() || undefined,
+      }
+    : undefined
+  const attempt = useRef<{ choice: string; key: string } | null>(null)
   const keyFor = (c: string, a: number) => {
-    if (attempt.current?.currency !== c || attempt.current.amount !== a)
-      attempt.current = { currency: c, amount: a, key: crypto.randomUUID() }
+    const choice = JSON.stringify([c, a, billing])
+    if (attempt.current?.choice !== choice) attempt.current = { choice, key: crypto.randomUUID() }
     return attempt.current.key
   }
 
@@ -213,7 +225,7 @@ function AmountStep({ onStarted }: { onStarted: (started: Started) => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (valid && amount !== null)
-      start.mutate({ currency, amount, idempotencyKey: keyFor(currency, amount) })
+      start.mutate({ currency, amount, billing, idempotencyKey: keyFor(currency, amount) })
   }
 
   if (!rule) return null
@@ -284,6 +296,54 @@ function AmountStep({ onStarted }: { onStarted: (started: Started) => void }) {
               max: formatMoney(rule.max, currency),
             })}
           </p>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={company}
+              onChange={(e) => setCompany(e.target.checked)}
+              data-testid="invoice-company"
+            />
+            {t('billing.topup.company')}
+          </label>
+          {company && (
+            <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+              <p className="text-xs text-muted-foreground">{t('billing.topup.companyHint')}</p>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="invoice-name">{t('billing.topup.companyName')}</Label>
+                <Input
+                  id="invoice-name"
+                  autoComplete="organization"
+                  maxLength={120}
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="invoice-tax-id">{t('billing.topup.taxId')}</Label>
+                <Input
+                  id="invoice-tax-id"
+                  autoComplete="off"
+                  maxLength={40}
+                  value={taxId}
+                  onChange={(e) => setTaxId(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="invoice-address">{t('billing.topup.companyAddress')}</Label>
+                <Input
+                  id="invoice-address"
+                  autoComplete="street-address"
+                  maxLength={300}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter>

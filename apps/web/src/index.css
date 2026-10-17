@@ -148,3 +148,20 @@ body {
     transform: translateY(-4px) scale(0.97);
   }
 }
+
+/* An invoice or receipt prints on its own: everything but the element marked `data-print-area` is hidden. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+  [data-print-area] {
+    position: absolute;
+    inset: 0;
+    border: 0;
+    box-shadow: none;
+  }
+}

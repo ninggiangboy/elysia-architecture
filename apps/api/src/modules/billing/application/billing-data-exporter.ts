@@ -1,13 +1,18 @@
 import type { DataExporter, ExportedPart } from '#/shared/application/privacy'
-import type { LedgerRepository, TopUpRepository } from '../domain/billing-repository'
+import type {
+  DocumentRepository,
+  LedgerRepository,
+  TopUpRepository,
+} from '../domain/billing-repository'
 
 const PAGE = 200
 
-/** What billing holds about a user, for a data export: every top-up attempt, the ledger and the balances. */
+/** What billing holds about a user, for a data export: every top-up attempt, the ledger, the balances and the documents. */
 export class BillingDataExporter implements DataExporter {
   constructor(
     private topUps: TopUpRepository,
     private ledger: LedgerRepository,
+    private documents: DocumentRepository,
   ) {}
 
   async collect(userId: string): Promise<ExportedPart> {
@@ -28,11 +33,25 @@ export class BillingDataExporter implements DataExporter {
       if (page.length < PAGE) break
       before = page[page.length - 1]?.id
     }
+    const documents: Record<string, unknown>[] = []
+    let after: string | undefined
+    for (;;) {
+      const page = await this.documents.list({ userId, before: after, limit: PAGE })
+      for (const d of page)
+        documents.push({
+          ...d.props,
+          issuedAt: d.props.issuedAt.toISOString(),
+          settledAt: d.props.settledAt?.toISOString() ?? null,
+        })
+      if (page.length < PAGE) break
+      after = page[page.length - 1]?.id
+    }
     const entries = await this.ledger.entries(userId)
     return {
       data: {
         balances: await this.ledger.balances(userId),
         topUps,
+        documents,
         ledger: entries.map((e) => ({
           id: e.id,
           type: e.type,
