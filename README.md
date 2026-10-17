@@ -17,7 +17,9 @@ races, N instances).
 apps/api              backend  (identity · profile · notification · privacy · billing · realtime)
 apps/web              React SPA
 packages/shared-types constants shared by web ↔ api
-docs/architecture.md  the full write-up: principles, flows, trade-offs, module-splitting checklist
+docs/architecture.md  the map: goals, modules, big picture, reading guide
+docs/architecture/    how the system works, topic by topic (messaging, auth, realtime, privacy, billing…)
+docs/patterns/        reusable techniques as standalone recipes
 ```
 
 ## What makes it interesting
@@ -30,9 +32,9 @@ domain is framework-free, application never imports infrastructure, module A may
 `bootstrap/container.ts` is plain, readable code.
 
 ### 2. Every module is a future microservice
-Own Postgres schema, own migrations (`drizzle_<module>` history table), own outbox/inbox, **no cross-module FKs or JOINs**.
+Own Postgres schema, own migrations (history in schema `drizzle_<module>`), own outbox/inbox, **no cross-module FKs or JOINs**.
 Modules talk only through `contracts/`: plain-DTO interfaces for sync calls and versioned events (`identity.user_registered.v1`)
-for async. Splitting a service is a checklist, not a rewrite ([see it](docs/architecture.md#checklist-splitting-a-module-into-a-service)).
+for async. Splitting a service is a checklist, not a rewrite ([see it](docs/architecture/01-modules-and-boundaries.md#extracting-a-module-into-a-service)).
 
 ### 3. Transactional Outbox + idempotent Inbox
 "Write to the DB *and* emit an event" is atomic. The relay claims rows with `FOR UPDATE SKIP LOCKED` + a lease, so any number of
@@ -57,8 +59,9 @@ an advisory lock; process roles (`APP_ROLES=api,worker`) let you peel the worker
 
 ### 6. Realtime without Redis
 Server-Sent Events fanned out through Postgres `LISTEN/NOTIFY`: use case → outbox → relay → `NOTIFY` → every instance pushes to its own sockets.
-Revoke a device from another browser and it signs out **instantly** instead of after the access-token TTL. Best-effort by design
-(no replay; clients refetch on reconnect), and the trade-off is documented rather than hidden.
+Revoke a device from another browser and it signs out **instantly** instead of after the access-token TTL. Best-effort by design:
+most events are refetched on reconnect, and only the few that opt in (sign-out, privacy job steps, a credited top-up) are replayed
+from a short buffer via `Last-Event-ID`. The trade-off is documented rather than hidden.
 
 ### 7. Notifications: in-app + Web Push, one event
 `notification.created.v1` feeds both the SSE bell and **Web Push** (VAPID, service worker) — neither knows about the other.
@@ -120,7 +123,7 @@ Things worth trying:
 - **Realtime:** open `/realtime`, then sign in on a second browser and sign it out from the profile page — it drops immediately.
 - **Web Push:** enable the toggle in the notification settings (bell → gear), close the tab, trigger an event (e.g. sign in elsewhere).
 - **Top-ups (Stripe test mode):** put your test keys in `.env` (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`), run `bun run stripe:secret` and set the printed `whsec_…` as `STRIPE_WEBHOOK_SECRET`, then `bun run dev` — it also starts the Stripe CLI that forwards webhooks to the API (the `stripe` binary, or Docker). Pay at `Settings → Wallet` with `4242 4242 4242 4242` (any future date and CVC); `4000 0000 0000 0002` is declined. `bun run test:stripe` does both against the running stack.
-- **Multi-instance:** `bun run keys:generate && docker compose --profile app up -d --build`, then http://localhost:8080 (2 replicas behind nginx, both running the relay).
+- **Multi-instance:** `bun run keys:generate && docker compose --profile app up -d --build`, then http://localhost:8080 (2 replicas behind nginx, both with the `api,worker` roles, so both run the relay).
 
 ## Built-in use cases
 
@@ -161,11 +164,11 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 | Command | What it does |
 | --- | --- |
 | `bun run --filter @app/api db:generate` | Generate migrations per module (after editing `schema.ts`) |
-| `bun run --filter @app/api db:migrate` | Run migrations per module (each has its own `drizzle_<module>` history table) |
-| `bun run deploy` | Release with a soft stop: maintenance on → drain → migrate → restart → health check → maintenance off ([Operations](docs/architecture.md)) |
+| `bun run --filter @app/api db:migrate` | Run migrations per module (each keeps its history in schema `drizzle_<module>`) |
+| `bun run deploy` | Release with a soft stop: maintenance on → drain → migrate → restart → health check → maintenance off ([Operations](docs/architecture/03-runtime-and-operations.md#deploys-bun-run-deploy)) |
 | `bun run deploy maintenance on\|off\|status` | Flip maintenance mode by hand (503 for everything but `/health/*`, relay and jobs paused) |
 | `bun run --filter @app/api outbox:list` / `outbox:requeue` | List / requeue events that ended up in the dead-letter queue |
-| `bun run --filter @app/api keys:generate` | Generate JWT (ES256) and VAPID keys into `.env` (never overwrites an existing pair) |
+| `bun run --filter @app/api keys:generate` | Generate JWT (ES256) and VAPID keys into `.env`. The JWT pair is regenerated on every run; an existing VAPID pair is kept, because replacing it unsubscribes every browser |
 | `bun run stripe:listen` / `stripe:secret` | Forward Stripe's webhooks to the API (also part of `bun run dev` when a Stripe key is set) / print the webhook signing secret |
 | `bun run test:stripe` | Pay with Stripe's test cards against the running stack and check the wallet |
 | `bun run infra:down` | Stop the containers (add `-v` to `docker compose down` to delete data) |
@@ -174,8 +177,10 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 
 Nothing here is free, and the docs say so: access tokens outlive logout by up to 15 minutes (no Redis denylist), the magic-link
 throttle can let a few requests slip through under a race, realtime is best-effort (only events that opt in, such as sign-out, are replayed after a reconnect; the rest are refetched), and one shared pool/transaction means you must
-review cross-module transactions before splitting. See [Deliberate trade-offs](docs/architecture.md#deliberate-trade-offs).
+review cross-module transactions before splitting. See [Trade-offs and known gaps](docs/architecture/13-trade-offs-and-known-gaps.md).
 
 ---
 
-📖 **Go deeper:** [docs/architecture.md](docs/architecture.md) — layers and rules, distributed-ready principles, every major flow, mail rate limiting, and the checklist for splitting a module into a service.
+📖 **Go deeper:**
+- [docs/architecture.md](docs/architecture.md) — the map: modules, the big picture, and a reading guide to 13 topic pages (messaging, runtime and deploys, identity, realtime, notifications, mail, privacy, billing, web client, i18n, testing and CI, trade-offs).
+- [docs/patterns/](docs/patterns/README.md) — 25 reusable techniques from this codebase (outbox, inbox, SKIP LOCKED claiming, Postgres token bucket, pub/sub with replay, idempotent payments, maintenance-mode deploys, …), each written to be lifted into another project.
