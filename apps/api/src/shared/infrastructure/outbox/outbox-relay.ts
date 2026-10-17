@@ -54,7 +54,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  */
 export class OutboxRelay {
   private running = false
+  private paused = false
   private loop?: Promise<void>
+  /** The batch being processed right now, if any. */
+  private working?: Promise<number>
   private lastCleanup = 0
 
   private readonly batchSize: number
@@ -93,18 +96,44 @@ export class OutboxRelay {
     await this.loop
   }
 
+  /**
+   * Stops pulling from the outbox but keeps the loop alive: resolves once the batch in flight has finished, so nothing is
+   * cut short. What is not published yet stays in the tables for whoever runs next. Safe to call before `start`.
+   */
+  async pause(): Promise<void> {
+    this.paused = true
+    await this.working
+  }
+
+  resume(): void {
+    this.paused = false
+  }
+
   private async run(): Promise<void> {
     while (this.running) {
       let processed = 0
-      try {
-        for (const source of this.sources) processed += await this.drain(source)
-        await this.maybeCleanup()
-      } catch (err) {
-        this.logger.error({ err }, 'outbox relay tick failed')
+      if (!this.paused) {
+        this.working = this.tick()
+        processed = await this.working
+        this.working = undefined
       }
-      // Keep going immediately while there is work, sleep only when idle.
+      // Keep going immediately while there is work, sleep only when idle (or paused).
       if (processed === 0) await sleep(this.options.pollIntervalMs)
     }
+  }
+
+  private async tick(): Promise<number> {
+    let processed = 0
+    try {
+      for (const source of this.sources) {
+        if (this.paused) break
+        processed += await this.drain(source)
+      }
+      if (!this.paused) await this.maybeCleanup()
+    } catch (err) {
+      this.logger.error({ err }, 'outbox relay tick failed')
+    }
+    return processed
   }
 
   /** Processes one batch of one source; returns the number of messages claimed. */

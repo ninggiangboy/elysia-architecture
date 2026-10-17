@@ -8,3 +8,6 @@ apps/web/playwright-report
 coverage
 .claude/settings.local.json
 apps/web/.tanstack
+
+# Local runtime of `bun run deploy` (pid + log)
+.run

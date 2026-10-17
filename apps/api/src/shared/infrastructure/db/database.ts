@@ -57,12 +57,18 @@ export class Database implements UnitOfWork {
   }
 }
 
-/** Unique violation (23505) — drizzle wraps the driver error in `cause`. */
-export function isUniqueViolation(err: unknown): boolean {
+/** True if the driver error (drizzle wraps it in `cause`) carries one of these SQLSTATE codes. */
+export function isPgError(err: unknown, ...codes: string[]): boolean {
   let current: unknown = err
   for (let depth = 0; depth < 3 && current; depth++) {
-    if ((current as { code?: string }).code === '23505') return true
+    const code = (current as { code?: string }).code
+    if (code && codes.includes(code)) return true
     current = (current as { cause?: unknown }).cause
   }
   return false
+}
+
+/** Unique violation (23505). */
+export function isUniqueViolation(err: unknown): boolean {
+  return isPgError(err, '23505')
 }

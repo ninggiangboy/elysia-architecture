@@ -19,6 +19,7 @@
     "test:e2e": "bun --env-file=../../.env test tests/e2e --timeout 30000",
     "typecheck": "tsc --noEmit",
     "check:arch": "depcruise src --config .dependency-cruiser.cjs",
+    "deploy": "bun --env-file=../../.env scripts/deploy.ts",
     "outbox:list": "bun --env-file=../../.env scripts/outbox.ts list",
     "outbox:requeue": "bun --env-file=../../.env scripts/outbox.ts requeue",
     "privacy:list": "bun --env-file=../../.env scripts/privacy.ts list",

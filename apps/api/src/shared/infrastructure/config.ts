@@ -173,6 +173,9 @@ const schema = z
     OTEL_EXPORTER_OTLP_ENDPOINT: blank.pipe(z.url().optional()),
     OTEL_SERVICE_NAME: z.string().default('elysia-architecture-api'),
 
+    /** How often each process reads the maintenance flag (`bun run deploy` sets it); it takes this long to take effect. */
+    MAINTENANCE_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
+
     OUTBOX_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
     /** Messages claimed per relay batch. */
     OUTBOX_BATCH_SIZE: z.coerce.number().int().positive().default(200),

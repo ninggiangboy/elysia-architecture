@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "dev": "bun scripts/dev.ts",
+    "deploy": "bun run --cwd apps/api deploy",
     "stripe:listen": "bun scripts/stripe.ts listen",
     "stripe:secret": "bun scripts/stripe.ts secret",
     "test:stripe": "bun run --filter @app/api test:stripe",

@@ -162,6 +162,8 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 | --- | --- |
 | `bun run --filter @app/api db:generate` | Generate migrations per module (after editing `schema.ts`) |
 | `bun run --filter @app/api db:migrate` | Run migrations per module (each has its own `drizzle_<module>` history table) |
+| `bun run deploy` | Release with a soft stop: maintenance on → drain → migrate → restart → health check → maintenance off ([Operations](docs/architecture.md)) |
+| `bun run deploy maintenance on\|off\|status` | Flip maintenance mode by hand (503 for everything but `/health/*`, relay and jobs paused) |
 | `bun run --filter @app/api outbox:list` / `outbox:requeue` | List / requeue events that ended up in the dead-letter queue |
 | `bun run --filter @app/api keys:generate` | Generate JWT (ES256) and VAPID keys into `.env` (never overwrites an existing pair) |
 | `bun run stripe:listen` / `stripe:secret` | Forward Stripe's webhooks to the API (also part of `bun run dev` when a Stripe key is set) / print the webhook signing secret |

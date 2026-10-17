@@ -4,6 +4,7 @@ import { Elysia, t } from 'elysia'
 import type { Container } from '#/bootstrap/container'
 import { API_PREFIX } from '#/shared/http/constants'
 import { errorHandlerPlugin } from '#/shared/http/error-handler.plugin'
+import { maintenancePlugin } from '#/shared/http/maintenance.plugin'
 import { openapiDocumentation } from '#/shared/http/openapi'
 import { requestContextPlugin } from '#/shared/http/request-context.plugin'
 import { tracingPlugin } from '#/shared/http/tracing.plugin'
@@ -17,6 +18,8 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 const readiness = t.Object({
   status: t.Union([t.Literal('ready'), t.Literal('degraded')]),
   database: t.Union([t.Literal('up'), t.Literal('down')]),
+  /** True while maintenance mode is on: the process is healthy but answers every other request 503. */
+  maintenance: t.Boolean(),
 })
 
 function healthRoutes(container: Container) {
@@ -40,12 +43,14 @@ function healthRoutes(container: Container) {
         return {
           status: ready ? ('ready' as const) : ('degraded' as const),
           database,
+          maintenance: container.maintenance.active,
         }
       },
       {
         detail: {
           summary: 'Readiness',
-          description: 'Checks the database connection; 503 if not ready.',
+          description:
+            'Checks the database connection; 503 if not ready. Stays ready in maintenance mode (and says so), so a deploy can tell a booted process from a dead one.',
         },
         response: {
           200: t.Object(readiness.properties, { description: 'Ready to accept requests' }),
@@ -62,6 +67,7 @@ export function buildApp(container: Container) {
     .use(tracingPlugin)
     .use(errorHandlerPlugin(container.logger))
     .use(cors({ origin: container.config.CORS_ORIGINS, credentials: true }))
+    .use(maintenancePlugin(container.maintenance))
     .use(
       openapi({
         enabled: container.config.NODE_ENV === 'development',

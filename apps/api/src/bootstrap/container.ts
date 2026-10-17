@@ -16,6 +16,10 @@ import type { Config } from '#/shared/infrastructure/config'
 import { Database } from '#/shared/infrastructure/db/database'
 import type { Logger } from '#/shared/infrastructure/logger'
 import { SmtpMailer } from '#/shared/infrastructure/mail/smtp-mailer'
+import {
+  MaintenanceMode,
+  MaintenanceStore,
+} from '#/shared/infrastructure/maintenance/maintenance-mode'
 import { OutboxRelay } from '#/shared/infrastructure/outbox/outbox-relay'
 import { S3ObjectStorage } from '#/shared/infrastructure/storage/s3-object-storage'
 import { SystemClock, UuidV7Generator } from '#/shared/infrastructure/system'
@@ -37,6 +41,8 @@ export interface ContainerOverrides {
   oauth?: OAuthGateway
   /** Replaces Stripe (tests: a fake provider). Needs the `STRIPE_*` variables in the config to take effect. */
   paymentGateway?: PaymentGateway
+  /** Replaces where the maintenance flag is read from (tests: no shared state with other processes on the database). */
+  maintenanceStore?: Pick<MaintenanceStore, 'read'>
 }
 
 export async function createContainer(
@@ -219,6 +225,25 @@ export async function createContainer(
     },
   )
 
+  // Not started here (tests build containers too): `main.ts` reads it once before serving, then polls.
+  const maintenance = new MaintenanceMode(
+    overrides.maintenanceStore ?? new MaintenanceStore(database),
+    logger,
+    config.MAINTENANCE_POLL_INTERVAL_MS,
+  )
+
+  /** Maintenance mode stops everything that starts work on its own: the relay and the timers behind the jobs. */
+  const pauseWorker = async () => {
+    await relay.pause()
+    await privacy.stopJobs()
+    await billing.stopJobs()
+  }
+  const resumeWorker = () => {
+    relay.resume()
+    privacy.startJobs()
+    billing.startJobs()
+  }
+
   return {
     config,
     logger,
@@ -229,13 +254,31 @@ export async function createContainer(
     database,
     bus,
     relay,
-    /** Starts what a worker-role process runs: the outbox relay, and the timers behind the privacy and billing jobs. */
+    maintenance,
+    /**
+     * Starts what a worker-role process runs: the outbox relay, and the timers behind the privacy and billing jobs.
+     * Follows maintenance mode from then on: paused while it is on (right away if it already is), running again when it ends.
+     */
     startWorker() {
+      if (maintenance.active)
+        void relay.pause() // before `start`, so the first batch is not claimed
+      else {
+        privacy.startJobs()
+        billing.startJobs()
+      }
       relay.start()
-      privacy.startJobs()
-      billing.startJobs()
+      // One transition at a time: on → off → on in quick succession must not interleave.
+      let transition: Promise<unknown> = Promise.resolve()
+      maintenance.onChange((active) => {
+        transition = transition
+          .then(active ? pauseWorker : resumeWorker)
+          .catch((err) =>
+            logger.error({ err, active }, 'switching the worker for maintenance failed'),
+          )
+      })
     },
     async close() {
+      maintenance.stop()
       await billing.stopJobs()
       await privacy.stopJobs()
       await relay.stop()

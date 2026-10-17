@@ -24,6 +24,11 @@ const tracing = config.OTEL_EXPORTER_OTLP_ENDPOINT
 const clustered = config.PROCESS_SLOT !== undefined
 const container = await createContainer(config, logger)
 
+// Before anything is served or pulled: a process started in the middle of a deploy comes up already in maintenance mode.
+await container.maintenance.refresh()
+container.maintenance.start()
+if (container.maintenance.active) logger.warn('maintenance mode is on')
+
 const app = config.APP_ROLES.includes('api')
   ? buildApp(container).listen({
       port: config.PORT,
@@ -41,6 +46,7 @@ if (config.APP_ROLES.includes('worker') && (!clustered || config.PROCESS_SLOT ==
     {
       outboxIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
       privacyJobsIntervalS: config.PRIVACY_JOBS_INTERVAL_SECONDS,
+      paused: container.maintenance.active,
     },
     'outbox relay and privacy jobs started',
   )
@@ -51,8 +57,8 @@ async function shutdown(signal: string) {
   if (shuttingDown) return
   shuttingDown = true
   logger.info({ signal }, 'shutting down')
-  // Order: close live SSE streams (else `stop` waits on them) → stop accepting requests →
-  // stop the relay (wait for the running batch) → close the DB pool.
+  // Order: close live SSE streams (else `stop` waits on them) → stop accepting requests (in-flight ones finish) →
+  // stop the relay and the jobs (wait for the running batch) → close the DB pool.
   await container.modules.realtime.stop()
   await app?.stop()
   await container.close()
