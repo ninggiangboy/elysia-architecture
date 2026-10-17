@@ -9,7 +9,10 @@ export interface IdGenerator {
   next(): string
 }
 
-/** Transaction scoped to ONE module (one DB). There is no cross-module transaction. */
+/**
+ * A transaction. All modules share one pool, so it CAN span modules, but by convention it stays within one module:
+ * that is what lets a module move to its own database later without rewriting its use cases.
+ */
 export interface UnitOfWork {
   run<T>(fn: () => Promise<T>): Promise<T>
 }

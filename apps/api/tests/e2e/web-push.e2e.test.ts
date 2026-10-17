@@ -98,7 +98,10 @@ describe('web push', () => {
       'push to both browsers',
     )
     const pushed = sender.to(one)[0]?.message
-    expect(pushed).toMatchObject({ title: 'New sign-in to your account', link: '/' })
+    expect(pushed).toMatchObject({
+      title: 'New sign-in to your account',
+      link: '/settings/security',
+    })
     expect(pushed?.id).toMatch(/^[0-9a-f-]{36}$/)
     expect(sender.to(one)[0]?.target).toMatchObject(KEYS)
     expect(sender.to(one)).toHaveLength(1)

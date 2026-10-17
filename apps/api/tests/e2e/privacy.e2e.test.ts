@@ -145,7 +145,10 @@ describe('data export', () => {
       const list = await api('GET', '/api/notifications', { token: me.accessToken })
       return list.json.items.find((n: { kind: string }) => n.kind === 'data_export')
     })
-    expect(notice).toMatchObject({ template: 'dataExportReady', data: { link: '/privacy' } })
+    expect(notice).toMatchObject({
+      template: 'dataExportReady',
+      data: { link: '/settings/account' },
+    })
     expect(JSON.stringify(notice)).not.toContain('http')
 
     // A fresh link on demand — also behind step-up, and only for the owner.

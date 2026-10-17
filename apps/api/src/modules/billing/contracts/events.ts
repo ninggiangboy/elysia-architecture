@@ -1,3 +1,7 @@
+/**
+ * Integration events emitted by billing. The payload is a public contract: only add fields (backward compatible);
+ * breaking changes need a new version (`.v2`) emitted in parallel for a while.
+ */
 export const BillingEvents = {
   TopUpSucceeded: 'billing.topup_succeeded.v1',
   TopUpFailed: 'billing.topup_failed.v1',

@@ -1,4 +1,5 @@
 import { Elysia } from 'elysia'
+import { TooManyRequestsError } from '#/shared/application/errors'
 import type { ErrorKind } from '#/shared/domain/errors'
 import { DomainError } from '#/shared/domain/errors'
 import type { Logger } from '#/shared/infrastructure/logger'
@@ -21,6 +22,8 @@ export const errorHandlerPlugin = (logger: Logger) =>
   new Elysia({ name: 'error-handler' }).onError({ as: 'global' }, ({ code, error, set }) => {
     if (error instanceof DomainError) {
       set.status = STATUS[error.kind]
+      if (error instanceof TooManyRequestsError && error.retryAfterSeconds !== undefined)
+        set.headers['retry-after'] = String(error.retryAfterSeconds)
       return body(error.code, error.message)
     }
     switch (code) {

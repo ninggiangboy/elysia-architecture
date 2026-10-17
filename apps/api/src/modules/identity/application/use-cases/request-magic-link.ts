@@ -21,10 +21,12 @@ export class RequestMagicLink {
     const email = Email.create(cmd.email)
     const now = this.clock.now()
 
-    if (!(await this.throttle.isAllowed(email, cmd.ip, now))) {
+    const verdict = await this.throttle.check(email, cmd.ip, now)
+    if (!verdict.allowed) {
       throw new TooManyRequestsError(
         'magic_link_rate_limited',
         'Too many requests, try again later',
+        Math.ceil(verdict.retryAfterMs / 1000),
       )
     }
 

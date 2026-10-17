@@ -3,6 +3,7 @@ import type { MessagePublisher } from '#/shared/application/ports'
 import { withAdvisoryXactLock } from '#/shared/infrastructure/db/advisory-lock'
 import type { Database } from '#/shared/infrastructure/db/database'
 import type { Logger } from '#/shared/infrastructure/logger'
+import { requestContext } from '#/shared/infrastructure/request-context'
 import {
   contextFromTraceparent,
   recordSpanError,
@@ -139,7 +140,8 @@ export class OutboxRelay {
   /** Processes one batch of one source; returns the number of messages claimed. */
   async drain(source: OutboxSource): Promise<number> {
     const { table } = source
-    const now = new Date()
+    // One clock: due-ness and lease expiry are compared with the database's `now()`, the same clock that sets the lease.
+    const now = sql`now()`
     const claimed = await this.database.db
       .update(table)
       .set({
@@ -196,33 +198,41 @@ export class OutboxRelay {
       payload: row.payload,
       headers: row.headers as MessageHeaders,
     }
+    // Handlers run in the context of the request that caused the event: their log lines carry its correlation id, and the
+    // events they write in turn keep it (causation = this message).
+    const context = {
+      requestId: row.id,
+      correlationId: row.headers.correlationId ?? row.id,
+    }
     // Continues the trace of whatever wrote the event (a request, or a handler that emitted a follow-up event).
-    const published = await withSpan(
-      `outbox.relay ${row.type}`,
-      {
-        kind: SpanKind.CONSUMER,
-        parent: contextFromTraceparent(row.headers.traceparent),
-        attributes: {
-          'messaging.system': 'outbox',
-          'messaging.message.id': row.id,
-          'messaging.destination.name': row.type,
-          'outbox.source': source.name,
-          'outbox.attempt': row.attempts,
-          'app.correlation_id': row.headers.correlationId,
+    const published = await requestContext.run(context, () =>
+      withSpan(
+        `outbox.relay ${row.type}`,
+        {
+          kind: SpanKind.CONSUMER,
+          parent: contextFromTraceparent(row.headers.traceparent),
+          attributes: {
+            'messaging.system': 'outbox',
+            'messaging.message.id': row.id,
+            'messaging.destination.name': row.type,
+            'outbox.source': source.name,
+            'outbox.attempt': row.attempts,
+            'app.correlation_id': row.headers.correlationId,
+          },
         },
-      },
-      async (span) => {
-        try {
-          await this.publisher.publish(envelope)
-          return true
-        } catch (err) {
-          // Deferred by a rate limit is the system working as designed; only real failures mark the span.
-          if (!isDeferral(err)) recordSpanError(span, err)
-          else span.setAttribute('outbox.deferred', true)
-          await this.safely(row, () => this.recordFailure(source, row, err))
-          return false
-        }
-      },
+        async (span) => {
+          try {
+            await this.publisher.publish(envelope)
+            return true
+          } catch (err) {
+            // Deferred by a rate limit is the system working as designed; only real failures mark the span.
+            if (!isDeferral(err)) recordSpanError(span, err)
+            else span.setAttribute('outbox.deferred', true)
+            await this.safely(row, () => this.recordFailure(source, row, err))
+            return false
+          }
+        },
+      ),
     )
     if (!published) return
     // Published but not yet marked: if marking fails the lease expires and the message is redelivered (at-least-once).

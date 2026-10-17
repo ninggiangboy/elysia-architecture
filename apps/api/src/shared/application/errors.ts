@@ -33,7 +33,12 @@ export class ValidationError extends DomainError {
 }
 
 export class TooManyRequestsError extends DomainError {
-  constructor(code = 'too_many_requests', message = 'Too many requests') {
+  constructor(
+    code = 'too_many_requests',
+    message = 'Too many requests',
+    /** When a retry can succeed, if known; sent as `Retry-After`. */
+    readonly retryAfterSeconds?: number,
+  ) {
     super(code, message, 'too_many_requests')
   }
 }

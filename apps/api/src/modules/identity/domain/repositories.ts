@@ -83,7 +83,8 @@ export interface OAuthStateRepository {
 export interface StepUpCodeRepository {
   /** Replaces any code still pending for the user: only the newest one can be used. */
   issue(code: StepUpCode): Promise<void>
-  countSince(userId: string, since: Date): Promise<number>
+  /** Codes issued to the user since `since`, and when the oldest of them was issued. */
+  issuedSince(userId: string, since: Date): Promise<{ count: number; oldest: Date | null }>
   /**
    * Consumes the user's pending code if `codeHash` matches and fewer than `maxAttempts` wrong guesses were made.
    * On a mismatch it counts the attempt and returns false.

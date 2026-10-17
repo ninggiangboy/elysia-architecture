@@ -63,6 +63,35 @@ describe('health & plumbing', () => {
     expect(rows[0]?.headers.correlationId).toBe('corr-xyz-9')
     expect(rows[0]?.headers.causationId).toBe('req-abc-1')
   })
+
+  test('the correlation id survives the relay: a handler’s follow-up event keeps it', async () => {
+    const email = uniqueEmail('chain')
+    expect((await api('POST', '/api/auth/magic-link', { body: { email } })).status).toBe(202)
+    const mail = await waitForMail(email, 'sign-in')
+    const verified = await api('POST', '/api/auth/magic-link/verify', {
+      body: { token: mail.token },
+      headers: { 'x-correlation-id': 'corr-chain-1' },
+    })
+    expect(verified.status).toBe(200)
+    const userId = verified.json.user.id as string
+
+    // user_registered (identity) → welcome notification → notification.created (written by the handler, on the worker)
+    const [registered] = await t.container.database.db.execute<{ id: string }>(
+      sql`select id from identity.outbox_messages where type = 'identity.user_registered.v1' and aggregate_id = ${userId}`,
+    )
+    const created = await eventually(
+      async () => {
+        const rows = await t.container.database.db.execute<{ headers: Record<string, string> }>(
+          sql`select headers from notification.outbox_messages where type = 'notification.created.v1' and aggregate_id = ${userId}`,
+        )
+        return rows[0]
+      },
+      10_000,
+      'the welcome notification event',
+    )
+    expect(created.headers.correlationId).toBe('corr-chain-1')
+    expect(created.headers.causationId).toBe(registered?.id)
+  })
 })
 
 describe('full user journey', () => {
@@ -315,6 +344,9 @@ describe('full user journey', () => {
     // Reuse right away (within the 10s grace, e.g. two tabs) → rejected but the session is NOT revoked
     const concurrent = await api('POST', '/api/auth/refresh', { cookie })
     expect(concurrent.status).toBe(401)
+    expect(concurrent.json.error.code).toBe('refresh_token_rotated')
+    // …and it leaves the cookie alone: clearing it could wipe the one the winning tab just received
+    expect(concurrent.setCookie).toBeNull()
     expect((await api('POST', '/api/auth/refresh', { cookie: rotated })).status).toBe(200)
 
     // Simulate the old token being reused after the grace window → treated as stolen
@@ -479,6 +511,10 @@ describe('abuse protection', () => {
     const blocked = await api('POST', '/api/auth/magic-link', { body: { email } })
     expect(blocked.status).toBe(429)
     expect(blocked.json.error.code).toBe('magic_link_rate_limited')
+    // Until the oldest request leaves the 15-minute window
+    const retryAfter = Number(blocked.headers.get('retry-after'))
+    expect(retryAfter).toBeGreaterThan(0)
+    expect(retryAfter).toBeLessThanOrEqual(15 * 60)
   })
 
   test('magic link requests are rate limited per IP', async () => {

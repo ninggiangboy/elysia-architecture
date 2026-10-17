@@ -1,8 +1,9 @@
 // Outbox dead-letter operations:
 //   bun scripts/outbox.ts list
-//   bun scripts/outbox.ts requeue [--module identity|profile|notification|privacy] [--type <event type>] [--id <uuid>]
+//   bun scripts/outbox.ts requeue [--module identity|profile|notification|privacy|billing] [--type <event type>] [--id <uuid>]
 // A handler that already finished a message is blocked by the inbox, so requeue does not send duplicates; only unfinished handlers run again.
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
+import { outbox as billingOutbox } from '#/modules/billing/infrastructure/persistence/schema'
 import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
 import { outbox as notificationOutbox } from '#/modules/notification/infrastructure/persistence/schema'
 import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
@@ -15,6 +16,7 @@ const SOURCES: { name: string; table: OutboxTable }[] = [
   { name: 'profile', table: profileOutbox },
   { name: 'notification', table: notificationOutbox },
   { name: 'privacy', table: privacyOutbox },
+  { name: 'billing', table: billingOutbox },
 ]
 
 const env = process.env as Record<string, string | undefined>
@@ -64,7 +66,13 @@ try {
     } else {
       const rows = await database.db
         .update(table)
-        .set({ deadAt: null, attempts: 0, lockedUntil: null, nextAttemptAt: sql`now()` })
+        .set({
+          deadAt: null,
+          attempts: 0,
+          lockedUntil: null,
+          lastError: null,
+          nextAttemptAt: sql`now()`,
+        })
         .where(dead)
         .returning({ id: table.id })
       total += rows.length

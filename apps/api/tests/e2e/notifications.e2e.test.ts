@@ -58,7 +58,7 @@ describe('notifications', () => {
       kind: 'welcome',
       read: false,
       readAt: null,
-      data: { link: '/' },
+      data: { link: '/settings/profile' },
     })
     expect(await unreadCount(me.accessToken)).toBe(SIGN_UP_NOTIFICATIONS)
   })

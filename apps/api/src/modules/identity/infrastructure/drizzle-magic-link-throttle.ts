@@ -1,6 +1,6 @@
-import { and, count, eq, gte } from 'drizzle-orm'
+import { and, count, eq, gte, min, type SQL } from 'drizzle-orm'
 import type { Database } from '#/shared/infrastructure/db/database'
-import type { MagicLinkThrottle } from '../application/ports'
+import type { MagicLinkThrottle, ThrottleVerdict } from '../application/ports'
 import type { Email } from '../domain/email'
 import { magicLinks } from './persistence/schema'
 
@@ -16,18 +16,26 @@ export class DrizzleMagicLinkThrottle implements MagicLinkThrottle {
     private limits: { perEmail: number; perIp: number },
   ) {}
 
-  async isAllowed(email: Email, ip: string, now: Date): Promise<boolean> {
+  async check(email: Email, ip: string, now: Date): Promise<ThrottleVerdict> {
     const since = new Date(now.getTime() - WINDOW_MS)
-    const [byEmail] = await this.database.executor
-      .select({ n: count() })
-      .from(magicLinks)
-      .where(and(eq(magicLinks.email, email.value), gte(magicLinks.createdAt, since)))
-    if ((byEmail?.n ?? 0) >= this.limits.perEmail) return false
+    const byEmail = await this.window(eq(magicLinks.email, email.value), since)
+    if (byEmail.n >= this.limits.perEmail) return this.refused(byEmail.oldest, now)
+    const byIp = await this.window(eq(magicLinks.requestedIp, ip), since)
+    if (byIp.n >= this.limits.perIp) return this.refused(byIp.oldest, now)
+    return { allowed: true }
+  }
 
-    const [byIp] = await this.database.executor
-      .select({ n: count() })
+  private async window(scope: SQL, since: Date): Promise<{ n: number; oldest: Date | null }> {
+    const [row] = await this.database.executor
+      .select({ n: count(), oldest: min(magicLinks.createdAt) })
       .from(magicLinks)
-      .where(and(eq(magicLinks.requestedIp, ip), gte(magicLinks.createdAt, since)))
-    return (byIp?.n ?? 0) < this.limits.perIp
+      .where(and(scope, gte(magicLinks.createdAt, since)))
+    return { n: row?.n ?? 0, oldest: row?.oldest ?? null }
+  }
+
+  /** A slot frees up when the oldest request still counted leaves the window. */
+  private refused(oldest: Date | null, now: Date): ThrottleVerdict {
+    const freesAt = (oldest?.getTime() ?? now.getTime()) + WINDOW_MS
+    return { allowed: false, retryAfterMs: Math.max(1000, freesAt - now.getTime()) }
   }
 }

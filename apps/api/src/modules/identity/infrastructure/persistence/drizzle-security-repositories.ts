@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gt, gte, isNull, lt, sql } from 'drizzle-orm'
+import { and, asc, count, eq, gt, gte, isNull, lt, min, sql } from 'drizzle-orm'
 import { ConflictError, VersionConflictError } from '#/shared/application/errors'
 import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
 import type { OAuthState, WebAuthnChallenge, WebAuthnPurpose } from '../../domain/auth-challenge'
@@ -271,12 +271,12 @@ export class DrizzleStepUpCodeRepository implements StepUpCodeRepository {
     await ex.insert(stepUpCodes).values(code)
   }
 
-  async countSince(userId: string, since: Date): Promise<number> {
+  async issuedSince(userId: string, since: Date): Promise<{ count: number; oldest: Date | null }> {
     const [row] = await this.database.executor
-      .select({ n: count() })
+      .select({ n: count(), oldest: min(stepUpCodes.createdAt) })
       .from(stepUpCodes)
       .where(and(eq(stepUpCodes.userId, userId), gte(stepUpCodes.createdAt, since)))
-    return row?.n ?? 0
+    return { count: row?.n ?? 0, oldest: row?.oldest ?? null }
   }
 
   async verify(userId: string, codeHash: string, now: Date, maxAttempts: number): Promise<boolean> {

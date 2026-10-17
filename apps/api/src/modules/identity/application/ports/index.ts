@@ -16,8 +16,11 @@ export interface TokenService {
   }): Promise<{ token: string; expiresInSeconds: number }>
 }
 
+export type ThrottleVerdict = { allowed: true } | { allowed: false; retryAfterMs: number }
+
 export interface MagicLinkThrottle {
-  isAllowed(email: Email, ip: string, now: Date): Promise<boolean>
+  /** When refused, `retryAfterMs` is how long until the oldest counted request leaves the window. */
+  check(email: Email, ip: string, now: Date): Promise<ThrottleVerdict>
 }
 
 /** The credential as the browser reports it: `id` is the base64url credential id, the rest is opaque to us. */

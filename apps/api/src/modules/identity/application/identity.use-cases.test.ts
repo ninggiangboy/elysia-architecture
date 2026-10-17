@@ -154,7 +154,10 @@ describe('identity use cases', () => {
     return {
       request: new RequestMagicLink(
         links,
-        { isAllowed: async () => allow },
+        {
+          check: async () =>
+            allow ? { allowed: true as const } : { allowed: false as const, retryAfterMs: 60_000 },
+        },
         tokens,
         outbox,
         uow,
@@ -261,9 +264,10 @@ describe('identity use cases', () => {
       const { uc, session } = await login()
       const next = await uc.refresh.execute({ refreshToken: session.session.refreshToken, meta })
       clock.advance(2_000)
+      // A distinct code, so the route keeps the cookie the other tab just received.
       await expect(
         uc.refresh.execute({ refreshToken: session.session.refreshToken, meta }),
-      ).rejects.toBeInstanceOf(UnauthorizedError)
+      ).rejects.toMatchObject({ code: 'refresh_token_rotated' })
       await uc.refresh.execute({ refreshToken: next.session.refreshToken, meta }) // still usable
     })
 
@@ -273,7 +277,7 @@ describe('identity use cases', () => {
       clock.advance(60_000)
       await expect(
         uc.refresh.execute({ refreshToken: session.session.refreshToken, meta }),
-      ).rejects.toBeInstanceOf(UnauthorizedError)
+      ).rejects.toMatchObject({ code: 'invalid_refresh_token' })
       await expect(
         uc.refresh.execute({ refreshToken: next.session.refreshToken, meta }),
       ).rejects.toBeInstanceOf(UnauthorizedError)
@@ -387,7 +391,7 @@ describe('identity use cases', () => {
       clock.advance(60_000)
       await expect(
         uc.refresh.execute({ refreshToken: session.session.refreshToken, meta }),
-      ).rejects.toBeInstanceOf(UnauthorizedError)
+      ).rejects.toMatchObject({ code: 'invalid_refresh_token' })
       const revoked = outbox.events.filter((e) => e.type === IdentityEvents.SessionRevoked)
       expect(revoked.map((e) => e.payload)).toMatchObject([
         { sessionId: familyOf(session), reason: 'token_reuse' },

@@ -51,8 +51,15 @@ export class RequestStepUpCode {
     if (!user) throw new NotFoundError('user_not_found', 'User not found')
     const now = this.clock.now()
     const since = new Date(now.getTime() - STEP_UP_CODE_WINDOW_MS)
-    if ((await this.codes.countSince(user.id, since)) >= STEP_UP_CODE_MAX_PER_WINDOW) {
-      throw new TooManyRequestsError('step_up_rate_limited', 'Too many codes requested, try later')
+    const issued = await this.codes.issuedSince(user.id, since)
+    if (issued.count >= STEP_UP_CODE_MAX_PER_WINDOW) {
+      // A new code is allowed once the oldest one counted leaves the window.
+      const freesAt = (issued.oldest ?? now).getTime() + STEP_UP_CODE_WINDOW_MS
+      throw new TooManyRequestsError(
+        'step_up_rate_limited',
+        'Too many codes requested, try later',
+        Math.max(1, Math.ceil((freesAt - now.getTime()) / 1000)),
+      )
     }
 
     const code = this.tokens.newNumericCode(CODE_DIGITS)

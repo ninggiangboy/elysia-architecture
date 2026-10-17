@@ -253,7 +253,10 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           setRefreshCookie(cookie, result, deps.secureCookies)
           return sessionResponse(result)
         } catch (err) {
-          if (err instanceof UnauthorizedError) clearRefreshCookie(cookie, deps.secureCookies)
+          // Not on `refresh_token_rotated`: another tab of this browser refreshed a moment ago and its response set the
+          // cookie that now holds the session. Clearing it here could wipe that cookie if this response lands last.
+          if (err instanceof UnauthorizedError && err.code !== 'refresh_token_rotated')
+            clearRefreshCookie(cookie, deps.secureCookies)
           throw err
         }
       },
@@ -263,12 +266,18 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           summary: 'Refresh session',
           description:
             'Uses the `refresh_token` cookie to issue a new access token and rotate the refresh token. ' +
-            'Reusing an old refresh token (outside the grace window) revokes the whole session.',
+            'Reusing an old refresh token (outside the grace window) revokes the whole session. Inside the window ' +
+            '(another tab refreshed first) the answer is 401 `refresh_token_rotated` and the cookie is left alone: retry.',
         },
         response: {
           200: sessionBody,
           400: validationError(),
-          401: errorResponse(401, 'missing_refresh_token', 'invalid_refresh_token'),
+          401: errorResponse(
+            401,
+            'missing_refresh_token',
+            'invalid_refresh_token',
+            'refresh_token_rotated',
+          ),
         },
       },
     )

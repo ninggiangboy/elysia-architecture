@@ -28,8 +28,11 @@ export class RefreshSession {
       const old = await this.refreshTokens.consume(hash, nextTokenId, now)
       if (!old) {
         const known = await this.refreshTokens.findByHash(hash)
+        // Rotated moments ago: another tab of the same browser refreshed first. Not theft, and the session lives on
+        // in the cookie that request set — the caller must not clear it.
+        if (known?.isRecentlyRotated(now)) return 'rotated' as const
         // A rotated token that is used again → treat as stolen, revoke the whole session.
-        if (known && !known.isRecentlyRotated(now)) {
+        if (known) {
           const revoked = await this.refreshTokens.revokeUserSession(
             known.userId,
             known.familyId,
@@ -58,6 +61,11 @@ export class RefreshSession {
       return { user: { id: user.id, email: user.email.value }, session }
     })
 
+    if (result === 'rotated')
+      throw new UnauthorizedError(
+        'refresh_token_rotated',
+        'The session was just refreshed by another tab, retry with the current cookie',
+      )
     if (!result)
       throw new UnauthorizedError('invalid_refresh_token', 'Session expired, please sign in again')
     return result

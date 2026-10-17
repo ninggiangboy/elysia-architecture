@@ -189,12 +189,12 @@ describe('step-up (recent confirmation)', () => {
     expect((await verify()).status).toBe(200)
     expect((await verify()).status).toBe(400)
 
-    let last = 202
-    for (let i = 0; i < 6 && last === 202; i++) {
-      last = (await api('POST', '/api/account/step-up/email-code', { token: stale.accessToken }))
-        .status
+    let last = { status: 202, headers: new Headers() }
+    for (let i = 0; i < 6 && last.status === 202; i++) {
+      last = await api('POST', '/api/account/step-up/email-code', { token: stale.accessToken })
     }
-    expect(last).toBe(429)
+    expect(last.status).toBe(429)
+    expect(Number(last.headers.get('retry-after'))).toBeGreaterThan(0)
   })
 
   test('the endpoints need a signed-in user', async () => {
