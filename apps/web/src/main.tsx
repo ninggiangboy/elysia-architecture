@@ -16,3 +16,12 @@ createRoot(document.getElementById('root') as HTMLElement).render(
     <App />
   </StrictMode>,
 )
+
+// The service worker serves the offline page when the app is opened with no connection (public/sw.js). It is registered on
+// every load, not only when push is turned on, or a first offline visit after a normal one would find nothing to serve it.
+// After the first render, so installing it never competes with the page for bandwidth (`load` may already have fired by now).
+if ('serviceWorker' in navigator) {
+  const register = () => void navigator.serviceWorker.register('/sw.js').catch(() => {})
+  if (document.readyState === 'complete') register()
+  else addEventListener('load', register)
+}
