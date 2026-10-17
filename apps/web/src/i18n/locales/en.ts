@@ -494,9 +494,15 @@ export const en = {
       closed: 'closed',
     },
   },
-  maintenance: {
-    title: "We're updating the app",
-    body: "A new version is being installed. This only takes a moment, and this window closes by itself when we're done. Your work is safe.",
+  outage: {
+    maintenance: {
+      title: "We're updating the app",
+      body: "A new version is being installed. This only takes a moment, and this window closes by itself when we're done. Your work is safe.",
+    },
+    unavailable: {
+      title: "We can't reach the server",
+      body: 'The connection to the server was lost. We keep trying, and this window closes by itself as soon as it is back. Your work is safe.',
+    },
   },
   errors: {
     validation_error: 'The request is not valid',

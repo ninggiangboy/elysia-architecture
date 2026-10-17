@@ -491,9 +491,15 @@ export const vi = {
       closed: 'đã đóng',
     },
   },
-  maintenance: {
-    title: 'Chúng tôi đang cập nhật ứng dụng',
-    body: 'Phiên bản mới đang được cài đặt, chỉ mất một lát và cửa sổ này sẽ tự đóng khi xong. Dữ liệu của bạn vẫn an toàn.',
+  outage: {
+    maintenance: {
+      title: 'Chúng tôi đang cập nhật ứng dụng',
+      body: 'Phiên bản mới đang được cài đặt, chỉ mất một lát và cửa sổ này sẽ tự đóng khi xong. Dữ liệu của bạn vẫn an toàn.',
+    },
+    unavailable: {
+      title: 'Không kết nối được tới máy chủ',
+      body: 'Kết nối tới máy chủ bị gián đoạn. Chúng tôi vẫn đang thử lại và cửa sổ này sẽ tự đóng ngay khi kết nối trở lại. Dữ liệu của bạn vẫn an toàn.',
+    },
   },
   errors: {
     validation_error: 'Yêu cầu không hợp lệ',

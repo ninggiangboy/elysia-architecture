@@ -1,6 +1,6 @@
 import { authStore } from './auth-store'
 import { apiOrigin } from './config'
-import { reportIfMaintenance } from './maintenance'
+import { watchNetworkFailure, watchResponse } from './maintenance'
 import { refreshSession } from './session'
 
 /** One event as the server sends it (`id`/`at` are absent on the protocol-level `ready` / `pong`). */
@@ -106,7 +106,7 @@ async function connectOnce(
       signal,
     })
     if (res.status === 401) return (await refreshSession()) ? 'again' : 'stop'
-    await reportIfMaintenance(res)
+    await watchResponse(res)
     if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`)
     const tracked: RealtimeListener = {
       ...listener,
@@ -118,8 +118,10 @@ async function connectOnce(
       },
     }
     return (await readStream(res.body, tracked, onReady)) ? 'stop' : 'retry'
-  } catch {
-    return signal.aborted ? 'stop' : 'retry'
+  } catch (err) {
+    if (signal.aborted) return 'stop'
+    void watchNetworkFailure(err)
+    return 'retry'
   }
 }
 

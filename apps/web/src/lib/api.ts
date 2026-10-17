@@ -10,7 +10,7 @@ import { treaty } from '@elysiajs/eden'
 import { currentLocale, i18n } from '@/i18n'
 import { authStore } from './auth-store'
 import { apiOrigin } from './config'
-import { reportIfMaintenance } from './maintenance'
+import { watchNetworkFailure, watchResponse } from './maintenance'
 import { refreshSession } from './session'
 
 const isAuthEndpoint = (input: RequestInfo | URL) =>
@@ -37,12 +37,21 @@ const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     headers.set('accept-language', currentLocale())
     return fetch(input, { ...init, headers, credentials: 'include' })
   }
-  await simulateLatency(input, init)
-  let res = await send()
-  if (res.status === 401 && !isAuthEndpoint(input) && authStore.get().accessToken) {
-    if (await refreshSession()) res = await send()
+  // A request that gets no answer at all may mean the API is down: have a look (without holding up the caller's error).
+  const sendWatched = async () => {
+    try {
+      return await send()
+    } catch (err) {
+      void watchNetworkFailure(err)
+      throw err
+    }
   }
-  await reportIfMaintenance(res)
+  await simulateLatency(input, init)
+  let res = await sendWatched()
+  if (res.status === 401 && !isAuthEndpoint(input) && authStore.get().accessToken) {
+    if (await refreshSession()) res = await sendWatched()
+  }
+  await watchResponse(res)
   return res
 }) as typeof fetch // bun-types adds `preconnect` to typeof fetch; cast to match
 
