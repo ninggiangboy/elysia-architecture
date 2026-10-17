@@ -9,12 +9,15 @@ export function Dialog({
   title,
   onClose,
   busy,
+  role,
   className,
   children,
 }: {
   title: string
   onClose: () => void
   busy?: boolean
+  /** `alertdialog` for something the user must read before anything else: it announces itself to screen readers. */
+  role?: 'dialog' | 'alertdialog'
   className?: string
   children: ReactNode
 }) {
@@ -31,6 +34,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
+      role={role}
       aria-labelledby={titleId}
       onCancel={(e) => (busy ? e.preventDefault() : undefined)}
       onClose={onClose}

@@ -491,6 +491,10 @@ export const vi = {
       closed: 'đã đóng',
     },
   },
+  maintenance: {
+    title: 'Chúng tôi đang cập nhật ứng dụng',
+    body: 'Phiên bản mới đang được cài đặt, chỉ mất một lát và cửa sổ này sẽ tự đóng khi xong. Dữ liệu của bạn vẫn an toàn.',
+  },
   errors: {
     validation_error: 'Yêu cầu không hợp lệ',
     bad_request: 'Không đọc được yêu cầu',

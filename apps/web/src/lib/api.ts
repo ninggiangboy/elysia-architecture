@@ -10,6 +10,7 @@ import { treaty } from '@elysiajs/eden'
 import { currentLocale, i18n } from '@/i18n'
 import { authStore } from './auth-store'
 import { apiOrigin } from './config'
+import { reportIfMaintenance } from './maintenance'
 import { refreshSession } from './session'
 
 const isAuthEndpoint = (input: RequestInfo | URL) =>
@@ -37,10 +38,11 @@ const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     return fetch(input, { ...init, headers, credentials: 'include' })
   }
   await simulateLatency(input, init)
-  const res = await send()
+  let res = await send()
   if (res.status === 401 && !isAuthEndpoint(input) && authStore.get().accessToken) {
-    if (await refreshSession()) return send()
+    if (await refreshSession()) res = await send()
   }
+  await reportIfMaintenance(res)
   return res
 }) as typeof fetch // bun-types adds `preconnect` to typeof fetch; cast to match
 

@@ -494,6 +494,10 @@ export const en = {
       closed: 'closed',
     },
   },
+  maintenance: {
+    title: "We're updating the app",
+    body: "A new version is being installed. This only takes a moment, and this window closes by itself when we're done. Your work is safe.",
+  },
   errors: {
     validation_error: 'The request is not valid',
     bad_request: 'The request could not be read',
