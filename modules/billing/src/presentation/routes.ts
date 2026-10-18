@@ -1,4 +1,3 @@
-import { DOCUMENT_KINDS, DOCUMENT_STATUSES } from '@app/shared-types/billing'
 import { authPlugin, type TokenVerifier } from '@kit/auth'
 import { ConflictError, NotFoundError, ValidationError } from '@kit/core'
 import { errorResponse, validationError } from '@kit/http'
@@ -15,6 +14,7 @@ import {
   MAX_PAGE_SIZE,
 } from '../application/use-cases/read-billing'
 import type { GetDocument, ListDocuments } from '../application/use-cases/read-documents'
+import { DOCUMENT_KINDS, DOCUMENT_STATUSES } from '../public'
 
 export interface BillingRouteDeps {
   verifier: TokenVerifier

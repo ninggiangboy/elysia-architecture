@@ -1,3 +1,4 @@
+import type { ConfigSlice } from '@kit/config'
 import type { IntegrationEventHandler, OutboxSource } from '@kit/messaging'
 import type { PrivacyParticipation } from '@kit/privacy-participant'
 
@@ -31,4 +32,23 @@ export interface AppModule<Name extends string = string, Routes = unknown> {
   readonly privacy?: PrivacyParticipation
   /** Releases live resources (SSE connections, LISTEN). Called BEFORE the HTTP server is stopped. */
   close?(): Promise<void>
+}
+
+/**
+ * What a host app needs to know about a module without building it: where its migrations and schema are, its outbox table
+ * and its configuration. Static data, so CLI scripts (`db:migrate`, `outbox:list`) and drizzle-kit can read it without
+ * pulling in the container. Every module package exports one as `@mod/<name>/manifest`.
+ */
+export interface ModuleManifest {
+  readonly name: string
+  /** The module's folder: it holds its own `drizzle.config.ts`. */
+  readonly dir: string
+  /** Absolute path of the folder with the module's generated migrations. */
+  readonly migrations: string
+  /** Absolute path of the Drizzle schema file drizzle-kit reads. */
+  readonly schemaFile: string
+  /** The module's outbox table, or `null` when it emits no events. */
+  readonly outbox: OutboxSource['table'] | null
+  /** The module's configuration slice, read under `config.<name>`; `undefined` when it has no variables of its own. */
+  readonly config: ConfigSlice | undefined
 }

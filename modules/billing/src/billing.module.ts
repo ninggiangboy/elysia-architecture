@@ -1,4 +1,3 @@
-import { TOPUP_CURRENCIES } from '@app/shared-types/billing'
 import type { TokenVerifier } from '@kit/auth'
 import type { Clock, IdGenerator, Log } from '@kit/core'
 import type { Database } from '@kit/db'
@@ -32,6 +31,7 @@ import {
 import { DrizzleBillingDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
 import { inbox, outbox } from './infrastructure/persistence/schema'
 import { billingRoutes } from './presentation/routes'
+import { TOPUP_CURRENCIES } from './public'
 
 export interface BillingModuleDeps {
   database: Database

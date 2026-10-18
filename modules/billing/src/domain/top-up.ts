@@ -1,5 +1,5 @@
-import type { TopUpStatus } from '@app/shared-types/billing'
 import { DomainError } from '@kit/core'
+import type { TopUpStatus } from '../public'
 
 export type { TopUpStatus }
 

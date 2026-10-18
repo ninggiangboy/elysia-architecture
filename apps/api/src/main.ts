@@ -2,10 +2,10 @@ import cluster from 'node:cluster'
 import { leftOutModules } from '@kit/db'
 import { superviseProcesses } from '@kit/runtime'
 import { createLogger, initTracing } from '@kit/telemetry'
-import { buildApp } from '#/app'
-import { loadAppConfig } from '#/bootstrap/config'
-import { createContainer } from '#/bootstrap/container'
-import { MODULE_NAMES } from '#/bootstrap/module-catalog'
+import { buildApp } from './app'
+import { loadAppConfig } from './bootstrap/config'
+import { createContainer } from './bootstrap/container'
+import { MODULE_NAMES } from './bootstrap/module-catalog'
 
 const config = loadAppConfig()
 const { core } = config

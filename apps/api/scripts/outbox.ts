@@ -5,7 +5,7 @@
 
 import { Database } from '@kit/db'
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
-import { MODULE_CATALOG, MODULE_NAMES } from '#/bootstrap/module-catalog'
+import { MODULE_CATALOG, MODULE_NAMES } from '../src/bootstrap/module-catalog'
 
 const SOURCES = MODULE_CATALOG.flatMap((m) => (m.outbox ? [{ name: m.name, table: m.outbox }] : []))
 

@@ -1,6 +1,6 @@
 import { Database } from '@kit/db'
 import { sql } from 'drizzle-orm'
-import { loadAppConfig } from '#/bootstrap/config'
+import { loadAppConfig } from '../../src/bootstrap/config'
 
 /** The configuration the dev stack runs with (`bun run infra:up`): Postgres, SeaweedFS, Mailpit. */
 export const config = loadAppConfig({ ...process.env, LOG_LEVEL: 'silent' })

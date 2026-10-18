@@ -1,7 +1,7 @@
 import { createLogger } from '@kit/telemetry'
-import { buildApp } from '#/app'
-import { loadAppConfig } from '#/bootstrap/config'
-import { type ContainerOverrides, createContainer } from '#/bootstrap/container'
+import { buildApp } from '../../src/app'
+import { loadAppConfig } from '../../src/bootstrap/config'
+import { type ContainerOverrides, createContainer } from '../../src/bootstrap/container'
 
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 

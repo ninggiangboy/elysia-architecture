@@ -7,8 +7,8 @@
 
 import { createLogger } from '@kit/telemetry'
 import { sql } from 'drizzle-orm'
-import { loadAppConfig } from '#/bootstrap/config'
-import { createContainer } from '#/bootstrap/container'
+import { loadAppConfig } from '../src/bootstrap/config'
+import { createContainer } from '../src/bootstrap/container'
 
 const [command, ...rest] = process.argv.slice(2)
 const idFlag = rest.indexOf('--id')

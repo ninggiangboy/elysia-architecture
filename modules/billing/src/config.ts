@@ -1,6 +1,6 @@
-import { TOPUP_CURRENCY_CODES } from '@app/shared-types/billing'
 import { allOrNone, blank, defineSlice, duration, list, posInt } from '@kit/config'
 import { z } from 'zod'
+import { TOPUP_CURRENCY_CODES } from './public'
 
 export const billingConfig = defineSlice({
   title: 'Billing: top-ups with Stripe',

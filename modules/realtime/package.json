@@ -20,8 +20,7 @@
     "@kit/db": "workspace:*",
     "@kit/http": "workspace:*",
     "@kit/messaging": "workspace:*",
-    "@kit/runtime": "workspace:*",
-    "@app/shared-types": "workspace:*"
+    "@kit/runtime": "workspace:*"
   },
   "peerDependencies": {
     "drizzle-orm": "^0.45.4",

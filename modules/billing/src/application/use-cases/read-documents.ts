@@ -1,7 +1,7 @@
-import type { DocumentKind, DocumentStatus } from '@app/shared-types/billing'
 import { NotFoundError } from '@kit/core'
 import type { DocumentRepository } from '../../domain/billing-repository'
 import type { BillingDocument, DocumentLine, Party } from '../../domain/document'
+import type { DocumentKind, DocumentStatus } from '../../public'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './read-billing'
 
 export interface DocumentView {

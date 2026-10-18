@@ -1,4 +1,4 @@
-import type { DocumentKind } from '@app/shared-types/billing'
+import type { DocumentKind } from '@mod/billing/public'
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import { http, unwrap } from '@/lib/api'
 

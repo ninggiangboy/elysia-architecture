@@ -1,7 +1,7 @@
 // Writes (or with --check, verifies) the monorepo's .env.example from the config slices.
 
 import { renderEnvExample } from '@kit/config'
-import { CONFIG_SLICES } from '#/bootstrap/config'
+import { CONFIG_SLICES } from '../src/bootstrap/config'
 
 const path = new URL('../../../.env.example', import.meta.url).pathname
 const expected = renderEnvExample(CONFIG_SLICES)

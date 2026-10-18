@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildApp } from '#/app'
-import { loadAppConfig } from '#/bootstrap/config'
-import { createContainer } from '#/bootstrap/container'
+import { buildApp } from '../../src/app'
+import { loadAppConfig } from '../../src/bootstrap/config'
+import { createContainer } from '../../src/bootstrap/container'
 import { client, eventually, uniqueEmail, uniqueIp } from './helpers'
 
 // The app with STORAGE_DRIVER=local and MAIL_DRIVER=console: no S3 service and no mail server, only Postgres.

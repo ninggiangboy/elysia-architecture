@@ -1,5 +1,5 @@
-import type { DocumentKind, DocumentStatus } from '@app/shared-types/billing'
 import { DomainError } from '@kit/core'
+import type { DocumentKind, DocumentStatus } from '../public'
 
 export type { DocumentKind, DocumentStatus }
 

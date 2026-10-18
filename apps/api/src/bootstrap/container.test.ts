@@ -4,9 +4,9 @@ import { join } from 'node:path'
 import type { AppModule } from '@kit/runtime'
 import { createLogger } from '@kit/telemetry'
 import type { WebPushSender } from '@mod/notification'
-import { loadAppConfig } from '#/bootstrap/config'
-import { createContainer } from '#/bootstrap/container'
-import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
+import { loadAppConfig } from './config'
+import { createContainer } from './container'
+import { MODULE_CATALOG } from './module-catalog'
 
 /**
  * A handler's name is its consumer group, i.e. the key in each module's `inbox` table. Renaming one makes messages
@@ -109,11 +109,8 @@ describe('container', () => {
       const root = join(import.meta.dir, '../..')
       const names: string[] = MODULE_CATALOG.map((m) => m.name)
       expect(names.slice().sort()).toEqual(Object.keys(container.modules).sort())
-      // A module is a folder under modules/ (a package) or, until it is lifted, under src/modules.
-      const folders = [join(root, 'src/modules'), join(root, '../../modules')].flatMap((dir) =>
-        existsSync(dir) ? readdirSync(dir) : [],
-      )
-      expect(names.slice().sort()).toEqual(folders.sort())
+      // A module is a package: a folder under modules/ at the root of the repo.
+      expect(names.slice().sort()).toEqual(readdirSync(join(root, '../../modules')).sort())
       for (const m of MODULE_CATALOG) {
         expect(existsSync(m.schemaFile)).toBe(true)
         expect(existsSync(join(m.migrations, 'meta'))).toBe(true)

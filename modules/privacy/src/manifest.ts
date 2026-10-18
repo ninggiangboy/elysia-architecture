@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import type { ModuleManifest } from '@kit/runtime'
 import { privacyConfig } from './config'
 import { outbox } from './infrastructure/persistence/schema'
 
@@ -10,4 +11,4 @@ export const privacyManifest = {
   schemaFile: fileURLToPath(new URL('./infrastructure/persistence/schema.ts', import.meta.url)),
   outbox: outbox,
   config: privacyConfig,
-} as const
+} as const satisfies ModuleManifest

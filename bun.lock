@@ -31,6 +31,7 @@
         "@kit/runtime": "workspace:*",
         "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
+        "@mod/billing": "workspace:*",
         "@mod/identity": "workspace:*",
         "@mod/notification": "workspace:*",
         "@mod/privacy": "workspace:*",
@@ -39,13 +40,11 @@
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/sdk-trace-node": "^2.12.0",
         "@simplewebauthn/server": "^14.0.3",
-        "arctic": "^3.7.0",
         "drizzle-orm": "^0.45.4",
         "elysia": "^1.4.0",
         "fflate": "^0.8.3",
         "jose": "^6.1.0",
         "postgres": "^3.4.7",
-        "sharp": "^0.35.5",
         "stripe": "^23.0.0",
         "web-push": "^3.6.7",
         "zod": "^4.1.0",
@@ -62,6 +61,7 @@
         "@app/shared-types": "workspace:*",
         "@elysiajs/eden": "^1.4.9",
         "@kit/i18n": "workspace:*",
+        "@mod/billing": "workspace:*",
         "@mod/profile": "workspace:*",
         "@radix-ui/react-label": "^2.1.17",
         "@radix-ui/react-slot": "^1.5.0",
@@ -94,6 +94,45 @@
         "typescript": "^5.9.0",
         "vite": "^8.3.4",
       },
+    },
+    "modules/billing": {
+      "name": "@mod/billing",
+      "dependencies": {
+        "@kit/auth": "workspace:*",
+        "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
+        "@kit/db": "workspace:*",
+        "@kit/http": "workspace:*",
+        "@kit/i18n": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/privacy-participant": "workspace:*",
+        "@kit/runtime": "workspace:*",
+        "@kit/storage": "workspace:*",
+        "@mod/identity": "workspace:*",
+        "@mod/profile": "workspace:*",
+        "stripe": "^23.0.0",
+      },
+      "devDependencies": {
+        "@kit/testing": "workspace:*",
+        "@mod/notification": "workspace:*",
+        "@mod/realtime": "workspace:*",
+        "@types/bun": "latest",
+        "drizzle-kit": "^0.31.0",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "@mod/notification": "workspace:*",
+        "@mod/realtime": "workspace:*",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "optionalPeers": [
+        "@mod/notification",
+        "@mod/realtime",
+      ],
     },
     "modules/identity": {
       "name": "@mod/identity",
@@ -214,7 +253,6 @@
     "modules/profile": {
       "name": "@mod/profile",
       "dependencies": {
-        "@app/shared-types": "workspace:*",
         "@kit/auth": "workspace:*",
         "@kit/core": "workspace:*",
         "@kit/db": "workspace:*",
@@ -241,7 +279,6 @@
     "modules/realtime": {
       "name": "@mod/realtime",
       "dependencies": {
-        "@app/shared-types": "workspace:*",
         "@kit/auth": "workspace:*",
         "@kit/config": "workspace:*",
         "@kit/core": "workspace:*",
@@ -765,6 +802,8 @@
     "@lezer/yaml": ["@lezer/yaml@1.0.4", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.4.0" } }, "sha512-2lrrHqxalACEbxIbsjhqGpSW8kWpUKuY6RHgnSAFZa6qK62wvnPxA8hGOwOoDbwHcOFs5M4o27mjGu+P7TvBmw=="],
 
     "@marijn/find-cluster-break": ["@marijn/find-cluster-break@1.0.4", "", {}, "sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ=="],
+
+    "@mod/billing": ["@mod/billing@workspace:modules/billing"],
 
     "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 

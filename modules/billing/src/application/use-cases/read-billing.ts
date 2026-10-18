@@ -1,7 +1,7 @@
-import type { TopUpStatus } from '@app/shared-types/billing'
 import { NotFoundError } from '@kit/core'
 import type { LedgerRepository, TopUpRepository } from '../../domain/billing-repository'
 import type { TopUp } from '../../domain/top-up'
+import type { TopUpStatus } from '../../public'
 
 export const DEFAULT_PAGE_SIZE = 20
 export const MAX_PAGE_SIZE = 50

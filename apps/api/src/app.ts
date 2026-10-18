@@ -11,7 +11,7 @@ import {
 import { healthRoutes } from '@kit/runtime'
 import { localStoragePlugin } from '@kit/storage/http'
 import { Elysia } from 'elysia'
-import type { Container } from '#/bootstrap/container'
+import type { Container } from './bootstrap/container'
 
 /** Shared by main.ts and e2e tests. `App` is the type the web app uses to infer the client (Eden Treaty). */
 export function buildApp(container: Container) {

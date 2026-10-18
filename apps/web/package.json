@@ -14,6 +14,7 @@
     "@app/shared-types": "workspace:*",
     "@elysiajs/eden": "^1.4.9",
     "@kit/i18n": "workspace:*",
+    "@mod/billing": "workspace:*",
     "@mod/profile": "workspace:*",
     "@radix-ui/react-label": "^2.1.17",
     "@radix-ui/react-slot": "^1.5.0",

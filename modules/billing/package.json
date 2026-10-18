@@ -1,0 +1,60 @@
+{
+  "name": "@mod/billing",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./config": "./src/config.ts",
+    "./manifest": "./src/manifest.ts",
+    "./schema": "./src/infrastructure/persistence/schema.ts",
+    "./integrations/notification": "./src/integrations/notification.ts",
+    "./integrations/realtime": "./src/integrations/realtime.ts",
+    "./testing": "./src/testing.ts",
+    "./public": "./src/public.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun --env-file=../../.env test src"
+  },
+  "dependencies": {
+    "@kit/auth": "workspace:*",
+    "@kit/config": "workspace:*",
+    "@kit/core": "workspace:*",
+    "@kit/db": "workspace:*",
+    "@kit/http": "workspace:*",
+    "@kit/i18n": "workspace:*",
+    "@kit/messaging": "workspace:*",
+    "@kit/privacy-participant": "workspace:*",
+    "@kit/runtime": "workspace:*",
+    "@kit/storage": "workspace:*",
+    "@mod/identity": "workspace:*",
+    "@mod/profile": "workspace:*",
+    "stripe": "^23.0.0"
+  },
+  "peerDependencies": {
+    "@mod/notification": "workspace:*",
+    "@mod/realtime": "workspace:*",
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0",
+    "zod": "^4.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@mod/notification": {
+      "optional": true
+    },
+    "@mod/realtime": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@kit/testing": "workspace:*",
+    "@mod/notification": "workspace:*",
+    "@mod/realtime": "workspace:*",
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.0",
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0",
+    "zod": "^4.1.0"
+  }
+}

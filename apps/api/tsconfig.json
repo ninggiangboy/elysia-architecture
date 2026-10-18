@@ -1,10 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["bun"],
-    "paths": {
-      "#/*": ["./src/*"]
-    }
+    "types": ["bun"]
   },
-  "include": ["src", "tests", "scripts", "drizzle.config.ts"]
+  "include": ["src", "tests", "scripts"]
 }

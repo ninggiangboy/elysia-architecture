@@ -3,7 +3,8 @@
   "workspaces": {
     ".": {
       "entry": ["scripts/*.ts"],
-      "project": ["scripts/*.ts"]
+      "project": ["scripts/*.ts"],
+      "ignoreDependencies": ["drizzle-kit"]
     },
     "apps/api": {
       "entry": ["scripts/*.ts", "tests/e2e/*.test.ts", "src/**/*.test.ts"],
@@ -88,6 +89,10 @@
       "project": ["src/**/*.ts"]
     },
     "modules/privacy": {
+      "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "modules/billing": {
       "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts"]
     }

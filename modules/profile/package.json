@@ -22,7 +22,6 @@
     "@kit/privacy-participant": "workspace:*",
     "@kit/runtime": "workspace:*",
     "@kit/storage": "workspace:*",
-    "@app/shared-types": "workspace:*",
     "@mod/identity": "workspace:*",
     "sharp": "^0.35.5"
   },

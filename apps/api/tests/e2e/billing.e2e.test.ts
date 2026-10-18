@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
-import { sql } from 'drizzle-orm'
 import {
+  DrizzleBillingDataEraser,
   FAKE_WEBHOOK_SIGNATURE,
   FakePaymentGateway,
-} from '#/modules/billing/infrastructure/fake-payment-gateway'
-import { DrizzleBillingDataEraser } from '#/modules/billing/infrastructure/persistence/drizzle-data-eraser'
+} from '@mod/billing/testing'
+import { sql } from 'drizzle-orm'
 import {
   client,
   createTestApp,

@@ -1,4 +1,4 @@
-import type { DocumentKind } from '@app/shared-types/billing'
+import type { DocumentKind } from '@mod/billing/public'
 import { useSuspenseInfiniteQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { FileText } from 'lucide-react'
