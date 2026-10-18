@@ -6,9 +6,9 @@ import type {
   OutboxWriter,
 } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
+import type { NotificationDraft } from '../../contracts'
 import { Notification } from '../../domain/notification'
 import type { NotificationRepository } from '../../domain/notification-repository'
-import type { NotificationDraft } from '../in-app-notifications'
 import { notificationCreated } from '../notification-events'
 
 /**

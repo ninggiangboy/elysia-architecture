@@ -1,11 +1,12 @@
 import type { Clock, InboxGuard, IntegrationEventHandler, Log } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
+import type { LocaleResolver } from '../../contracts'
 import { type NotificationCreatedPayload, NotificationEvents } from '../../contracts'
 import type { NotificationRepository } from '../../domain/notification-repository'
 import type { PushSubscriptionRepository } from '../../domain/push-subscription-repository'
-import { renderNotification } from '../in-app-notifications'
+import type { NotificationRenderer } from '../notification-renderer'
 import { payloadLocale } from '../payload-locale'
-import type { LocaleResolver, WebPushSender } from '../ports'
+import type { WebPushSender } from '../ports'
 
 /** A push that arrives hours late (relay backlog) is noise; the in-app inbox still has the notification. */
 export const MAX_WEB_PUSH_AGE_MS = 15 * 60_000
@@ -38,6 +39,7 @@ export class WebPushHandler implements IntegrationEventHandler {
     private inbox: InboxGuard,
     private clock: Clock,
     private log: Log,
+    private render: NotificationRenderer,
     private quietWindowMs = 0,
     private locales: LocaleResolver = payloadLocale,
   ) {}
@@ -51,7 +53,7 @@ export class WebPushHandler implements IntegrationEventHandler {
 
     // A push is a message in flight, not a record: it is written now, in the language the account uses now.
     const text = (p.template &&
-      renderNotification(p.template, p.data, await this.locales.resolve({ userId: p.userId }))) || {
+      this.render(p.template, p.data, await this.locales.resolve({ userId: p.userId }))) || {
       title: p.title,
       body: p.body,
     }

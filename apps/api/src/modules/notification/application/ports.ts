@@ -1,16 +1,3 @@
-import type { Locale } from '@app/shared-types'
-
-/** Who a message is for, as far as the event says: a language it carries (a request's, or a snapshot) and/or the account. */
-export interface Recipient {
-  locale?: string | null
-  userId?: string
-}
-
-/** Which language to write to someone in: the one the event carries, else the account's preference, else the default. */
-export interface LocaleResolver {
-  resolve(recipient: Recipient): Promise<Locale>
-}
-
 export type SendGrant = { ok: true } | { ok: false; retryAfterMs: number }
 
 /**

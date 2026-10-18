@@ -8,9 +8,9 @@ import type {
   Mailer,
 } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
+import type { LocaleResolver, Recipient } from '../../contracts'
+import type { MailContent } from '../mail-composer'
 import { payloadLocale } from '../payload-locale'
-import type { LocaleResolver, Recipient } from '../ports'
-import type { MailContent } from '../templates'
 
 export interface MailRequest {
   to: string

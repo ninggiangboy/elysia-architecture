@@ -2,14 +2,20 @@ import { TOPUP_CURRENCIES } from '@app/shared-types'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
 import { createBillingModule } from '#/modules/billing/billing.module'
 import { StripePaymentGateway } from '#/modules/billing/infrastructure/stripe-payment-gateway'
+import { billingNotifications } from '#/modules/billing/integrations/notification'
 import { billingRealtime } from '#/modules/billing/integrations/realtime'
 import type { OAuthGateway, WebAuthnService } from '#/modules/identity/application/ports'
 import { createIdentityModule } from '#/modules/identity/identity.module'
+import {
+  identityLocaleResolver,
+  identityNotifications,
+} from '#/modules/identity/integrations/notification'
 import { identityRealtime } from '#/modules/identity/integrations/realtime'
 import type { WebPushSender } from '#/modules/notification/application/ports'
 import { WebPushLibrarySender } from '#/modules/notification/infrastructure/web-push-sender'
 import { notificationRealtime } from '#/modules/notification/integrations/realtime'
 import { createNotificationModule } from '#/modules/notification/notification.module'
+import { privacyNotifications } from '#/modules/privacy/integrations/notification'
 import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
@@ -142,7 +148,10 @@ export async function createContainer(
     log: logger,
     storage,
     verifier: identity.verifier,
-    identity: identity.api,
+    // The one thing notification asks identity: which language an account reads.
+    locales: identityLocaleResolver(identity.api),
+    // What gets said, per producer. Leave one out and its events simply produce no mail or notification.
+    integrations: [identityNotifications, privacyNotifications, billingNotifications], // <kit:notification-integrations>
     sending: {
       ratePerSecond: config.MAIL_RATE_PER_SECOND,
       burst: config.MAIL_BURST,

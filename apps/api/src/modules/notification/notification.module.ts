@@ -1,27 +1,3 @@
-import { BillingEvents, type TopUpSucceededPayload } from '#/modules/billing/contracts'
-import {
-  type EmailChangedPayload,
-  type EmailChangeRequestedPayload,
-  type IdentityApi,
-  IdentityEvents,
-  type MagicLinkRequestedPayload,
-  type OAuthAccountLinkedPayload,
-  type OAuthAccountUnlinkedPayload,
-  type PasskeyAddedPayload,
-  type PasskeyRemovedPayload,
-  type SessionRevokedPayload,
-  type SessionStartedPayload,
-  type StepUpCodeRequestedPayload,
-  type UserRegisteredPayload,
-} from '#/modules/identity/contracts'
-import {
-  type AccountDeletedPayload,
-  type AccountDeletionCancelledPayload,
-  type AccountDeletionScheduledPayload,
-  type DataExportFailedPayload,
-  type DataExportReadyPayload,
-  PrivacyEvents,
-} from '#/modules/privacy/contracts'
 import type {
   Clock,
   IdGenerator,
@@ -42,36 +18,13 @@ import { CreateNotificationHandler } from './application/handlers/create-notific
 import { DropPushSubscriptionsHandler } from './application/handlers/drop-push-subscriptions-handler'
 import { MailEventHandler } from './application/handlers/mail-event-handler'
 import { WebPushHandler } from './application/handlers/web-push-handler'
-import {
-  accountDeletionCancelledNotification,
-  accountDeletionScheduledNotification,
-  dataExportFailedNotification,
-  dataExportReadyNotification,
-  emailChangedNotification,
-  type NotificationDraft,
-  newSignInNotification,
-  oauthLinkedNotification,
-  oauthUnlinkedNotification,
-  passkeyAddedNotification,
-  passkeyRemovedNotification,
-  suspiciousSessionNotification,
-  topUpSucceededNotification,
-  welcomeNotification,
-} from './application/in-app-notifications'
+import { composeMail } from './application/mail-composer'
+import { createMessages, type MessagesOptions } from './application/messages'
 import { NotificationDataExporter } from './application/notification-data-exporter'
+import { createNotificationRenderer } from './application/notification-renderer'
+import { payloadLocale } from './application/payload-locale'
 import type { WebPushSender } from './application/ports'
 import { PruneOldNotifications, type RetentionPolicy } from './application/prune-notifications'
-import {
-  accountDeletedMail,
-  accountDeletionCancelledMail,
-  accountDeletionScheduledMail,
-  confirmEmailChangeMail,
-  dataExportReadyMail,
-  emailChangedNoticeMail,
-  magicLinkMail,
-  stepUpCodeMail,
-  welcomeMail,
-} from './application/templates'
 import { ThrottledMailer } from './application/throttled-mailer'
 import {
   MarkAllNotificationsRead,
@@ -84,8 +37,8 @@ import {
   GetUnseenCount,
   ListNotifications,
 } from './application/use-cases/read-notifications'
+import type { LocaleResolver, NotificationIntegration, TemplateValues } from './contracts'
 import { NotificationEvents } from './contracts/events'
-import { IdentityLocaleResolver } from './infrastructure/identity-locale-resolver'
 import { DrizzleNotificationDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
 import { DrizzleNotificationRepository } from './infrastructure/persistence/drizzle-notification-repository'
 import { DrizzlePushSubscriptionRepository } from './infrastructure/persistence/drizzle-push-subscription-repository'
@@ -104,8 +57,12 @@ export interface NotificationModuleDeps {
   /** Where the data export is written. */
   storage: ObjectStorage
   verifier: TokenVerifier
-  /** Whose language a message is written in, when the event itself does not say. */
-  identity: IdentityApi
+  /** Whose language a message is written in, when the event itself does not say. Omit to use the language the event carries. */
+  locales?: LocaleResolver
+  /** What the module says and to which events: one entry per producer module the app installs. */
+  integrations: readonly NotificationIntegration[]
+  /** Rewords messages without ejecting the module (the extension point for wording). */
+  messageOverrides?: MessagesOptions['overrides']
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
   /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
   webPush?: { sender: WebPushSender; publicKey: string; quietWindowMs?: number }
@@ -124,9 +81,6 @@ export interface NotificationModule
   prune(): Promise<number>
 }
 
-const minutesUntil = (iso: string) =>
-  Math.max(1, Math.round((new Date(iso).getTime() - Date.now()) / 60_000))
-
 export function createNotificationModule({
   database,
   mailer: providerMailer,
@@ -136,13 +90,18 @@ export function createNotificationModule({
   log,
   storage,
   verifier,
-  identity,
+  locales = payloadLocale,
+  integrations,
+  messageOverrides,
   sending,
   webPush,
   retention,
 }: NotificationModuleDeps): NotificationModule {
   const guard = new DrizzleInboxGuard(database, inbox)
-  const locales = new IdentityLocaleResolver(identity)
+  const appUrl = webAppUrl.replace(/\/$/, '')
+  const messages = createMessages({ integrations, overrides: messageOverrides })
+  const templates = mergeTemplates(integrations)
+  const render = createNotificationRenderer(templates, messages.translate)
   const mailer = new ThrottledMailer(
     providerMailer,
     new PostgresSendRateLimiter(database, {
@@ -154,21 +113,6 @@ export function createNotificationModule({
   const notifications = new DrizzleNotificationRepository(database)
   const pushSubscriptions = new DrizzlePushSubscriptionRepository(database)
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
-  const inApp = <TPayload>(
-    name: string,
-    eventType: string,
-    build: (payload: TPayload) => NotificationDraft | null,
-  ) =>
-    new CreateNotificationHandler<TPayload>(
-      name,
-      eventType,
-      build,
-      notifications,
-      outboxWriter,
-      guard,
-      ids,
-      clock,
-    )
   const participation = privacyParticipation({
     module: 'notification',
     storage,
@@ -191,9 +135,6 @@ export function createNotificationModule({
     run: () => pruner.runOnce(),
     onError: (err) => log.error({ err }, 'notification retention failed'),
   })
-  const link = (path: string, token: string) =>
-    `${webAppUrl.replace(/\/$/, '')}${path}?token=${encodeURIComponent(token)}`
-
   return {
     name: 'notification',
     routes: notificationRoutes({
@@ -224,219 +165,64 @@ export function createNotificationModule({
               guard,
               clock,
               log,
+              render,
               webPush.quietWindowMs,
               locales,
             ),
-            new DropPushSubscriptionsHandler(pushSubscriptions),
+            ...integrations
+              .flatMap((i) => i.dropPushOn ?? [])
+              .map((rule) => new DropPushSubscriptionsHandler(rule, pushSubscriptions)),
           ]
         : []),
-      inApp<UserRegisteredPayload>(
-        'notification.in-app-welcome',
-        IdentityEvents.UserRegistered,
-        welcomeNotification,
-      ),
-      inApp<EmailChangedPayload>(
-        'notification.in-app-email-changed',
-        IdentityEvents.EmailChanged,
-        emailChangedNotification,
-      ),
-      inApp<SessionStartedPayload>(
-        'notification.in-app-new-sign-in',
-        IdentityEvents.SessionStarted,
-        // The first session of a new account is the sign-up itself — the welcome notification covers it.
-        (p) => (p.newUser ? null : newSignInNotification(p)),
-      ),
-      inApp<SessionRevokedPayload>(
-        'notification.in-app-suspicious-session',
-        IdentityEvents.SessionRevoked,
-        // Logouts and "sign out that device" are the user's own doing — only token theft is news.
-        (p) => (p.reason === 'token_reuse' ? suspiciousSessionNotification(p) : null),
-      ),
-      inApp<PasskeyAddedPayload>(
-        'notification.in-app-passkey-added',
-        IdentityEvents.PasskeyAdded,
-        passkeyAddedNotification,
-      ),
-      inApp<PasskeyRemovedPayload>(
-        'notification.in-app-passkey-removed',
-        IdentityEvents.PasskeyRemoved,
-        passkeyRemovedNotification,
-      ),
-      inApp<OAuthAccountLinkedPayload>(
-        'notification.in-app-oauth-linked',
-        IdentityEvents.OAuthAccountLinked,
-        oauthLinkedNotification,
-      ),
-      inApp<OAuthAccountUnlinkedPayload>(
-        'notification.in-app-oauth-unlinked',
-        IdentityEvents.OAuthAccountUnlinked,
-        oauthUnlinkedNotification,
-      ),
-      inApp<DataExportReadyPayload>(
-        'notification.in-app-export-ready',
-        PrivacyEvents.DataExportReady,
-        dataExportReadyNotification,
-      ),
-      inApp<DataExportFailedPayload>(
-        'notification.in-app-export-failed',
-        PrivacyEvents.DataExportFailed,
-        dataExportFailedNotification,
-      ),
-      inApp<AccountDeletionScheduledPayload>(
-        'notification.in-app-deletion-scheduled',
-        PrivacyEvents.AccountDeletionScheduled,
-        accountDeletionScheduledNotification,
-      ),
-      inApp<AccountDeletionCancelledPayload>(
-        'notification.in-app-deletion-cancelled',
-        PrivacyEvents.AccountDeletionCancelled,
-        accountDeletionCancelledNotification,
-      ),
-      inApp<TopUpSucceededPayload>(
-        'notification.in-app-topup-succeeded',
-        BillingEvents.TopUpSucceeded,
-        topUpSucceededNotification,
-      ),
-      new MailEventHandler<DataExportReadyPayload>(
-        'notification.send-export-ready',
-        PrivacyEvents.DataExportReady,
-        (p, locale) => ({
-          to: p.email,
-          content: dataExportReadyMail({ url: p.downloadUrl, expiresAt: p.expiresAt }, locale),
-          // A link that no longer works is not worth sending late.
-          expiresAt: p.expiresAt,
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<AccountDeletionScheduledPayload>(
-        'notification.send-deletion-scheduled',
-        PrivacyEvents.AccountDeletionScheduled,
-        (p, locale) => ({
-          to: p.email,
-          content: accountDeletionScheduledMail(
-            {
-              scheduledFor: p.scheduledFor,
-              cancelUrl: `${webAppUrl.replace(/\/$/, '')}/privacy`,
-            },
-            locale,
-          ),
-          // The grace period is the whole point of this mail: after it, the account is gone.
-          expiresAt: p.scheduledFor,
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<AccountDeletionCancelledPayload>(
-        'notification.send-deletion-cancelled',
-        PrivacyEvents.AccountDeletionCancelled,
-        (p, locale) => ({ to: p.email, content: accountDeletionCancelledMail(locale) }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<AccountDeletedPayload>(
-        'notification.send-account-deleted',
-        PrivacyEvents.AccountDeleted,
-        (p, locale) => ({ to: p.email, content: accountDeletedMail({ email: p.email }, locale) }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
+      ...integrations
+        .flatMap((i) => i.inApp ?? [])
+        .map(
+          (def) =>
+            new CreateNotificationHandler(
+              def.name,
+              def.eventType,
+              def.build,
+              notifications,
+              outboxWriter,
+              guard,
+              ids,
+              clock,
+            ),
+        ),
+      ...integrations
+        .flatMap((i) => i.mails ?? [])
+        .map(
+          (def) =>
+            new MailEventHandler(
+              def.name,
+              def.eventType,
+              (payload, locale) => {
+                const t = messages.translate(locale)
+                const spec = def.build(payload, { locale, t, webAppUrl: appUrl })
+                return {
+                  to: spec.to,
+                  content: composeMail(t, def.template, spec),
+                  expiresAt: spec.expiresAt,
+                }
+              },
+              mailer,
+              guard,
+              clock,
+              log,
+              locales,
+            ),
+        ),
       ...participation.handlers,
-      new MailEventHandler<StepUpCodeRequestedPayload>(
-        'notification.send-step-up-code',
-        IdentityEvents.StepUpCodeRequested,
-        (p, locale) => ({
-          to: p.email,
-          content: stepUpCodeMail(
-            { code: p.code, expiresInMinutes: minutesUntil(p.expiresAt) },
-            locale,
-          ),
-          expiresAt: p.expiresAt,
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<MagicLinkRequestedPayload>(
-        'notification.send-magic-link',
-        IdentityEvents.MagicLinkRequested,
-        (p, locale) => ({
-          to: p.email,
-          content: magicLinkMail(
-            {
-              url: link('/auth/callback', p.token),
-              expiresInMinutes: minutesUntil(p.expiresAt),
-            },
-            locale,
-          ),
-          expiresAt: p.expiresAt,
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<UserRegisteredPayload>(
-        'notification.send-welcome',
-        IdentityEvents.UserRegistered,
-        (p, locale) => ({
-          to: p.email,
-          content: welcomeMail({ email: p.email, appUrl: webAppUrl }, locale),
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<EmailChangeRequestedPayload>(
-        'notification.send-email-change-confirmation',
-        IdentityEvents.EmailChangeRequested,
-        (p, locale) => ({
-          to: p.newEmail,
-          content: confirmEmailChangeMail(
-            {
-              url: link('/account/confirm-email', p.token),
-              expiresInMinutes: minutesUntil(p.expiresAt),
-            },
-            locale,
-          ),
-          expiresAt: p.expiresAt,
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
-      new MailEventHandler<EmailChangedPayload>(
-        'notification.send-email-changed-notice',
-        IdentityEvents.EmailChanged,
-        (p, locale) => ({
-          to: p.oldEmail,
-          content: emailChangedNoticeMail({ oldEmail: p.oldEmail, newEmail: p.newEmail }, locale),
-        }),
-        mailer,
-        guard,
-        clock,
-        log,
-        locales,
-      ),
     ],
   }
+}
+
+/** Two integrations defining the same template is a bug (the last would silently win): fail at startup. */
+function mergeTemplates(integrations: readonly NotificationIntegration[]) {
+  const merged: Record<string, TemplateValues> = {}
+  for (const [name, values] of integrations.flatMap((i) => Object.entries(i.templates ?? {}))) {
+    if (Object.hasOwn(merged, name)) throw new Error(`Duplicate notification template: ${name}`)
+    merged[name] = values
+  }
+  return merged
 }

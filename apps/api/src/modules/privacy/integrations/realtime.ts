@@ -1,8 +1,4 @@
-import {
-  type RealtimeIntegration,
-  realtimePurgeRule,
-  realtimeRoute,
-} from '#/modules/realtime/contracts'
+import type { RealtimeIntegration } from '#/modules/realtime/contracts'
 import {
   type AccountDeletedPayload,
   type AccountDeletionCancelledPayload,
@@ -18,10 +14,10 @@ export const privacyRealtime = {
   routes: [
     // Steps of a long job: a client that was offline for one must still learn how it went, so these replay.
     // They carry progress, never the download link — the replay buffer is stored.
-    realtimeRoute<DataExportProgressedPayload>({
+    {
       name: 'realtime.push-export-progress',
       eventType: PrivacyEvents.DataExportProgressed,
-      map: (p) => ({
+      map: (p: DataExportProgressedPayload) => ({
         userId: p.userId,
         event: {
           type: 'privacy.export.progress',
@@ -29,11 +25,11 @@ export const privacyRealtime = {
           replay: true,
         },
       }),
-    }),
-    realtimeRoute<DataExportReadyPayload>({
+    },
+    {
       name: 'realtime.push-export-ready',
       eventType: PrivacyEvents.DataExportReady,
-      map: (p) => ({
+      map: (p: DataExportReadyPayload) => ({
         userId: p.userId,
         event: {
           type: 'privacy.export.ready',
@@ -41,19 +37,19 @@ export const privacyRealtime = {
           replay: true,
         },
       }),
-    }),
-    realtimeRoute<DataExportFailedPayload>({
+    },
+    {
       name: 'realtime.push-export-failed',
       eventType: PrivacyEvents.DataExportFailed,
-      map: (p) => ({
+      map: (p: DataExportFailedPayload) => ({
         userId: p.userId,
         event: { type: 'privacy.export.failed', data: { exportId: p.exportId }, replay: true },
       }),
-    }),
-    realtimeRoute<AccountErasureProgressedPayload>({
+    },
+    {
       name: 'realtime.push-erasure-progress',
       eventType: PrivacyEvents.AccountErasureProgressed,
-      map: (p) => ({
+      map: (p: AccountErasureProgressedPayload) => ({
         userId: p.userId,
         event: {
           type: 'privacy.deletion.progress',
@@ -61,30 +57,30 @@ export const privacyRealtime = {
           replay: true,
         },
       }),
-    }),
+    },
     // Scheduling and cancelling are "something changed, refetch" for the user's other devices.
-    realtimeRoute<AccountDeletionScheduledPayload>({
+    {
       name: 'realtime.push-deletion-scheduled',
       eventType: PrivacyEvents.AccountDeletionScheduled,
-      map: (p) => ({
+      map: (p: AccountDeletionScheduledPayload) => ({
         userId: p.userId,
         event: { type: 'privacy.deletion.changed', data: { status: 'scheduled' } },
       }),
-    }),
-    realtimeRoute<AccountDeletionCancelledPayload>({
+    },
+    {
       name: 'realtime.push-deletion-cancelled',
       eventType: PrivacyEvents.AccountDeletionCancelled,
-      map: (p) => ({
+      map: (p: AccountDeletionCancelledPayload) => ({
         userId: p.userId,
         event: { type: 'privacy.deletion.changed', data: { status: 'cancelled' } },
       }),
-    }),
+    },
   ],
   purgeOn: [
-    realtimePurgeRule<AccountDeletedPayload>({
+    {
       name: 'realtime.purge-erased-user',
       eventType: PrivacyEvents.AccountDeleted,
-      userId: (p) => p.userId,
-    }),
+      userId: (p: AccountDeletedPayload) => p.userId,
+    },
   ],
 } satisfies RealtimeIntegration

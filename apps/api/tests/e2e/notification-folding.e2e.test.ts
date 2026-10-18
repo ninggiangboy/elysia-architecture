@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { eq } from 'drizzle-orm'
 import { CreateNotificationHandler } from '#/modules/notification/application/handlers/create-notification-handler'
-import type { NotificationDraft } from '#/modules/notification/application/in-app-notifications'
+import type { NotificationDraft } from '#/modules/notification/contracts'
 import { Notification } from '#/modules/notification/domain/notification'
 import { DrizzleNotificationRepository } from '#/modules/notification/infrastructure/persistence/drizzle-notification-repository'
 import {

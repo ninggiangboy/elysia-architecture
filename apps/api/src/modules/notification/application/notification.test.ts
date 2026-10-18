@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { IdentityEvents } from '#/modules/identity/contracts'
 import type { InboxGuard } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
 import {
@@ -8,17 +7,12 @@ import {
   PassthroughUnitOfWork,
   SequentialIds,
 } from '#/shared/testing/fakes'
-import { NotificationEvents } from '../contracts'
+import { type NotificationDraft, NotificationEvents } from '../contracts'
 import { InvalidNotificationError, Notification } from '../domain/notification'
 import type { ListQuery, NotificationRepository } from '../domain/notification-repository'
 import { CreateNotificationHandler } from './handlers/create-notification-handler'
-import {
-  describeDevice,
-  type NotificationDraft,
-  newSignInNotification,
-  renderNotification,
-  suspiciousSessionNotification,
-} from './in-app-notifications'
+import { createMessages } from './messages'
+import { createNotificationRenderer } from './notification-renderer'
 import { PruneOldNotifications } from './prune-notifications'
 import {
   MarkAllNotificationsRead,
@@ -26,6 +20,27 @@ import {
   MarkNotificationsSeen,
 } from './use-cases/mark-read'
 import { GetUnreadCount, GetUnseenCount, ListNotifications } from './use-cases/read-notifications'
+
+// Producer-shaped drafts, local to the test: the notification module knows no producer.
+const SESSION_REVOKED = 'test.session_revoked.v1'
+const SESSION_STARTED = 'test.session_started.v1'
+const suspiciousSessionNotification = (p: { userId: string }): NotificationDraft => ({
+  userId: p.userId,
+  kind: 'security_alert',
+  template: 'suspiciousSession',
+  data: { link: '/settings/security' },
+})
+const newSignInNotification = (p: {
+  userId: string
+  sessionId: string
+  ip: string | null
+  userAgent: string | null
+}): NotificationDraft => ({
+  userId: p.userId,
+  kind: 'new_sign_in',
+  template: 'newSignIn',
+  data: { link: '/settings/security', sessionId: p.sessionId, ip: p.ip, userAgent: p.userAgent },
+})
 
 class InMemoryNotifications implements NotificationRepository {
   rows: Notification[] = []
@@ -167,7 +182,7 @@ describe('CreateNotificationHandler', () => {
     outbox = new InMemoryOutbox()
     handler = new CreateNotificationHandler(
       'test.handler',
-      IdentityEvents.SessionRevoked,
+      SESSION_REVOKED,
       (p) => (p.reason === 'token_reuse' ? suspiciousSessionNotification(p) : null),
       repo,
       outbox,
@@ -220,7 +235,7 @@ describe('CreateNotificationHandler with a group', () => {
     clock = new FakeClock()
     handler = new CreateNotificationHandler(
       'test.sign-in',
-      IdentityEvents.SessionStarted,
+      SESSION_STARTED,
       grouped,
       repo,
       outbox,
@@ -245,7 +260,7 @@ describe('CreateNotificationHandler with a group', () => {
     expect(repo.locked).toEqual([`${ALICE}:new_sign_in`])
     const plain = new CreateNotificationHandler(
       'test.plain',
-      IdentityEvents.SessionStarted,
+      SESSION_STARTED,
       newSignInNotification,
       repo,
       outbox,
@@ -445,50 +460,35 @@ describe('reading notifications', () => {
   })
 })
 
-describe('new sign-in notification', () => {
-  const chromeMac =
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
+describe('notification renderer', () => {
+  const templates = {
+    greeted: (d: Record<string, unknown>, { t }: { t: (key: string) => string }) => ({
+      who: String(d.who ?? t('common.minutes')),
+    }),
+  }
+  const integration = {
+    templates,
+    messages: {
+      en: { inApp: { greeted: { title: 'Hello {{who}}', body: 'Nice to see {{who}}' } } },
+      vi: { inApp: { greeted: { title: 'Chào {{who}}', body: 'Rất vui được gặp {{who}}' } } },
+    },
+  }
+  const render = createNotificationRenderer(
+    templates,
+    createMessages({ integrations: [integration] }).translate,
+  )
 
-  test('stores what the text is made from, not the text', () => {
-    const draft = newSignInNotification({
-      userId: ALICE,
-      sessionId: 's1',
-      ip: '203.0.113.9',
-      userAgent: chromeMac,
+  test('writes a template in the reader language, from the data it was stored with', () => {
+    expect(render('greeted', { who: 'Ann' }, 'en')).toEqual({
+      title: 'Hello Ann',
+      body: 'Nice to see Ann',
     })
-    expect(draft).toMatchObject({ userId: ALICE, kind: 'new_sign_in', template: 'newSignIn' })
-    expect(draft.title).toBeUndefined()
-    expect(draft.body).toBeUndefined()
-    expect(draft.data).toMatchObject({ sessionId: 's1', ip: '203.0.113.9', userAgent: chromeMac })
+    expect(render('greeted', { who: 'Ann' }, 'vi')?.title).toBe('Chào Ann')
   })
 
-  test('is written in the reader language when it has to leave as text (a push)', () => {
-    const { template, data } = newSignInNotification({
-      userId: ALICE,
-      sessionId: 's1',
-      ip: '203.0.113.9',
-      userAgent: chromeMac,
-    })
-    const en = renderNotification(template as string, data ?? {}, 'en')
-    expect(en?.body).toContain('Chrome on macOS')
-    expect(en?.body).toContain('203.0.113.9')
-    expect(renderNotification(template as string, data ?? {}, 'vi')?.title).toBe(
-      'Đăng nhập mới vào tài khoản của bạn',
-    )
-    expect(renderNotification('somethingNew', {}, 'en')).toBeNull()
-  })
-
-  test('copes with a missing user agent and ip', () => {
-    expect(describeDevice(null)).toBe('an unknown device')
-    const { template, data } = newSignInNotification({
-      userId: ALICE,
-      sessionId: 's1',
-      ip: null,
-      userAgent: null,
-    })
-    expect(renderNotification(template as string, data ?? {}, 'en')?.body).toStartWith(
-      'an unknown device signed in',
-    )
+  test('answers null for a template this build does not know', () => {
+    expect(render('somethingNew', {}, 'en')).toBeNull()
+    expect(render('constructor', {}, 'en')).toBeNull()
   })
 })
 

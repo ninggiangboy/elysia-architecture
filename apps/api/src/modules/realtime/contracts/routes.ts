@@ -40,7 +40,3 @@ export interface RealtimeIntegration {
   routes?: readonly RealtimeRoute[]
   purgeOn?: readonly RealtimePurgeRule[]
 }
-
-/** Keeps the payload type of a route inferred from `map` while the array of routes stays heterogeneous. */
-export const realtimeRoute = <TPayload>(route: RealtimeRoute<TPayload>) => route
-export const realtimePurgeRule = <TPayload>(rule: RealtimePurgeRule<TPayload>) => rule

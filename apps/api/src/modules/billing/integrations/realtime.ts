@@ -1,13 +1,13 @@
-import { type RealtimeIntegration, realtimeRoute } from '#/modules/realtime/contracts'
+import type { RealtimeIntegration } from '#/modules/realtime/contracts'
 import { BillingEvents, type TopUpFailedPayload, type TopUpSucceededPayload } from '../contracts'
 
 // "Your money moved": the wallet and the history of the user's other open tabs refetch.
 export const billingRealtime = {
   routes: [
-    realtimeRoute<TopUpSucceededPayload>({
+    {
       name: 'realtime.push-topup-succeeded',
       eventType: BillingEvents.TopUpSucceeded,
-      map: (p) => ({
+      map: (p: TopUpSucceededPayload) => ({
         userId: p.userId,
         event: {
           type: 'billing.topup',
@@ -22,17 +22,17 @@ export const billingRealtime = {
           replay: true,
         },
       }),
-    }),
-    realtimeRoute<TopUpFailedPayload>({
+    },
+    {
       name: 'realtime.push-topup-failed',
       eventType: BillingEvents.TopUpFailed,
-      map: (p) => ({
+      map: (p: TopUpFailedPayload) => ({
         userId: p.userId,
         event: {
           type: 'billing.topup',
           data: { topUpId: p.topUpId, status: 'failed', currency: p.currency, amount: p.amount },
         },
       }),
-    }),
+    },
   ],
 } satisfies RealtimeIntegration

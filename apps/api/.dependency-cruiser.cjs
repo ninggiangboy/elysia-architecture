@@ -64,10 +64,40 @@ module.exports = {
     {
       name: 'participants-do-not-know-privacy',
       comment:
-        'A module that takes part in the privacy jobs speaks the protocol in shared/privacy-participant; it does not import the privacy module, so privacy can be left out.',
+        'A module that takes part in the privacy jobs speaks the protocol in shared/privacy-participant; it does not import the privacy module, so privacy can be left out. Only integrations/ (the glue the app installs) may read privacy events.',
       severity: 'error',
-      from: { path: '^src/modules/(identity|profile|billing)/' },
+      from: { path: '^src/modules/(?!privacy/)', pathNot: '/integrations/' },
       to: { path: '^src/modules/privacy/' },
+    },
+    {
+      name: 'generic-modules-are-leaves',
+      comment:
+        'notification and realtime deliver for every module, so their core must not know any module. What they say about a producer lives in the producer (integrations/).',
+      severity: 'error',
+      from: { path: '^src/modules/(notification|realtime)/' },
+      to: { path: '^src/modules/', pathNot: '^src/modules/(notification|realtime)/' },
+    },
+    {
+      name: 'integrations-use-contracts-only',
+      comment:
+        'An integrations/ folder sees its own contracts, the consumer contracts (notification, realtime) and shared; nothing else.',
+      severity: 'error',
+      from: { path: '^src/modules/([^/]+)/integrations/' },
+      to: {
+        path: '^src/modules/',
+        pathNot: [
+          '^src/modules/$1/(contracts|integrations)/',
+          '^src/modules/(notification|realtime)/contracts/',
+        ],
+      },
+    },
+    {
+      name: 'module-core-does-not-load-its-integrations',
+      comment:
+        'Only the composition root installs integrations; otherwise the consumer stops being optional.',
+      severity: 'error',
+      from: { path: '^src/modules/([^/]+)/', pathNot: '/integrations/' },
+      to: { path: '^src/modules/[^/]+/integrations/' },
     },
     {
       name: 'shared-knows-no-module',

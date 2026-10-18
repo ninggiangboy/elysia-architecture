@@ -1,4 +1,4 @@
-import { type RealtimeIntegration, realtimeRoute } from '#/modules/realtime/contracts'
+import type { RealtimeIntegration } from '#/modules/realtime/contracts'
 import {
   type NotificationCreatedPayload,
   NotificationEvents,
@@ -8,10 +8,10 @@ import {
 
 export const notificationRealtime = {
   routes: [
-    realtimeRoute<NotificationCreatedPayload>({
+    {
       name: 'realtime.push-notification-created',
       eventType: NotificationEvents.Created,
-      map: (p) => ({
+      map: (p: NotificationCreatedPayload) => ({
         userId: p.userId,
         event: {
           type: 'notification.created',
@@ -27,22 +27,22 @@ export const notificationRealtime = {
           },
         },
       }),
-    }),
-    realtimeRoute<NotificationReadPayload>({
+    },
+    {
       name: 'realtime.push-notification-read',
       eventType: NotificationEvents.Read,
-      map: (p) => ({
+      map: (p: NotificationReadPayload) => ({
         userId: p.userId,
         event: { type: 'notification.read', data: { id: p.notificationId, readAt: p.readAt } },
       }),
-    }),
-    realtimeRoute<NotificationSeenPayload>({
+    },
+    {
       name: 'realtime.push-notification-seen',
       eventType: NotificationEvents.Seen,
-      map: (p) => ({
+      map: (p: NotificationSeenPayload) => ({
         userId: p.userId,
         event: { type: 'notification.seen', data: { seenAt: p.seenAt } },
       }),
-    }),
+    },
   ],
 } satisfies RealtimeIntegration

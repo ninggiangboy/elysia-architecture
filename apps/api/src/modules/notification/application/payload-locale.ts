@@ -1,5 +1,5 @@
 import { DEFAULT_LOCALE, isLocale } from '@app/shared-types'
-import type { LocaleResolver } from './ports'
+import type { LocaleResolver } from '../contracts'
 
 /** The language the event itself carries, else the default. Used where nobody can be looked up (and in tests). */
 export const payloadLocale: LocaleResolver = {

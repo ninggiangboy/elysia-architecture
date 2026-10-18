@@ -229,7 +229,7 @@ describe('account deletion', () => {
 
     // Told straight away, and by the account's own notifications.
     const mail = await waitForMail(me.email, 'scheduled for deletion')
-    expect(mail.text).toContain('/privacy')
+    expect(mail.text).toContain('/settings/account')
     await eventually(async () => {
       const list = await api('GET', '/api/notifications', { token: me.accessToken })
       return list.json.items.some((n: { template: string }) => n.template === 'deletionScheduled')

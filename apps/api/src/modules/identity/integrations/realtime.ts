@@ -1,12 +1,12 @@
-import { type RealtimeIntegration, realtimeRoute } from '#/modules/realtime/contracts'
+import type { RealtimeIntegration } from '#/modules/realtime/contracts'
 import { IdentityEvents, type SessionRevokedPayload } from '../contracts'
 
 export const identityRealtime = {
   routes: [
-    realtimeRoute<SessionRevokedPayload>({
+    {
       name: 'realtime.push-session-revoked',
       eventType: IdentityEvents.SessionRevoked,
-      map: (p) => ({
+      map: (p: SessionRevokedPayload) => ({
         userId: p.userId,
         closeSessionId: p.sessionId,
         event: {
@@ -16,6 +16,6 @@ export const identityRealtime = {
           replay: true,
         },
       }),
-    }),
+    },
   ],
 } satisfies RealtimeIntegration

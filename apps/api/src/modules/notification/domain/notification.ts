@@ -1,14 +1,8 @@
 import { DomainError } from '#/shared/domain/errors'
 
-export const NOTIFICATION_KINDS = [
-  'welcome',
-  'email_changed',
-  'new_sign_in',
-  'security_alert',
-  'data_export',
-  'payment',
-] as const
-export type NotificationKind = (typeof NOTIFICATION_KINDS)[number]
+import type { NotificationKind } from '../contracts'
+
+export type { NotificationKind }
 
 export const MAX_TITLE_LENGTH = 200
 export const MAX_BODY_LENGTH = 1000

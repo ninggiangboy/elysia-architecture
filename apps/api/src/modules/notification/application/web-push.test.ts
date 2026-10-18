@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { IdentityEvents } from '#/modules/identity/contracts'
 import type { InboxGuard, Log } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
 import { FakeClock, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing/fakes'
@@ -9,6 +8,8 @@ import { InvalidPushSubscriptionError, PushSubscription } from '../domain/push-s
 import type { PushSubscriptionRepository } from '../domain/push-subscription-repository'
 import { DropPushSubscriptionsHandler } from './handlers/drop-push-subscriptions-handler'
 import { MAX_WEB_PUSH_AGE_MS, WebPushHandler } from './handlers/web-push-handler'
+import { createMessages } from './messages'
+import { createNotificationRenderer } from './notification-renderer'
 import type { PushMessage, PushOutcome, PushTarget, WebPushSender } from './ports'
 import { SubscribeToPush, UnsubscribeFromPush } from './use-cases/push-subscriptions'
 
@@ -71,6 +72,31 @@ class OncePerMessageInbox implements InboxGuard {
 }
 
 const log: Log = { info() {}, warn() {}, error() {} }
+
+// What a producer would ship; the notification module itself knows none.
+const templates = { passkeyAdded: (d: Record<string, unknown>) => ({ name: String(d.name ?? '') }) }
+const render = createNotificationRenderer(
+  templates,
+  createMessages({
+    integrations: [
+      {
+        templates,
+        messages: {
+          en: {
+            inApp: {
+              passkeyAdded: { title: 'A passkey was added', body: '"{{name}}" can now sign in.' },
+            },
+          },
+          vi: {
+            inApp: {
+              passkeyAdded: { title: 'Đã thêm một passkey', body: '"{{name}}" có thể đăng nhập.' },
+            },
+          },
+        },
+      },
+    ],
+  }).translate,
+)
 
 const sub = (userId: string, n: number, sessionId = `session-${n}`) =>
   PushSubscription.create({
@@ -222,6 +248,7 @@ describe('WebPushHandler', () => {
       new OncePerMessageInbox(),
       clock,
       log,
+      render,
       QUIET_MS,
     )
   })
@@ -255,6 +282,7 @@ describe('WebPushHandler', () => {
       new OncePerMessageInbox(),
       clock,
       log,
+      render,
       0,
       {
         resolve: async () => 'vi',
@@ -346,7 +374,7 @@ describe('WebPushHandler', () => {
 describe('DropPushSubscriptionsHandler', () => {
   const revoked = (userId: string, sessionId: string): Envelope => ({
     id: 'm1',
-    type: IdentityEvents.SessionRevoked,
+    type: 'test.session_revoked.v1',
     source: 'identity',
     aggregateId: userId,
     occurredAt: new Date().toISOString(),
@@ -356,7 +384,12 @@ describe('DropPushSubscriptionsHandler', () => {
   test('drops only the subscriptions of the revoked session', async () => {
     const repo = new InMemorySubscriptions()
     repo.rows.push(sub(ALICE, 1, 'phone'), sub(ALICE, 2, 'laptop'), sub(BOB, 3, 'phone'))
-    await new DropPushSubscriptionsHandler(repo).handle(revoked(ALICE, 'phone'))
+    const rule = {
+      name: 'test.drop-push',
+      eventType: 'test.session_revoked.v1',
+      session: (p: { userId: string; sessionId: string }) => p,
+    }
+    await new DropPushSubscriptionsHandler(rule, repo).handle(revoked(ALICE, 'phone'))
     expect(repo.rows.map((r) => r.endpoint)).toEqual([endpoint(2), endpoint(3)])
   })
 })
