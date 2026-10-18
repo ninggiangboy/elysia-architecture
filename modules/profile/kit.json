@@ -1,0 +1,10 @@
+{
+  "requires": ["identity"],
+  "late": false,
+  "appDependencies": { "@mod/profile": "workspace:*" },
+  "container": {
+    "imports": ["import { installProfile } from '@mod/profile'"],
+    "install": "const profile = use(installProfile({ ...host, modules: { identity } }))"
+  },
+  "integrations": {}
+}

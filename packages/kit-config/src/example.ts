@@ -28,7 +28,11 @@ const comment = (text: string) =>
     .map((line) => (line ? `# ${line}` : '#'))
     .join('\n')
 
-function renderSlice(slice: ConfigSlice, listed: Set<string>): string {
+function renderSlice(
+  slice: ConfigSlice,
+  listed: Set<string>,
+  set: Record<string, string | null>,
+): string {
   const shape = (slice.schema as unknown as { shape: Record<string, z.ZodType> }).shape
   const lines = [`# ---- ${slice.title} ----`]
   if (slice.notes) lines.push(comment(slice.notes))
@@ -37,9 +41,10 @@ function renderSlice(slice: ConfigSlice, listed: Set<string>): string {
     if (listed.has(name)) continue
     listed.add(name)
     if (field.description) lines.push(comment(field.description))
-    const example = slice.example?.[name]
+    // `set` wins over the slice's own example; `null` there means "leave it commented out".
+    const example = name in set ? set[name] : slice.example?.[name]
     const fallback = defaultOf(field)
-    if (example !== undefined) lines.push(`${name}=${example}`)
+    if (example !== undefined && example !== null) lines.push(`${name}=${example}`)
     else if (fallback !== undefined) lines.push(`# ${name}=${fallback}`)
     else if (isOptional(field)) lines.push(`# ${name}=`)
     else lines.push(`${name}=`)
@@ -51,11 +56,19 @@ function renderSlice(slice: ConfigSlice, listed: Set<string>): string {
  * The `.env.example` file, written from the slices: each variable with its description and default, grouped by owner.
  * Generated (`bun run --filter @app/api config:example`) and checked by a test, so it cannot drift from the schemas.
  */
-export function renderEnvExample(slices: Record<string, ConfigSlice>): string {
-  const header =
-    '# Generated from the config slices: run `bun run --filter @app/api config:example` after changing one. Do not edit by hand.\n'
+export function renderEnvExample(
+  slices: Record<string, ConfigSlice>,
+  options: {
+    /** Values this app ships uncommented, over each slice's own examples (a starter that runs on the local disk). */
+    set?: Record<string, string | null>
+    /** The command that regenerates the file, named in its header. */
+    command?: string
+  } = {},
+): string {
+  const { set = {}, command = 'bun run config:example' } = options
+  const header = `# Generated from the config slices: run \`${command}\` after changing one. Do not edit by hand.\n`
   const listed = new Set<string>()
   return `${header}\n${Object.values(slices)
-    .map((slice) => renderSlice(slice, listed))
+    .map((slice) => renderSlice(slice, listed, set))
     .join('\n\n')}\n`
 }

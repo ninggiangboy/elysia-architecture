@@ -1,5 +1,6 @@
 export * from './app-module'
 export * from './cluster'
+export * from './db-cli'
 export * from './health'
 export * from './host'
 export * from './interval-jobs'

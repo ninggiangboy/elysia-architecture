@@ -1,0 +1,19 @@
+{
+  "requires": ["identity"],
+  "late": false,
+  "consumes": "notification",
+  "appDependencies": { "@mod/notification": "workspace:*" },
+  "container": {
+    "imports": [
+      "import { installNotification } from '@mod/notification'",
+      "import { identityLocaleResolver } from '@mod/identity/integrations/notification'"
+    ],
+    "install": "const notification = use(\n  installNotification({\n    ...host,\n    modules: { identity },\n    // What gets said, per producer module the app installs.\n    integrations: [\n      // <kit:notification-integrations>\n    ],\n    // The one thing notification asks identity: which language an account reads.\n    locales: identityLocaleResolver(identity.api),\n  }),\n)"
+  },
+  "integrations": {
+    "realtime": {
+      "import": "import { notificationRealtime } from '@mod/notification/integrations/realtime'",
+      "entry": "notificationRealtime"
+    }
+  }
+}

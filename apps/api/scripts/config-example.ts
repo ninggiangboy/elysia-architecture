@@ -4,7 +4,9 @@ import { renderEnvExample } from '@kit/config'
 import { CONFIG_SLICES } from '../src/bootstrap/config'
 
 const path = new URL('../../../.env.example', import.meta.url).pathname
-const expected = renderEnvExample(CONFIG_SLICES)
+const expected = renderEnvExample(CONFIG_SLICES, {
+  command: 'bun run --filter @app/api config:example',
+})
 
 if (process.argv.includes('--check')) {
   if ((await Bun.file(path).text()) !== expected) {

@@ -1,0 +1,37 @@
+{
+  "name": "@example/starter",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development bun --env-file=.env --watch src/main.ts",
+    "start": "bun --env-file=.env src/main.ts",
+    "keys:generate": "bun scripts/generate-keys.ts",
+    "config:example": "bun scripts/config-example.ts",
+    "db:generate": "bun --env-file=.env scripts/db.ts generate",
+    "db:migrate": "bun --env-file=.env scripts/db.ts migrate",
+    "test:e2e": "bun --env-file=.env test tests/e2e --timeout 30000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.0",
+    "@kit/config": "workspace:*",
+    "@kit/core": "workspace:*",
+    "@kit/db": "workspace:*",
+    "@kit/http": "workspace:*",
+    "@kit/mail": "workspace:*",
+    "@kit/messaging": "workspace:*",
+    "@kit/runtime": "workspace:*",
+    "@kit/storage": "workspace:*",
+    "@kit/telemetry": "workspace:*",
+    "@mod/identity": "workspace:*",
+    "@mod/profile": "workspace:*",
+    "elysia": "^1.4.0",
+    "jose": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

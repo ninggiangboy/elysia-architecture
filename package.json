@@ -4,7 +4,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "modules/*"
+    "modules/*",
+    "examples/*"
   ],
   "scripts": {
     "dev": "bun scripts/dev.ts",
@@ -13,10 +14,10 @@
     "stripe:secret": "bun scripts/stripe.ts secret",
     "test:stripe": "bun run --filter @app/api test:stripe",
     "build": "bun run --filter './apps/*' build",
-    "typecheck": "bun run --filter './apps/*' --filter './packages/*' --filter './modules/*' typecheck",
+    "typecheck": "bun run --filter './apps/*' --filter './packages/*' --filter './modules/*' --filter './examples/*' typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "test": "bun run --filter './apps/*' --filter './packages/*' --filter './modules/*' test",
+    "test": "bun run --filter './apps/*' --filter './packages/*' --filter './modules/*' --filter './examples/*' test",
     "test:coverage": "bun run --filter @app/api test:coverage",
     "quality:unused": "knip",
     "quality:dup": "jscpd",

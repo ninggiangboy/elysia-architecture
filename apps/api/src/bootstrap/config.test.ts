@@ -73,7 +73,9 @@ describe('core', () => {
 describe('.env.example', () => {
   test('is the one generated from the slices (run `bun run --filter @app/api config:example`)', () => {
     const path = new URL('../../../../.env.example', import.meta.url).pathname
-    expect(readFileSync(path, 'utf8')).toBe(renderEnvExample(CONFIG_SLICES))
+    expect(readFileSync(path, 'utf8')).toBe(
+      renderEnvExample(CONFIG_SLICES, { command: 'bun run --filter @app/api config:example' }),
+    )
   })
 
   test('every variable has a description', () => {

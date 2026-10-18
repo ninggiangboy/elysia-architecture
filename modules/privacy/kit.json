@@ -1,0 +1,22 @@
+{
+  "requires": ["identity"],
+  "late": true,
+  "appDependencies": { "@mod/privacy": "workspace:*", "@kit/privacy-participant": "workspace:*" },
+  "container": {
+    "imports": [
+      "import type { PrivacyParticipation } from '@kit/privacy-participant'",
+      "import { installPrivacy } from '@mod/privacy'"
+    ],
+    "install": "// Who takes part in its jobs is what the modules installed before it declare (`privacy` on the module).\nconst participants = (job: keyof PrivacyParticipation) =>\n  installed\n    .filter((m) => m.privacy?.[job])\n    .map((m) => m.name)\n    .sort()\nconst privacy = use(\n  installPrivacy({\n    ...host,\n    modules: { identity },\n    participants: { exports: participants('exports'), erases: participants('erases') },\n  }),\n)"
+  },
+  "integrations": {
+    "notification": {
+      "import": "import { privacyNotifications } from '@mod/privacy/integrations/notification'",
+      "entry": "privacyNotifications"
+    },
+    "realtime": {
+      "import": "import { privacyRealtime } from '@mod/privacy/integrations/realtime'",
+      "entry": "privacyRealtime"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "requires": ["identity"],
+  "late": false,
+  "appDependencies": { "@mod/__name__": "workspace:*" },
+  "container": {
+    "imports": ["import { install__Name__ } from '@mod/__name__'"],
+    "install": "const __name__ = use(install__Name__({ ...host, modules: { identity } }))"
+  },
+  "integrations": {}
+}

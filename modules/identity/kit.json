@@ -1,0 +1,19 @@
+{
+  "requires": [],
+  "late": false,
+  "appDependencies": { "@mod/identity": "workspace:*" },
+  "container": {
+    "imports": ["import { installIdentity } from '@mod/identity'"],
+    "install": "const identity = use(await installIdentity(host))"
+  },
+  "integrations": {
+    "notification": {
+      "import": "import { identityNotifications } from '@mod/identity/integrations/notification'",
+      "entry": "identityNotifications"
+    },
+    "realtime": {
+      "import": "import { identityRealtime } from '@mod/identity/integrations/realtime'",
+      "entry": "identityRealtime"
+    }
+  }
+}

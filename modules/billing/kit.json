@@ -1,0 +1,19 @@
+{
+  "requires": ["identity", "profile"],
+  "late": false,
+  "appDependencies": { "@mod/billing": "workspace:*" },
+  "container": {
+    "imports": ["import { installBilling } from '@mod/billing'"],
+    "install": "const billing = use(installBilling({ ...host, modules: { identity, profile } }))"
+  },
+  "integrations": {
+    "notification": {
+      "import": "import { billingNotifications } from '@mod/billing/integrations/notification'",
+      "entry": "billingNotifications"
+    },
+    "realtime": {
+      "import": "import { billingRealtime } from '@mod/billing/integrations/realtime'",
+      "entry": "billingRealtime"
+    }
+  }
+}
