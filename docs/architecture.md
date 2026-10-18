@@ -98,7 +98,7 @@ Solid arrows are synchronous contract calls (the arrow points from the provider 
 | [Adopt in a new project](guides/adopt-in-new-project.md) | Start from the starter, `kit:add` a module, swap an adapter, reword a message, react to an event, eject |
 | [Use a kit package alone](guides/use-a-kit-package-alone.md) | `@kit/messaging` (outbox, inbox, relay) in an existing Elysia app |
 
-The decisions behind the split are in [`docs/adr/`](adr/); the plan and the baseline it was measured against are in [`docs/plans/`](plans/).
+The decisions behind the split are in [`docs/adr/`](adr/).
 
 ### Reusable techniques: [`docs/patterns/`](patterns/README.md)
 

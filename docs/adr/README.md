@@ -1,6 +1,6 @@
 # Architecture decision records
 
-Why the repository is a kit of packages and not one app with a `shared/` folder. Decided 2026-10-18; the plan that carried them out is [`../plans/reusable-kit.md`](../plans/reusable-kit.md).
+Why the repository is a kit of packages and not one app with a `shared/` folder. Decided 2026-10-18.
 
 | ADR | Decision |
 | --- | --- |
