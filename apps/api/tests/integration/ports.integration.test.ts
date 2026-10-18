@@ -12,9 +12,9 @@ import {
   describeOutboxWriter,
   describeSendRateLimiter,
 } from '@kit/testing/contracts'
+import { PostgresSendRateLimiter } from '@mod/notification/testing'
 import { inArray, sql } from 'drizzle-orm'
 import { pgSchema } from 'drizzle-orm/pg-core'
-import { PostgresSendRateLimiter } from '#/modules/notification/infrastructure/postgres-send-rate-limiter'
 import { startScriptedSmtpServer } from './scripted-smtp-server'
 import { config, database, ensureContractTables, MAILPIT } from './support'
 

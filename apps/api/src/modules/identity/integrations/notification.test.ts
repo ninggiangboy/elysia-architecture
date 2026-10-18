@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import type { Locale } from '@app/shared-types/locales'
 import { createTranslator } from '@kit/i18n'
-import type { Translate } from '#/modules/notification/contracts'
+import type { Translate } from '@mod/notification/contracts'
 import { en } from './messages/en'
 import { vi } from './messages/vi'
 import {

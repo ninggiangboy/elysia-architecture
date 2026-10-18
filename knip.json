@@ -74,6 +74,10 @@
     "modules/realtime": {
       "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "modules/notification": {
+      "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

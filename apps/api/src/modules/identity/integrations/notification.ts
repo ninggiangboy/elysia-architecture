@@ -8,7 +8,7 @@ import type {
   NotificationKind,
   TemplateValues,
   Translate,
-} from '#/modules/notification/contracts'
+} from '@mod/notification/contracts'
 import {
   type EmailChangedPayload,
   type EmailChangeRequestedPayload,

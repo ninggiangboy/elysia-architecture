@@ -1,11 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import type { PushMessage, PushOutcome, PushTarget, WebPushSender } from '@mod/notification/testing'
 import webpush from 'web-push'
-import type {
-  PushMessage,
-  PushOutcome,
-  PushTarget,
-  WebPushSender,
-} from '#/modules/notification/application/ports'
 import { client, createTestApp, eventually, login, type TestApp, uniqueEmail } from './helpers'
 
 class RecordingSender implements WebPushSender {

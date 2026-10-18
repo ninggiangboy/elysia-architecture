@@ -2,13 +2,12 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ConfigSlice } from '@kit/config'
 import type { OutboxTable } from '@kit/messaging'
+import { notificationManifest } from '@mod/notification/manifest'
 import { realtimeManifest } from '@mod/realtime/manifest'
 import { billingConfig } from '#/modules/billing/config'
 import { outbox as billingOutbox } from '#/modules/billing/infrastructure/persistence/schema'
 import { identityConfig } from '#/modules/identity/config'
 import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
-import { notificationConfig } from '#/modules/notification/config'
-import { outbox as notificationOutbox } from '#/modules/notification/infrastructure/persistence/schema'
 import { privacyConfig } from '#/modules/privacy/config'
 import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'
@@ -50,7 +49,7 @@ const entry = <const Name extends string, const Slice extends ConfigSlice | unde
 export const MODULE_CATALOG = [
   entry('identity', identityOutbox, identityConfig),
   entry('profile', profileOutbox),
-  entry('notification', notificationOutbox, notificationConfig),
+  notificationManifest,
   entry('privacy', privacyOutbox, privacyConfig),
   entry('billing', billingOutbox, billingConfig),
   realtimeManifest,

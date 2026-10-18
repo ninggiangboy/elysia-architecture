@@ -6,7 +6,7 @@ import type {
   NotificationDraft,
   NotificationIntegration,
   TemplateValues,
-} from '#/modules/notification/contracts'
+} from '@mod/notification/contracts'
 import {
   type AccountDeletedPayload,
   type AccountDeletionCancelledPayload,

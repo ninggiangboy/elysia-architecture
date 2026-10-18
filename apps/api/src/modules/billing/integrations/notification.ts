@@ -3,7 +3,7 @@ import type {
   InAppDefinition,
   NotificationIntegration,
   TemplateValues,
-} from '#/modules/notification/contracts'
+} from '@mod/notification/contracts'
 import { BillingEvents, type TopUpSucceededPayload } from '../contracts'
 import { en } from './messages/en'
 import { vi } from './messages/vi'

@@ -3,10 +3,10 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AppModule } from '@kit/runtime'
 import { createLogger } from '@kit/telemetry'
+import type { WebPushSender } from '@mod/notification'
 import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
 import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
-import type { WebPushSender } from '#/modules/notification/application/ports'
 
 /**
  * A handler's name is its consumer group, i.e. the key in each module's `inbox` table. Renaming one makes messages

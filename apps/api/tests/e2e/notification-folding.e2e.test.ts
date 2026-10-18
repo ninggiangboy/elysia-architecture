@@ -1,15 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '@kit/messaging'
-import { eq } from 'drizzle-orm'
-import { CreateNotificationHandler } from '#/modules/notification/application/handlers/create-notification-handler'
-import type { NotificationDraft } from '#/modules/notification/contracts'
-import { Notification } from '#/modules/notification/domain/notification'
-import { DrizzleNotificationRepository } from '#/modules/notification/infrastructure/persistence/drizzle-notification-repository'
+import type { NotificationDraft } from '@mod/notification/contracts'
+import { inbox, notifications, outbox } from '@mod/notification/schema'
 import {
-  inbox,
-  notifications,
-  outbox,
-} from '#/modules/notification/infrastructure/persistence/schema'
+  CreateNotificationHandler,
+  DrizzleNotificationRepository,
+  Notification,
+} from '@mod/notification/testing'
+import { eq } from 'drizzle-orm'
 import { createTestApp, type TestApp } from './helpers'
 
 let t: TestApp
