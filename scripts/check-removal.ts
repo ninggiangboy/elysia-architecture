@@ -57,6 +57,24 @@ for (const top of ['apps', 'packages', 'modules', 'examples', 'scripts']) {
   }
 }
 
+const group = (file: string) => {
+  if (/(^|\/)(tests|e2e)\/|\.test\.ts$|\.spec\.ts$/.test(file))
+    return 'tests (they exercise the module: they go with it)'
+  if (
+    /^modules\/[^/]+\/src\/integrations\//.test(file) ||
+    /^modules\/[^/]+\/package\.json$/.test(file)
+  )
+    return "other modules' glue for it (dead once it is gone: nothing imports it)"
+  if (file.startsWith('apps/web/')) return 'web app'
+  return 'host app wiring (this is what "remove a module" edits)'
+}
+const groups = new Map<string, typeof hits>()
+for (const h of hits.sort((a, b) => a.file.localeCompare(b.file))) {
+  const g = group(h.file)
+  groups.set(g, [...(groups.get(g) ?? []), h])
+}
 console.log(`Removing "${name}" (${own}) touches ${hits.length} file(s) outside its folder:`)
-for (const h of hits.sort((a, b) => a.file.localeCompare(b.file)))
-  console.log(`  ${String(h.lines).padStart(3)}  ${h.file}`)
+for (const [g, list] of [...groups].sort((a, b) => (b[0].startsWith('host') ? 1 : -1))) {
+  console.log(`\n  ${g}`)
+  for (const h of list) console.log(`    ${String(h.lines).padStart(3)}  ${h.file}`)
+}
