@@ -25,6 +25,7 @@
         "@kit/db": "workspace:*",
         "@kit/http": "workspace:*",
         "@kit/i18n": "workspace:*",
+        "@kit/mail": "workspace:*",
         "@kit/messaging": "workspace:*",
         "@kit/telemetry": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
@@ -169,6 +170,21 @@
       "name": "@kit/i18n",
       "devDependencies": {
         "@types/bun": "latest",
+      },
+    },
+    "packages/kit-mail": {
+      "name": "@kit/mail",
+      "dependencies": {
+        "@kit/config": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "nodemailer": "^10.1.1",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "zod": "^4.1.0",
       },
     },
     "packages/kit-messaging": {
@@ -477,6 +493,8 @@
     "@kit/http": ["@kit/http@workspace:packages/kit-http"],
 
     "@kit/i18n": ["@kit/i18n@workspace:packages/kit-i18n"],
+
+    "@kit/mail": ["@kit/mail@workspace:packages/kit-mail"],
 
     "@kit/messaging": ["@kit/messaging@workspace:packages/kit-messaging"],
 
