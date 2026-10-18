@@ -18,6 +18,7 @@ export const MODULE_CATALOG = [
   privacyManifest,
   billingManifest,
   realtimeManifest,
+  // <kit:catalog>
 ] as const satisfies readonly ModuleManifest[]
 
 export const MODULE_NAMES: string[] = MODULE_CATALOG.map((m) => m.name)

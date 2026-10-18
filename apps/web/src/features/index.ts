@@ -19,6 +19,7 @@ export const FEATURES = [
   privacyFeature,
   billingFeature,
   realtimeFeature,
+  // <kit:features>
 ] as const
 
 const all: readonly FeatureDefinition[] = FEATURES

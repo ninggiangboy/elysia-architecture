@@ -15,7 +15,10 @@ const quick = process.argv.includes('--quick')
 
 async function run(cmd: string[], label = cmd.join(' ')) {
   const proc = Bun.spawn(cmd, { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' })
-  const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()])
+  const [out, err] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ])
   if ((await proc.exited) !== 0) {
     console.error(`\n✗ ${label}\n${out}${err}`)
     process.exit(1)
@@ -31,7 +34,8 @@ async function check(step: string) {
   console.log(`  ✓ ${step} (${((Date.now() - started) / 1000).toFixed(0)}s)`)
 }
 
-const kit = (...args: string[]) => run(['bun', 'scripts/kit.ts', ...args, '--app', 'examples/starter'], `kit ${args.join(' ')}`)
+const kit = (...args: string[]) =>
+  run(['bun', 'scripts/kit.ts', ...args, '--app', 'examples/starter'], `kit ${args.join(' ')}`)
 
 async function sequence(order: string[]) {
   console.log(`\nadd ${order.join(' → ')}, then remove in reverse`)
@@ -63,11 +67,17 @@ if (!quick) {
     await check(`gen ${name}`)
     console.log(`  ✓ ${name} works out of the box`)
   } finally {
-    await run(['bun', 'scripts/kit.ts', 'remove', name, '--app', 'examples/starter'], 'remove scratch').catch(() => {})
+    await run(
+      ['bun', 'scripts/kit.ts', 'remove', name, '--app', 'examples/starter'],
+      'remove scratch',
+    ).catch(() => {})
     rmSync(join(ROOT, 'modules', name), { recursive: true, force: true })
     await run(['bun', 'install'])
   }
-  await run(['git', 'status', '--porcelain', '--', 'examples/starter', 'modules'], 'clean tree').then((out) => {
+  await run(
+    ['git', 'status', '--porcelain', '--', 'examples/starter', 'modules'],
+    'clean tree',
+  ).then((out) => {
     if (out.trim()) {
       console.error(`✗ the tree is not as it was:\n${out}`)
       process.exit(1)

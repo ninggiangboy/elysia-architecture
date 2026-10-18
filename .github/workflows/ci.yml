@@ -78,6 +78,43 @@ jobs:
         if: failure()
         run: docker compose logs --no-color --tail=200
 
+  starter:
+    name: Starter (identity + profile; no S3, SMTP, Stripe or VAPID)
+    runs-on: ubuntu-latest
+    needs: [changes, check]
+    if: needs.changes.outputs.e2e == 'true'
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: cp examples/starter/.env.example examples/starter/.env
+      - run: bun run --filter @example/starter keys:generate
+      - run: bun examples/starter/scripts/config-example.ts --check
+      - run: docker compose up -d --wait postgres
+      - run: bun run --filter @example/starter db:migrate
+      - run: bun run --filter @example/starter typecheck
+      - run: bun run --filter @example/starter test:e2e
+
+  add-matrix:
+    name: Modules can be added and removed in any order
+    runs-on: ubuntu-latest
+    needs: [changes, check]
+    if: needs.changes.outputs.e2e == 'true'
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: cp examples/starter/.env.example examples/starter/.env
+      - run: bun run --filter @example/starter keys:generate
+      - run: docker compose up -d --wait postgres
+      - run: bun run check:add-matrix
+
   docker:
     name: Docker build (${{ matrix.app }})
     runs-on: ubuntu-latest
