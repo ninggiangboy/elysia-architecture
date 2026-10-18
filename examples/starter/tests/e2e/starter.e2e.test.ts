@@ -55,7 +55,8 @@ describe('starter', () => {
     const { config } = container
     expect(config.storage.STORAGE_DRIVER).toBe('local')
     expect(config.mail.MAIL_DRIVER).toBe('console')
-    expect(Object.keys(container.modules).sort()).toEqual(['identity', 'profile'])
+    // Whatever `kit:add` installed on top of these two.
+    expect(Object.keys(container.modules)).toEqual(expect.arrayContaining(['identity', 'profile']))
   })
 
   test('is ready', async () => {

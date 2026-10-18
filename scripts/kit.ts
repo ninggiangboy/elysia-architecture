@@ -194,6 +194,13 @@ function remove(app: App, name: string) {
   )
   container = container.replace(new RegExp(`^[ \\t]+${name},\\n`, 'm'), '')
   for (const statement of kit.container.imports) container = removeImport(container, statement)
+  // the imports of what the other modules ship for it (the lists went with its install block)
+  if (kit.consumes) {
+    for (const producer of installed) {
+      const entry = readKit(producer).integrations[kit.consumes]
+      if (producer !== name && entry) container = removeImport(container, entry.import)
+    }
+  }
   // its entries in the other modules' integration lists
   for (const integration of Object.values(kit.integrations)) {
     container = container.replace(new RegExp(`^[ \\t]+${integration.entry},\\n`, 'm'), '')
