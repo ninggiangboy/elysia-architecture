@@ -21,3 +21,5 @@ export const outboxConfig = defineSlice({
       ),
   }),
 })
+
+export type OutboxConfig = z.infer<typeof outboxConfig.schema>

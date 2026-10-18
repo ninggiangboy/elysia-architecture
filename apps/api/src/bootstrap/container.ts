@@ -1,10 +1,9 @@
 import { SystemClock, UuidV7Generator } from '@kit/core'
 import { Database } from '@kit/db'
 import { createMailer, type Mailer } from '@kit/mail'
-import { InProcessMessageBus, OutboxRelay } from '@kit/messaging'
 import type { PrivacyParticipation } from '@kit/privacy-participant'
 import type { AppModule } from '@kit/runtime'
-import { MaintenanceMode, MaintenanceStore } from '@kit/runtime'
+import { createRuntime, type MaintenanceStore } from '@kit/runtime'
 import { createObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
 import { installBilling, type PaymentGateway } from '@mod/billing'
@@ -130,92 +129,19 @@ export async function createContainer(
     // <kit:modules>
   } as const
 
-  const list: readonly AppModule[] = installed
-  const jobs = list.flatMap((m) => (m.jobs ? [m.jobs] : []))
-  const docs = list.flatMap((m) => m.docs ?? [])
-
-  const bus = new InProcessMessageBus(logger)
-  for (const handler of list.flatMap((m) => m.handlers ?? [])) bus.subscribe(handler)
-
-  const relay = new OutboxRelay(
+  const runtime = createRuntime({
+    modules: installed,
     database,
-    list.flatMap((m) => (m.outbox ? [m.outbox] : [])),
-    bus,
     logger,
-    {
-      pollIntervalMs: config.outbox.OUTBOX_POLL_INTERVAL_MS,
-      batchSize: config.outbox.OUTBOX_BATCH_SIZE,
-      concurrency: Math.min(
-        config.outbox.OUTBOX_CONCURRENCY,
-        Math.max(1, config.db.DB_POOL_MAX - 2),
-      ),
-      leaseSeconds: config.outbox.OUTBOX_LEASE_SECONDS,
-      deferBudgetMs: config.outbox.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
+    outbox: config.outbox,
+    dbPoolMax: config.db.DB_POOL_MAX,
+    maintenance: {
+      pollIntervalMs: config.maintenance.MAINTENANCE_POLL_INTERVAL_MS,
+      store: overrides.maintenanceStore,
     },
-  )
+  })
 
-  // Not started here (tests build containers too): `main.ts` reads it once before serving, then polls.
-  const maintenance = new MaintenanceMode(
-    overrides.maintenanceStore ?? new MaintenanceStore(database),
-    logger,
-    config.maintenance.MAINTENANCE_POLL_INTERVAL_MS,
-  )
-
-  /** Maintenance mode stops everything that starts work on its own: the relay and the timers behind the jobs. */
-  const pauseWorker = async () => {
-    await relay.pause()
-    for (const job of jobs) await job.stop()
-  }
-  const resumeWorker = () => {
-    relay.resume()
-    for (const job of jobs) job.start()
-  }
-  /** Closes what holds the HTTP server open (SSE streams). Idempotent; call it before stopping the server. */
-  const closeLive = async () => {
-    for (const m of list) await m.close?.()
-  }
-
-  return {
-    config,
-    logger,
-    clock,
-    ids,
-    storage,
-    modules,
-    /** The API doc sections the modules describe. */
-    docs,
-    database,
-    bus,
-    relay,
-    maintenance,
-    /**
-     * Starts what a worker-role process runs: the outbox relay, and the timers behind the modules' jobs.
-     * Follows maintenance mode from then on: paused while it is on (right away if it already is), running again when it ends.
-     */
-    startWorker() {
-      if (maintenance.active)
-        void relay.pause() // before `start`, so the first batch is not claimed
-      else for (const job of jobs) job.start()
-      relay.start()
-      // One transition at a time: on → off → on in quick succession must not interleave.
-      let transition: Promise<unknown> = Promise.resolve()
-      maintenance.onChange((active) => {
-        transition = transition
-          .then(active ? pauseWorker : resumeWorker)
-          .catch((err) =>
-            logger.error({ err, active }, 'switching the worker for maintenance failed'),
-          )
-      })
-    },
-    closeLive,
-    async close() {
-      maintenance.stop()
-      for (const job of [...jobs].reverse()) await job.stop()
-      await relay.stop()
-      await closeLive()
-      await database.close()
-    },
-  }
+  return { config, logger, clock, ids, storage, database, modules, ...runtime }
 }
 
 export type Container = Awaited<ReturnType<typeof createContainer>>
