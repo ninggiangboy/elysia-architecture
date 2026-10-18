@@ -1,8 +1,12 @@
 import { describe, expect, test } from 'bun:test'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { createContainer } from '#/bootstrap/container'
+import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
 import type { WebPushSender } from '#/modules/notification/application/ports'
 import { loadConfig } from '#/shared/infrastructure/config'
 import { createLogger } from '#/shared/infrastructure/logger'
+import type { AppModule } from '#/shared/module/app-module'
 
 /**
  * A handler's name is its consumer group, i.e. the key in each module's `inbox` table. Renaming one makes messages
@@ -94,6 +98,25 @@ describe('container', () => {
         .map((h) => `${h.name}|${h.eventType}`)
         .sort()
       expect(names).toEqual(HANDLERS)
+    } finally {
+      await container.close()
+    }
+  })
+
+  test('the module catalog lists the container modules, their folders and their migrations', async () => {
+    const container = await build()
+    try {
+      const root = join(import.meta.dir, '../..')
+      const names = MODULE_CATALOG.map((m) => m.name)
+      expect(names.slice().sort()).toEqual(Object.keys(container.modules).sort())
+      expect(names.slice().sort()).toEqual(readdirSync(join(root, 'src/modules')).sort())
+      for (const m of MODULE_CATALOG) {
+        expect(existsSync(join(root, m.schemaFile))).toBe(true)
+        expect(existsSync(join(root, m.migrations, 'meta'))).toBe(true)
+        // The relay reads exactly the outbox tables the catalog knows (realtime has none).
+        const module: AppModule = container.modules[m.name as keyof typeof container.modules]
+        expect(module.outbox?.table ?? null).toBe(m.outbox)
+      }
     } finally {
       await container.close()
     }

@@ -1,15 +1,15 @@
 // Per-module migration management:  bun scripts/db.ts generate | migrate
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
 import { Database } from '#/shared/infrastructure/db/database'
 import { migrateModule } from '#/shared/infrastructure/db/migrate'
 
-const MODULES = ['identity', 'profile', 'notification', 'privacy', 'billing', 'realtime'] as const
 const root = join(import.meta.dir, '..')
 const command = process.argv[2]
 
 if (command === 'generate') {
-  for (const name of MODULES) {
+  for (const { name } of MODULE_CATALOG) {
     console.log(`\n▶ generate ${name}`)
     const proc = Bun.spawn(['bunx', '--bun', 'drizzle-kit', 'generate'], {
       cwd: root,
@@ -24,8 +24,8 @@ if (command === 'generate') {
   if (!env.DATABASE_URL) throw new Error('DATABASE_URL is required')
   const database = new Database({ url: env.DATABASE_URL, poolMax: 1, prepare: false })
   try {
-    for (const name of MODULES) {
-      const folder = join(root, 'src/modules', name, 'migrations')
+    for (const { name, migrations } of MODULE_CATALOG) {
+      const folder = join(root, migrations)
       if (!existsSync(join(folder, 'meta'))) {
         console.warn(`- ${name}: no migrations found, skipping (run db:generate first)`)
         continue
