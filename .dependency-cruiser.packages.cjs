@@ -19,7 +19,16 @@ const KIT_GRAPH = {
   mail: ['core', 'config', 'messaging'],
   storage: ['core', 'config'],
   'privacy-participant': ['core', 'messaging', 'storage'],
-  runtime: ['config', 'db', 'messaging', 'privacy-participant', 'telemetry'],
+  runtime: [
+    'core',
+    'config',
+    'db',
+    'mail',
+    'messaging',
+    'privacy-participant',
+    'storage',
+    'telemetry',
+  ],
   // Fakes for tests: may use whatever a test wants to fake.
   testing: ['core', 'mail', 'messaging', 'storage'],
 }

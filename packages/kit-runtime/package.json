@@ -11,9 +11,12 @@
   },
   "dependencies": {
     "@kit/config": "workspace:*",
+    "@kit/core": "workspace:*",
     "@kit/db": "workspace:*",
+    "@kit/mail": "workspace:*",
     "@kit/messaging": "workspace:*",
     "@kit/privacy-participant": "workspace:*",
+    "@kit/storage": "workspace:*",
     "@kit/telemetry": "workspace:*"
   },
   "peerDependencies": {

@@ -7,25 +7,22 @@ import type { AppModule } from '@kit/runtime'
 import { MaintenanceMode, MaintenanceStore } from '@kit/runtime'
 import { createObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
-import type { PaymentGateway } from '@mod/billing'
-import { createBillingModule, StripePaymentGateway } from '@mod/billing'
+import { installBilling, type PaymentGateway } from '@mod/billing'
 import { billingNotifications } from '@mod/billing/integrations/notification'
 import { billingRealtime } from '@mod/billing/integrations/realtime'
-import type { OAuthGateway, WebAuthnService } from '@mod/identity'
-import { createIdentityModule } from '@mod/identity'
+import { installIdentity, type OAuthGateway, type WebAuthnService } from '@mod/identity'
 import {
   identityLocaleResolver,
   identityNotifications,
 } from '@mod/identity/integrations/notification'
 import { identityRealtime } from '@mod/identity/integrations/realtime'
-import type { WebPushSender } from '@mod/notification'
-import { createNotificationModule, WebPushLibrarySender } from '@mod/notification'
+import { installNotification, type WebPushSender } from '@mod/notification'
 import { notificationRealtime } from '@mod/notification/integrations/realtime'
-import { createPrivacyModule } from '@mod/privacy'
+import { installPrivacy } from '@mod/privacy'
 import { privacyNotifications } from '@mod/privacy/integrations/notification'
 import { privacyRealtime } from '@mod/privacy/integrations/realtime'
-import { createProfileModule } from '@mod/profile'
-import { createRealtimeModule } from '@mod/realtime'
+import { installProfile } from '@mod/profile'
+import { installRealtime } from '@mod/realtime'
 import type { Config } from './config'
 
 /**
@@ -62,124 +59,78 @@ export async function createContainer(
     poolMax: config.db.DB_POOL_MAX,
     prepare: config.db.DB_PREPARE,
   })
-
-  const smtp = config.mail
   const storage = createObjectStorage(config.storage)
-  const mailer = overrides.mailer ?? createMailer(smtp, logger)
+  const mailer = overrides.mailer ?? createMailer(config.mail, logger)
 
-  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = config.notification
-  const webPush =
-    VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT
-      ? {
-          publicKey: VAPID_PUBLIC_KEY,
-          sender:
-            overrides.webPushSender ??
-            new WebPushLibrarySender({
-              subject: VAPID_SUBJECT,
-              publicKey: VAPID_PUBLIC_KEY,
-              privateKey: VAPID_PRIVATE_KEY,
-            }),
-        }
-      : undefined
+  /** What every module's `install` gets. */
+  const host = { config, logger, clock, ids, database, storage, mailer, overrides }
 
-  const { STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET } = config.billing
-  const payments =
-    STRIPE_SECRET_KEY && STRIPE_PUBLISHABLE_KEY && STRIPE_WEBHOOK_SECRET
-      ? {
-          publishableKey: STRIPE_PUBLISHABLE_KEY,
-          gateway:
-            overrides.paymentGateway ??
-            new StripePaymentGateway(STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET),
-        }
-      : undefined
+  /** Modules in install order. A module that needs others takes them from `modules` of its own install call. */
+  const installed: AppModule[] = []
+  const use = <M extends AppModule>(module: M) => {
+    installed.push(module)
+    return module
+  }
 
-  const identity = await createIdentityModule({
-    database,
-    config: config.identity,
-    clock,
-    ids,
-    storage,
-    webauthn: overrides.webauthn,
-    oauth: overrides.oauth,
-  })
-  const profile = createProfileModule({
-    database,
-    clock,
-    ids,
-    storage,
-    log: logger,
-    identity: identity.api,
-    verifier: identity.verifier,
-  })
-  const notification = createNotificationModule({
-    database,
-    mailer,
-    webAppUrl: config.core.WEB_APP_URL,
-    clock,
-    ids,
-    log: logger,
-    storage,
-    verifier: identity.verifier,
-    // The one thing notification asks identity: which language an account reads.
-    locales: identityLocaleResolver(identity.api),
-    // What gets said, per producer. Leave one out and its events simply produce no mail or notification.
-    integrations: [identityNotifications, privacyNotifications, billingNotifications], // <kit:notification-integrations>
-    sending: {
-      ratePerSecond: smtp.MAIL_RATE_PER_SECOND,
-      burst: smtp.MAIL_BURST,
-      dailyQuota: smtp.MAIL_DAILY_QUOTA,
-    },
-    webPush,
-    config: config.notification,
-  })
-
-  const billing = createBillingModule({
-    database,
-    clock,
-    ids,
-    log: logger,
-    storage,
-    verifier: identity.verifier,
-    identity: identity.api,
-    profile: profile.api,
-    config: config.billing,
-    payments,
-  })
-
+  const identity = use(await installIdentity(host))
+  const profile = use(installProfile({ ...host, modules: { identity } }))
+  const notification = use(
+    installNotification({
+      ...host,
+      modules: { identity },
+      // What gets said, per producer. Leave one out and its events simply produce no mail or notification.
+      integrations: [
+        identityNotifications,
+        privacyNotifications,
+        billingNotifications,
+        // <kit:notification-integrations>
+      ],
+      // The one thing notification asks identity: which language an account reads.
+      locales: identityLocaleResolver(identity.api),
+    }),
+  )
+  const billing = use(installBilling({ ...host, modules: { identity, profile } }))
+  // <kit:install>
+  const realtime = use(
+    installRealtime({
+      ...host,
+      modules: { identity },
+      // What reaches the open tabs: one integration per producer.
+      integrations: [
+        identityRealtime,
+        privacyRealtime,
+        billingRealtime,
+        notificationRealtime,
+        // <kit:realtime-integrations>
+      ],
+    }),
+  )
+  // Installed last: who takes part in its jobs is what the modules above declare (`privacy` on the module).
   const participants = (job: keyof PrivacyParticipation) =>
-    [identity, profile, notification, billing]
+    installed
       .filter((m) => m.privacy?.[job])
       .map((m) => m.name)
       .sort()
+  const privacy = use(
+    installPrivacy({
+      ...host,
+      modules: { identity },
+      participants: { exports: participants('exports'), erases: participants('erases') },
+    }),
+  )
+  // <kit:install-late>
 
-  const privacy = createPrivacyModule({
-    database,
-    clock,
-    ids,
-    storage,
-    log: logger,
-    identity: identity.api,
-    verifier: identity.verifier,
-    stepUp: identity.stepUp,
-    config: config.privacy,
-    // Who takes part is what the modules declare (`privacy` on the module). A module that becomes a service stays in
-    // these lists and keeps answering with the same two events.
-    participants: { exports: participants('exports'), erases: participants('erases') },
-  })
+  const modules = {
+    identity,
+    profile,
+    notification,
+    privacy,
+    billing,
+    realtime,
+    // <kit:modules>
+  } as const
 
-  const realtime = createRealtimeModule({
-    database,
-    clock,
-    log: logger,
-    verifier: identity.verifier,
-    config: config.realtime,
-    // What reaches the open tabs: one integration per producer. Leave one out and its events simply stop being pushed.
-    integrations: [identityRealtime, privacyRealtime, billingRealtime, notificationRealtime], // <kit:realtime-integrations>
-  })
-
-  // Every place that used to name the modules one by one loops over this list instead.
-  const modules = { identity, profile, notification, privacy, billing, realtime } as const
-  const list: readonly AppModule[] = Object.values(modules)
+  const list: readonly AppModule[] = installed
   const jobs = list.flatMap((m) => (m.jobs ? [m.jobs] : []))
   const docs = list.flatMap((m) => m.docs ?? [])
 

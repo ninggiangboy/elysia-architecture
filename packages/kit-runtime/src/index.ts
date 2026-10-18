@@ -1,6 +1,7 @@
 export * from './app-module'
 export * from './cluster'
 export * from './health'
+export * from './host'
 export * from './interval-jobs'
 export * from './maintenance-config'
 export * from './maintenance-mode'
