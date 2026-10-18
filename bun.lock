@@ -33,6 +33,7 @@
         "@kit/telemetry": "workspace:*",
         "@mod/identity": "workspace:*",
         "@mod/notification": "workspace:*",
+        "@mod/profile": "workspace:*",
         "@mod/realtime": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/sdk-trace-node": "^2.12.0",
@@ -60,6 +61,7 @@
         "@app/shared-types": "workspace:*",
         "@elysiajs/eden": "^1.4.9",
         "@kit/i18n": "workspace:*",
+        "@mod/profile": "workspace:*",
         "@radix-ui/react-label": "^2.1.17",
         "@radix-ui/react-slot": "^1.5.0",
         "@scalar/api-reference-react": "^0.9.80",
@@ -168,6 +170,33 @@
       "optionalPeers": [
         "@mod/realtime",
       ],
+    },
+    "modules/profile": {
+      "name": "@mod/profile",
+      "dependencies": {
+        "@app/shared-types": "workspace:*",
+        "@kit/auth": "workspace:*",
+        "@kit/core": "workspace:*",
+        "@kit/db": "workspace:*",
+        "@kit/http": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/privacy-participant": "workspace:*",
+        "@kit/runtime": "workspace:*",
+        "@kit/storage": "workspace:*",
+        "@mod/identity": "workspace:*",
+        "sharp": "^0.35.5",
+      },
+      "devDependencies": {
+        "@kit/testing": "workspace:*",
+        "@types/bun": "latest",
+        "drizzle-kit": "^0.31.0",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+      },
+      "peerDependencies": {
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+      },
     },
     "modules/realtime": {
       "name": "@mod/realtime",
@@ -700,6 +729,8 @@
     "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 
     "@mod/notification": ["@mod/notification@workspace:modules/notification"],
+
+    "@mod/profile": ["@mod/profile@workspace:modules/profile"],
 
     "@mod/realtime": ["@mod/realtime@workspace:modules/realtime"],
 

@@ -1,0 +1,40 @@
+{
+  "name": "@mod/profile",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts/index.ts",
+    "./manifest": "./src/manifest.ts",
+    "./schema": "./src/infrastructure/persistence/schema.ts",
+    "./public": "./src/public.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun --env-file=../../.env test src"
+  },
+  "dependencies": {
+    "@kit/auth": "workspace:*",
+    "@kit/core": "workspace:*",
+    "@kit/db": "workspace:*",
+    "@kit/http": "workspace:*",
+    "@kit/messaging": "workspace:*",
+    "@kit/privacy-participant": "workspace:*",
+    "@kit/runtime": "workspace:*",
+    "@kit/storage": "workspace:*",
+    "@app/shared-types": "workspace:*",
+    "@mod/identity": "workspace:*",
+    "sharp": "^0.35.5"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0"
+  },
+  "devDependencies": {
+    "@kit/testing": "workspace:*",
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.31.0",
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0"
+  }
+}

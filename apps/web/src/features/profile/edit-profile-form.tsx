@@ -1,4 +1,4 @@
-import { BIO_MAX, DISPLAY_NAME_MAX } from '@app/shared-types/profile'
+import { BIO_MAX, DISPLAY_NAME_MAX } from '@mod/profile/public'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

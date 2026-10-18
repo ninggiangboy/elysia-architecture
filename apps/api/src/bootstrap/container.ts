@@ -17,6 +17,7 @@ import { identityRealtime } from '@mod/identity/integrations/realtime'
 import type { WebPushSender } from '@mod/notification'
 import { createNotificationModule, WebPushLibrarySender } from '@mod/notification'
 import { notificationRealtime } from '@mod/notification/integrations/realtime'
+import { createProfileModule } from '@mod/profile'
 import { createRealtimeModule } from '@mod/realtime'
 import type { Config } from '#/bootstrap/config'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
@@ -27,7 +28,6 @@ import { billingRealtime } from '#/modules/billing/integrations/realtime'
 import { privacyNotifications } from '#/modules/privacy/integrations/notification'
 import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
-import { createProfileModule } from '#/modules/profile/profile.module'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.

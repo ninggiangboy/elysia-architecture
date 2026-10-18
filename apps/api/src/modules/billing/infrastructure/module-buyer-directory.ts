@@ -1,6 +1,6 @@
 import type { Log } from '@kit/core'
 import type { IdentityApi } from '@mod/identity/contracts'
-import type { ProfileApi } from '#/modules/profile/contracts'
+import type { ProfileApi } from '@mod/profile/contracts'
 import type { BuyerDirectory } from '../application/ports'
 
 /** Reads the buyer's email from identity and name from profile, through their contracts. A failure costs the field, not the top-up. */

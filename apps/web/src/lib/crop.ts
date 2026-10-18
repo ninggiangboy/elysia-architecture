@@ -1,4 +1,4 @@
-import { COVER_CONTENT_TYPES } from '@app/shared-types/profile'
+import { COVER_CONTENT_TYPES } from '@mod/profile/public'
 import { i18n } from '@/i18n'
 
 export const MIN_ZOOM = 1
