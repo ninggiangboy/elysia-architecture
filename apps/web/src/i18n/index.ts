@@ -7,8 +7,7 @@ import {
 } from '@app/shared-types/locales'
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import { en } from './locales/en'
-import { vi } from './locales/vi'
+import { catalog } from './catalog'
 
 const STORAGE_KEY = 'locale'
 
@@ -30,7 +29,7 @@ void i18next.use(initReactI18next).init({
   lng: detect(),
   fallbackLng: DEFAULT_LOCALE,
   supportedLngs: [...LOCALES],
-  resources: { en: { translation: en }, vi: { translation: vi } },
+  resources: { en: { translation: catalog('en') }, vi: { translation: catalog('vi') } },
   // React already escapes what it renders.
   interpolation: { escapeValue: false },
   // Bundled catalogs: nothing to fetch, so init finishes before the first render.

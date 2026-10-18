@@ -1,0 +1,60 @@
+/** The account feature's messages in English, the source language (merged with every other feature's in `src/i18n`). */
+export const en = {
+  email: {
+    current: 'Current email',
+    new: 'New email',
+    newPlaceholder: 'new@example.com',
+    validFor: 'The link is valid for 30 minutes.',
+    send: 'Send confirmation link',
+    sent: 'Confirmation link sent to {{email}}',
+  },
+  sessions: {
+    thisDevice: 'This device',
+    activeNow: 'Active now',
+    active: 'Active {{when}}',
+    signedIn: 'Signed in {{when}}',
+    signOut: 'Sign out',
+    signedOut: 'Device signed out',
+    signedOutOthers_one: 'Signed out {{count}} other device',
+    signedOutOthers_other: 'Signed out {{count}} other devices',
+    othersSignedIn_one: '{{count}} other device is signed in.',
+    othersSignedIn_other: '{{count}} other devices are signed in.',
+    onlyThis: 'Only this device is signed in.',
+    signOutOthers: 'Sign out all other devices',
+  },
+  security: {
+    loading: 'Loading security settings',
+    passkeysTitle: 'Passkeys',
+    passkeysDescription:
+      'Sign in with your fingerprint, face or screen lock. Passkeys cannot be phished and never leave your device unless you sync them.',
+    accountsTitle: 'Connected accounts',
+    accountsDescription:
+      'Sign in with Google or GitHub. We only match an account by an email the provider has verified.',
+  },
+  passkeys: {
+    list: 'Passkeys',
+    none: 'No passkeys yet. A passkey lets you sign in with your fingerprint, face or screen lock — no email link needed.',
+    synced: 'Synced',
+    added: 'Added {{date}}',
+    usedAt: 'used {{when}}',
+    neverUsed: 'never used',
+    supported: 'Adding or removing one asks you to confirm it is you.',
+    unsupported: 'This browser does not support passkeys.',
+    add: 'Add a passkey',
+    addedToast: 'Passkey "{{name}}" added',
+    removedToast: 'Passkey removed',
+    removeTitle: 'Remove this passkey?',
+    removeBody:
+      'You will no longer be able to sign in with <b>{{name}}</b>. You can still sign in with an email link. Delete it from your device’s passkey list too if you do not want to see it offered.',
+    alreadyRegistered: 'This device already has a passkey for your account.',
+    dismissed: 'The passkey prompt was dismissed or timed out.',
+  },
+  accounts: {
+    list: 'Connected accounts',
+    connected: 'Connected',
+    notConnected: 'Not connected',
+    connect: 'Connect',
+    disconnect: 'Disconnect',
+    disconnected: '{{provider}} disconnected',
+  },
+} as const

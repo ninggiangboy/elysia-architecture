@@ -1,10 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { diffCatalogs } from '@kit/i18n'
-import { en } from './locales/en'
-import { vi } from './locales/vi'
+import { catalog } from './catalog'
 
-describe('web catalogs', () => {
+describe('web catalogs (the shell plus every feature)', () => {
   test('every translation has the same keys and placeholders as the English source', () => {
-    expect(diffCatalogs(en, vi)).toEqual([])
+    expect(diffCatalogs(catalog('en'), catalog('vi'))).toEqual([])
   })
 })
