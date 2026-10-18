@@ -1,4 +1,4 @@
-import type { DomainEvent } from '#/shared/core'
+import type { DomainEvent } from '@kit/core'
 import type { Envelope } from './envelope'
 
 /** Writes an event to the module's outbox table, inside the current transaction. */

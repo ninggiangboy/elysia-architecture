@@ -1,4 +1,4 @@
-import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '#/shared/core'
+import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '@kit/core'
 import type { InboxGuard, OutboxWriter } from '#/shared/messaging'
 import type { ObjectStat, ObjectStorage } from '#/shared/storage'
 

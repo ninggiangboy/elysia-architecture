@@ -1,6 +1,6 @@
+import { ValidationError } from '@kit/core'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
-import { ValidationError } from '#/shared/core'
 import { errorResponse, validationError } from '#/shared/http'
 import type { GetMe } from '../application/use-cases/get-me'
 import type { RequestAvatarUpload } from '../application/use-cases/request-avatar-upload'

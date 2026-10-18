@@ -1,4 +1,4 @@
-import type { IdGenerator } from '#/shared/core'
+import type { IdGenerator } from '@kit/core'
 import type { DocumentRepository } from '../domain/billing-repository'
 import {
   BillingDocument,

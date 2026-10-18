@@ -1,4 +1,4 @@
-import { AggregateRoot, DomainError } from '#/shared/core'
+import { AggregateRoot, DomainError } from '@kit/core'
 import { IdentityEvents } from '../contracts/events'
 
 export const MAX_PASSKEYS_PER_USER = 10

@@ -1,4 +1,4 @@
-import { DomainError } from '#/shared/core'
+import { DomainError } from '@kit/core'
 
 export const MAX_ENDPOINT_LENGTH = 2048
 export const MAX_KEY_LENGTH = 256

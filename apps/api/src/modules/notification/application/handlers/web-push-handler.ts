@@ -1,4 +1,4 @@
-import type { Clock, Log } from '#/shared/core'
+import type { Clock, Log } from '@kit/core'
 import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
 import type { LocaleResolver } from '../../contracts'
 import { type NotificationCreatedPayload, NotificationEvents } from '../../contracts'

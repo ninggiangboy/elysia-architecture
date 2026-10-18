@@ -1,5 +1,5 @@
+import type { Clock, Log } from '@kit/core'
 import { and, asc, eq, gt, lt, min, sql } from 'drizzle-orm'
-import type { Clock, Log } from '#/shared/core'
 import type { Database } from '#/shared/db'
 import type {
   RealtimeConnection,

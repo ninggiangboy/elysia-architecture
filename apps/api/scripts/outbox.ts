@@ -2,6 +2,7 @@
 //   bun scripts/outbox.ts list
 //   bun scripts/outbox.ts requeue [--module <name>] [--type <event type>] [--id <uuid>]
 // A handler that already finished a message is blocked by the inbox, so requeue does not send duplicates; only unfinished handlers run again.
+
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { MODULE_CATALOG, MODULE_NAMES } from '#/bootstrap/module-catalog'
 import { Database } from '#/shared/db'

@@ -1,6 +1,6 @@
+import type { Clock } from '@kit/core'
+import { NotFoundError } from '@kit/core'
 import type { AccountDto, IdentityApi } from '#/modules/identity/contracts'
-import type { Clock } from '#/shared/core'
-import { NotFoundError } from '#/shared/core'
 import { Profile } from '../domain/profile'
 import type { ProfileRepository } from '../domain/profile-repository'
 

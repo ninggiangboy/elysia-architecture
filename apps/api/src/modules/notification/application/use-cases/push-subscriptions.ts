@@ -1,4 +1,4 @@
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { MAX_SUBSCRIPTIONS_PER_USER, PushSubscription } from '../../domain/push-subscription'
 import type { PushSubscriptionRepository } from '../../domain/push-subscription-repository'
 

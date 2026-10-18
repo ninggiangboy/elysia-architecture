@@ -1,5 +1,5 @@
-import type { Clock } from '#/shared/core'
-import { VersionConflictError } from '#/shared/core'
+import type { Clock } from '@kit/core'
+import { VersionConflictError } from '@kit/core'
 import type { ObjectStorage } from '#/shared/storage'
 import type { ProfileRepository } from '../../domain/profile-repository'
 import { type MeView, toMeView } from '../me-view'

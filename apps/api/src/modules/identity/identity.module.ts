@@ -1,5 +1,5 @@
+import type { Clock, IdGenerator } from '@kit/core'
 import { StepUpPolicy } from '#/shared/auth'
-import type { Clock, IdGenerator } from '#/shared/core'
 import type { Database } from '#/shared/db'
 import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'

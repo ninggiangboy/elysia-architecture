@@ -1,4 +1,4 @@
-import { AggregateRoot } from '#/shared/core'
+import { AggregateRoot } from '@kit/core'
 import { ProfileEvents } from '../contracts/events'
 import { Bio, DisplayName } from './value-objects'
 

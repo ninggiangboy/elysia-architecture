@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import type { Log } from '#/shared/core'
+import type { Log } from '@kit/core'
 import type { Envelope, InboxGuard } from '#/shared/messaging'
 import { FakeClock, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
 import { NotificationEvents } from '../contracts'

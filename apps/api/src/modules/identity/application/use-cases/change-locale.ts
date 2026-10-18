@@ -1,6 +1,6 @@
 import type { Locale } from '@app/shared-types/locales'
-import type { Clock } from '#/shared/core'
-import { NotFoundError } from '#/shared/core'
+import type { Clock } from '@kit/core'
+import { NotFoundError } from '@kit/core'
 import type { UserRepository } from '../../domain/repositories'
 
 /** The language the account is addressed in (mail, notifications). A preference: no event, no step-up. */

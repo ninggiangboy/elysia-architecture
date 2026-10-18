@@ -1,6 +1,6 @@
+import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
+import { ConflictError, NotFoundError, ValidationError } from '@kit/core'
 import type { StepUpPolicy } from '#/shared/auth'
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
-import { ConflictError, NotFoundError, ValidationError } from '#/shared/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import { MAX_PASSKEYS_PER_USER, Passkey } from '../../domain/passkey'

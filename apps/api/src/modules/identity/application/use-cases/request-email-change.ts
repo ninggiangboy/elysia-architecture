@@ -1,6 +1,6 @@
+import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
+import { ConflictError, DomainError, NotFoundError } from '@kit/core'
 import type { StepUpPolicy } from '#/shared/auth'
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
-import { ConflictError, DomainError, NotFoundError } from '#/shared/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'

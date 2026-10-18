@@ -1,5 +1,5 @@
 import type { Locale } from '@app/shared-types/locales'
-import type { Clock, Log } from '#/shared/core'
+import type { Clock, Log } from '@kit/core'
 import type { Mailer } from '#/shared/mail'
 import { MailPermanentError } from '#/shared/mail'
 import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'

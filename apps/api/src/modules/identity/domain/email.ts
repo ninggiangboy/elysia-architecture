@@ -1,4 +1,4 @@
-import { DomainError } from '#/shared/core'
+import { DomainError } from '@kit/core'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

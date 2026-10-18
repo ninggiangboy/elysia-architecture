@@ -1,7 +1,7 @@
 import { LOCALES } from '@app/shared-types/locales'
+import { UnauthorizedError } from '@kit/core'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
-import { UnauthorizedError } from '#/shared/core'
 import {
   API_PREFIX,
   clientIp,

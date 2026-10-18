@@ -1,6 +1,6 @@
 import { DEFAULT_LOCALE, type Locale } from '@app/shared-types/locales'
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
-import { ConflictError, ValidationError } from '#/shared/core'
+import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
+import { ConflictError, ValidationError } from '@kit/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import type { MagicLinkRepository, UserRepository } from '../../domain/repositories'
 import { User } from '../../domain/user'

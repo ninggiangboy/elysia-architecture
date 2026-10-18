@@ -1,4 +1,4 @@
-import type { Log } from '#/shared/core'
+import type { Log } from '@kit/core'
 import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import { type AvatarChangedPayload, ProfileEvents } from '../../contracts/events'

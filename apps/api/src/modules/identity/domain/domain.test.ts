@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { DomainError } from '#/shared/core'
+import { DomainError } from '@kit/core'
 import { IdentityEvents } from '../contracts/events'
 import { Email } from './email'
 import { RefreshToken } from './refresh-token'

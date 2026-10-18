@@ -1,4 +1,4 @@
-import type { DomainEvent } from '#/shared/core'
+import type { DomainEvent } from '@kit/core'
 import {
   type AccountDeletedPayload,
   type AccountDeletionCancelledPayload,

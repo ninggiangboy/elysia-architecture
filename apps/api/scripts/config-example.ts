@@ -1,4 +1,5 @@
 // Writes (or with --check, verifies) the monorepo's .env.example from the config slices.
+
 import { CONFIG_SLICES } from '#/bootstrap/config'
 import { renderEnvExample } from '#/shared/config'
 

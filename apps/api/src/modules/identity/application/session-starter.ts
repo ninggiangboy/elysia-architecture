@@ -1,4 +1,4 @@
-import type { Clock } from '#/shared/core'
+import type { Clock } from '@kit/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import { sessionStarted } from './session-events'
 import type { SessionIssuer, SessionMeta, SessionTokens } from './session-issuer'

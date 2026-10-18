@@ -1,5 +1,5 @@
-import type { Clock, UnitOfWork } from '#/shared/core'
-import { NotFoundError } from '#/shared/core'
+import type { Clock, UnitOfWork } from '@kit/core'
+import { NotFoundError } from '@kit/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import type { DeviceSession } from '../../domain/refresh-token'
 import type { RefreshTokenRepository } from '../../domain/repositories'

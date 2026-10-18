@@ -14,6 +14,10 @@
     "packages/kit-i18n": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-core": {
+      "entry": [],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

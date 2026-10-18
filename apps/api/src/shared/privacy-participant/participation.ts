@@ -1,4 +1,4 @@
-import type { Clock } from '#/shared/core'
+import type { Clock } from '@kit/core'
 import type { InboxGuard, IntegrationEventHandler, OutboxWriter } from '#/shared/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import {

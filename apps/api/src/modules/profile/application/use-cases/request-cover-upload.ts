@@ -3,8 +3,8 @@ import {
   COVER_MAX_BYTES,
   type CoverContentType,
 } from '@app/shared-types/profile'
-import type { IdGenerator } from '#/shared/core'
-import { ValidationError } from '#/shared/core'
+import type { IdGenerator } from '@kit/core'
+import { ValidationError } from '@kit/core'
 import type { ObjectStorage } from '#/shared/storage'
 import { coverKeyPrefix } from '../cover-keys'
 

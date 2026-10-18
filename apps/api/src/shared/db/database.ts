@@ -1,8 +1,8 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
+import type { UnitOfWork } from '@kit/core'
 import { sql } from 'drizzle-orm'
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import type { UnitOfWork } from '#/shared/core'
 
 // biome-ignore lint/suspicious/noExplicitAny: the schema generic does not matter — only the query builder is used
 export type DrizzleDb = PostgresJsDatabase<any>

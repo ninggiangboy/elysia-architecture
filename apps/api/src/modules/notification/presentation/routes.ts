@@ -1,6 +1,6 @@
+import { NotFoundError } from '@kit/core'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
-import { NotFoundError } from '#/shared/core'
 import { errorResponse, userAgent, validationError } from '#/shared/http'
 import type {
   MarkAllNotificationsRead,

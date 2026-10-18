@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { DomainError } from '#/shared/core'
+import { DomainError } from '@kit/core'
 import { AccountDeletion } from './account-deletion'
 import { DataExport } from './data-export'
 

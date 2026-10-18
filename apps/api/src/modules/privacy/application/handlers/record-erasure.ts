@@ -1,4 +1,4 @@
-import type { Clock } from '#/shared/core'
+import type { Clock } from '@kit/core'
 import type {
   Envelope,
   InboxGuard,

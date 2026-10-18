@@ -1,6 +1,6 @@
 import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types/locales'
+import { ConflictError, VersionConflictError } from '@kit/core'
 import { and, desc, eq, gt, isNull, min, ne } from 'drizzle-orm'
-import { ConflictError, VersionConflictError } from '#/shared/core'
 import { type Database, isUniqueViolation } from '#/shared/db'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'

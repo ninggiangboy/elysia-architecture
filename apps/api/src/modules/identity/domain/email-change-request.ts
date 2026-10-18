@@ -1,4 +1,4 @@
-import { AggregateRoot } from '#/shared/core'
+import { AggregateRoot } from '@kit/core'
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from './email'
 

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import type { DomainEvent } from '@kit/core'
+import { ConflictError } from '@kit/core'
 import { unzipSync } from 'fflate'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import { StepUpPolicy } from '#/shared/auth'
-import type { DomainEvent } from '#/shared/core'
-import { ConflictError } from '#/shared/core'
 import type { Envelope, IntegrationEventHandler } from '#/shared/messaging'
 import {
   type DataEraser,

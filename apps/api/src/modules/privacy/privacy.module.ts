@@ -1,6 +1,6 @@
+import type { Clock, IdGenerator, Log } from '@kit/core'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import type { StepUpPolicy, TokenVerifier } from '#/shared/auth'
-import type { Clock, IdGenerator, Log } from '#/shared/core'
 import type { Database } from '#/shared/db'
 import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'

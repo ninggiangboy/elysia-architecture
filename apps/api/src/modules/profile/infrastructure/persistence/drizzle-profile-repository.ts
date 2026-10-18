@@ -1,5 +1,5 @@
+import { ConflictError, VersionConflictError } from '@kit/core'
 import { and, eq } from 'drizzle-orm'
-import { ConflictError, VersionConflictError } from '#/shared/core'
 import { type Database, isUniqueViolation } from '#/shared/db'
 import { Profile } from '../../domain/profile'
 import type { ProfileRepository } from '../../domain/profile-repository'

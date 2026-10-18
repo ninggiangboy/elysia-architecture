@@ -1,5 +1,5 @@
 import type { Locale } from '@app/shared-types/locales'
-import { AggregateRoot, DomainError } from '#/shared/core'
+import { AggregateRoot, DomainError } from '@kit/core'
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from './email'
 

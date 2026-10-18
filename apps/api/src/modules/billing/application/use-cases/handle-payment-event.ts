@@ -1,4 +1,4 @@
-import type { Clock, IdGenerator, Log, UnitOfWork } from '#/shared/core'
+import type { Clock, IdGenerator, Log, UnitOfWork } from '@kit/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import type {
   AnomalyKind,

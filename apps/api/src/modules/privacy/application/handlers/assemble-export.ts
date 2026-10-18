@@ -1,5 +1,5 @@
+import type { Clock, Log } from '@kit/core'
 import type { IdentityApi } from '#/modules/identity/contracts'
-import type { Clock, Log } from '#/shared/core'
 import type {
   Envelope,
   InboxGuard,

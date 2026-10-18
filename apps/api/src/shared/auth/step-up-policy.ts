@@ -1,5 +1,5 @@
-import type { Clock } from '#/shared/core'
-import { ForbiddenError } from '#/shared/core'
+import type { Clock } from '@kit/core'
+import { ForbiddenError } from '@kit/core'
 
 /**
  * Sensitive actions (change email, add/remove a sign-in method…) need a recent strong authentication on top of a valid

@@ -1,4 +1,4 @@
-import type { Clock, Log } from '#/shared/core'
+import type { Clock, Log } from '@kit/core'
 import type { NotificationRepository } from '../domain/notification-repository'
 
 export interface RetentionPolicy {

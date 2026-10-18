@@ -1,4 +1,4 @@
-import type { Clock } from '#/shared/core'
+import type { Clock } from '@kit/core'
 import type { DataExporter, ExportedPart } from '#/shared/privacy-participant'
 import type {
   OAuthAccountRepository,

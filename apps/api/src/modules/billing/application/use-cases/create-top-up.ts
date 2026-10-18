@@ -1,5 +1,5 @@
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
-import { ConflictError, NotFoundError } from '#/shared/core'
+import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
+import { ConflictError, NotFoundError } from '@kit/core'
 import type { TopUpRepository } from '../../domain/billing-repository'
 import { TopUp } from '../../domain/top-up'
 import type { CurrencyPolicy } from '../currency-policy'

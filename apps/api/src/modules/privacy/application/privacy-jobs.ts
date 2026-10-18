@@ -1,4 +1,4 @@
-import type { Clock, Log, UnitOfWork } from '#/shared/core'
+import type { Clock, Log, UnitOfWork } from '@kit/core'
 import type { OutboxWriter } from '#/shared/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import type { AccountDeletionRepository, DataExportRepository } from '../domain/repositories'

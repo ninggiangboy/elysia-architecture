@@ -1,5 +1,5 @@
+import type { Clock, IdGenerator, Log } from '@kit/core'
 import type { TokenVerifier } from '#/shared/auth'
-import type { Clock, IdGenerator, Log } from '#/shared/core'
 import type { Database } from '#/shared/db'
 import type { Mailer } from '#/shared/mail'
 import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'

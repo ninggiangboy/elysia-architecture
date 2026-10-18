@@ -1,7 +1,7 @@
+import type { ErrorKind } from '@kit/core'
+import { DomainError, TooManyRequestsError } from '@kit/core'
 import { Elysia } from 'elysia'
 import { requestContext } from '#/shared/context'
-import type { ErrorKind } from '#/shared/core'
-import { DomainError, TooManyRequestsError } from '#/shared/core'
 import type { Logger } from '#/shared/telemetry'
 
 const STATUS: Record<ErrorKind, number> = {
