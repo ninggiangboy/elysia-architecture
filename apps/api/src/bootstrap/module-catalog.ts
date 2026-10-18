@@ -4,12 +4,11 @@ import type { ConfigSlice } from '@kit/config'
 import type { OutboxTable } from '@kit/messaging'
 import { identityManifest } from '@mod/identity/manifest'
 import { notificationManifest } from '@mod/notification/manifest'
+import { privacyManifest } from '@mod/privacy/manifest'
 import { profileManifest } from '@mod/profile/manifest'
 import { realtimeManifest } from '@mod/realtime/manifest'
 import { billingConfig } from '#/modules/billing/config'
 import { outbox as billingOutbox } from '#/modules/billing/infrastructure/persistence/schema'
-import { privacyConfig } from '#/modules/privacy/config'
-import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
 
 /**
  * The modules, as static data: it builds nothing, so the CLI scripts and drizzle-kit can read it without pulling in the
@@ -49,7 +48,7 @@ export const MODULE_CATALOG = [
   identityManifest,
   profileManifest,
   notificationManifest,
-  entry('privacy', privacyOutbox, privacyConfig),
+  privacyManifest,
   entry('billing', billingOutbox, billingConfig),
   realtimeManifest,
 ] as const satisfies readonly ModuleEntry[]

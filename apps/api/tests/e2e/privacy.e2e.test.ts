@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import {
+  AccountDeletion,
+  DataExport,
+  DrizzleAccountDeletionRepository,
+  DrizzleDataExportRepository,
+} from '@mod/privacy/testing'
 import { sql } from 'drizzle-orm'
 import { unzipSync } from 'fflate'
-import { AccountDeletion } from '#/modules/privacy/domain/account-deletion'
-import { DataExport } from '#/modules/privacy/domain/data-export'
-import { DrizzleAccountDeletionRepository } from '#/modules/privacy/infrastructure/persistence/drizzle-deletion-repository'
-import { DrizzleDataExportRepository } from '#/modules/privacy/infrastructure/persistence/drizzle-export-repository'
 import {
   client,
   createTestApp,

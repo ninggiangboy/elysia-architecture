@@ -33,6 +33,7 @@
         "@kit/telemetry": "workspace:*",
         "@mod/identity": "workspace:*",
         "@mod/notification": "workspace:*",
+        "@mod/privacy": "workspace:*",
         "@mod/profile": "workspace:*",
         "@mod/realtime": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
@@ -168,6 +169,45 @@
         "zod": "^4.1.0",
       },
       "optionalPeers": [
+        "@mod/realtime",
+      ],
+    },
+    "modules/privacy": {
+      "name": "@mod/privacy",
+      "dependencies": {
+        "@app/shared-types": "workspace:*",
+        "@kit/auth": "workspace:*",
+        "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
+        "@kit/db": "workspace:*",
+        "@kit/http": "workspace:*",
+        "@kit/i18n": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/privacy-participant": "workspace:*",
+        "@kit/runtime": "workspace:*",
+        "@kit/storage": "workspace:*",
+        "@mod/identity": "workspace:*",
+        "fflate": "^0.8.3",
+      },
+      "devDependencies": {
+        "@kit/testing": "workspace:*",
+        "@mod/notification": "workspace:*",
+        "@mod/realtime": "workspace:*",
+        "@types/bun": "latest",
+        "drizzle-kit": "^0.31.0",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "@mod/notification": "workspace:*",
+        "@mod/realtime": "workspace:*",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "optionalPeers": [
+        "@mod/notification",
         "@mod/realtime",
       ],
     },
@@ -729,6 +769,8 @@
     "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 
     "@mod/notification": ["@mod/notification@workspace:modules/notification"],
+
+    "@mod/privacy": ["@mod/privacy@workspace:modules/privacy"],
 
     "@mod/profile": ["@mod/profile@workspace:modules/profile"],
 

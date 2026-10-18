@@ -86,6 +86,10 @@
     "modules/profile": {
       "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "modules/privacy": {
+      "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {
