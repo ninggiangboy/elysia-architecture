@@ -1,15 +1,9 @@
-import {
-  type AccountErasureRequestedPayload,
-  type DataExportRequestedPayload,
-  PrivacyEvents,
-} from '#/modules/privacy/contracts'
 import type {
   Clock,
   IdGenerator,
   IntegrationEventHandler,
   ObjectStorage,
 } from '#/shared/application/ports'
-import { EraseUserDataHandler, ExportUserDataHandler } from '#/shared/application/privacy'
 import { StepUpPolicy } from '#/shared/application/step-up-policy'
 import type { Config } from '#/shared/infrastructure/config'
 import type { Database } from '#/shared/infrastructure/db/database'
@@ -17,6 +11,7 @@ import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import type { AppModule } from '#/shared/module/app-module'
+import { privacyParticipation } from '#/shared/privacy-participant'
 import { IdentityDataExporter } from './application/identity-data-exporter'
 import { PasskeyAssertions } from './application/passkey-assertions'
 import type { OAuthGateway, WebAuthnService } from './application/ports'
@@ -94,7 +89,7 @@ export interface IdentityModule extends AppModule<'identity', ReturnType<typeof 
   routes: ReturnType<typeof identityRoutes>
   api: IdentityApi
   verifier: AccessTokenVerifier
-  /** Takes part in the privacy module's data export and account erasure. */
+  /** Takes part in the privacy data export and account erasure. */
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
 }
@@ -278,38 +273,29 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
     },
   })
 
+  const participation = privacyParticipation({
+    module: 'identity',
+    storage,
+    outbox: outboxWriter,
+    inbox: inboxGuard,
+    clock,
+    export: {
+      exporter: new IdentityDataExporter(users, passkeys, oauthAccounts, refreshTokens, clock),
+      answerType: IdentityEvents.DataExported,
+    },
+    erase: {
+      eraser: new DrizzleIdentityDataEraser(database),
+      answerType: IdentityEvents.UserDataErased,
+    },
+  })
+
   return {
     name: 'identity',
     routes,
     api: new IdentityApiImpl(users),
     verifier: tokenService,
-    handlers: [
-      new ExportUserDataHandler<DataExportRequestedPayload>(
-        {
-          name: 'identity.export-user-data',
-          module: 'identity',
-          requestType: PrivacyEvents.DataExportRequested,
-          answerType: IdentityEvents.DataExported,
-        },
-        new IdentityDataExporter(users, passkeys, oauthAccounts, refreshTokens, clock),
-        storage,
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
-      new EraseUserDataHandler<AccountErasureRequestedPayload>(
-        {
-          name: 'identity.erase-user-data',
-          module: 'identity',
-          requestType: PrivacyEvents.AccountErasureRequested,
-          answerType: IdentityEvents.UserDataErased,
-        },
-        new DrizzleIdentityDataEraser(database),
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
-    ],
+    handlers: participation.handlers,
+    privacy: participation.privacy,
     outbox: { name: 'identity', table: outbox },
   }
 }

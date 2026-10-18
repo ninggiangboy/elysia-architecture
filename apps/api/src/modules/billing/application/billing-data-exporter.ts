@@ -1,4 +1,4 @@
-import type { DataExporter, ExportedPart } from '#/shared/application/privacy'
+import type { DataExporter, ExportedPart } from '#/shared/privacy-participant'
 import type {
   DocumentRepository,
   LedgerRepository,

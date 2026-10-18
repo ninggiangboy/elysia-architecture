@@ -3,15 +3,15 @@ import { unzipSync } from 'fflate'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import { ConflictError } from '#/shared/application/errors'
 import type { IntegrationEventHandler } from '#/shared/application/ports'
+import { StepUpPolicy } from '#/shared/application/step-up-policy'
+import type { DomainEvent } from '#/shared/domain/domain-event'
+import type { Envelope } from '#/shared/messaging/envelope'
 import {
   type DataEraser,
   type DataExporter,
   EraseUserDataHandler,
   ExportUserDataHandler,
-} from '#/shared/application/privacy'
-import { StepUpPolicy } from '#/shared/application/step-up-policy'
-import type { DomainEvent } from '#/shared/domain/domain-event'
-import type { Envelope } from '#/shared/messaging/envelope'
+} from '#/shared/privacy-participant'
 import {
   FakeClock,
   FakeStorage,

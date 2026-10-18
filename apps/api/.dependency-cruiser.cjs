@@ -49,7 +49,7 @@ module.exports = {
     {
       name: 'contracts-are-self-contained',
       comment:
-        'contracts are plain DTOs/interfaces: they import nothing from inside the module or from shared.',
+        'contracts are plain DTOs/interfaces: they import nothing from inside the module or from shared (except the privacy participation protocol, which privacy re-exports).',
       severity: 'error',
       from: { path: '^src/modules/[^/]+/contracts/' },
       to: {
@@ -58,7 +58,16 @@ module.exports = {
           '^src/shared/',
           ROOT,
         ],
+        pathNot: '^src/shared/privacy-participant/',
       },
+    },
+    {
+      name: 'participants-do-not-know-privacy',
+      comment:
+        'A module that takes part in the privacy jobs speaks the protocol in shared/privacy-participant; it does not import the privacy module, so privacy can be left out.',
+      severity: 'error',
+      from: { path: '^src/modules/(identity|profile|billing)/' },
+      to: { path: '^src/modules/privacy/' },
     },
     {
       name: 'shared-knows-no-module',

@@ -1,9 +1,4 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
-import {
-  type AccountErasureRequestedPayload,
-  type DataExportRequestedPayload,
-  PrivacyEvents,
-} from '#/modules/privacy/contracts'
 import type {
   Clock,
   IdGenerator,
@@ -11,13 +6,13 @@ import type {
   Log,
   ObjectStorage,
 } from '#/shared/application/ports'
-import { EraseUserDataHandler, ExportUserDataHandler } from '#/shared/application/privacy'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import type { AppModule } from '#/shared/module/app-module'
+import { privacyParticipation } from '#/shared/privacy-participant'
 import { CreateProfileOnUserRegistered } from './application/handlers/create-profile-on-user-registered'
 import { DeleteOldAvatar } from './application/handlers/delete-old-avatar'
 import { DeleteOldCover } from './application/handlers/delete-old-cover'
@@ -64,6 +59,18 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
   const inboxGuard = new DrizzleInboxGuard(database, inbox)
   const loader = new ProfileLoader(identity, profiles, clock)
+  const participation = privacyParticipation({
+    module: 'profile',
+    storage,
+    outbox: outboxWriter,
+    inbox: inboxGuard,
+    clock,
+    export: { exporter: new ProfileDataExporter(profiles), answerType: ProfileEvents.DataExported },
+    erase: {
+      eraser: new DrizzleProfileDataEraser(database, storage),
+      answerType: ProfileEvents.UserDataErased,
+    },
+  })
 
   return {
     name: 'profile',
@@ -83,32 +90,9 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
       new DeleteOldAvatar(storage, inboxGuard),
       new DeleteOldCover(storage, inboxGuard),
       new GenerateAvatarThumbnails(storage, new SharpImageResizer(), inboxGuard, log),
-      new ExportUserDataHandler<DataExportRequestedPayload>(
-        {
-          name: 'profile.export-user-data',
-          module: 'profile',
-          requestType: PrivacyEvents.DataExportRequested,
-          answerType: ProfileEvents.DataExported,
-        },
-        new ProfileDataExporter(profiles),
-        storage,
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
-      new EraseUserDataHandler<AccountErasureRequestedPayload>(
-        {
-          name: 'profile.erase-user-data',
-          module: 'profile',
-          requestType: PrivacyEvents.AccountErasureRequested,
-          answerType: ProfileEvents.UserDataErased,
-        },
-        new DrizzleProfileDataEraser(database, storage),
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
+      ...participation.handlers,
     ],
+    privacy: participation.privacy,
     outbox: { name: 'profile', table: outbox },
     api: new ProfileApiImpl(profiles),
   }

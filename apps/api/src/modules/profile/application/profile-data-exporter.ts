@@ -1,4 +1,4 @@
-import type { DataExporter, ExportedFile, ExportedPart } from '#/shared/application/privacy'
+import type { DataExporter, ExportedFile, ExportedPart } from '#/shared/privacy-participant'
 import type { ProfileRepository } from '../domain/profile-repository'
 
 const extensionOf = (key: string) => {

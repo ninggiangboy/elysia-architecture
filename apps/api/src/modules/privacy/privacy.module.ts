@@ -6,7 +6,6 @@ import type {
   Log,
   ObjectStorage,
 } from '#/shared/application/ports'
-import { EraseUserDataHandler } from '#/shared/application/privacy'
 import type { StepUpPolicy } from '#/shared/application/step-up-policy'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
@@ -15,6 +14,7 @@ import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outb
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import type { AppModule } from '#/shared/module/app-module'
 import { intervalJobs } from '#/shared/module/interval-jobs'
+import { participantEvents, privacyParticipation } from '#/shared/privacy-participant'
 import { AssembleExport } from './application/handlers/assemble-export'
 import { RecordErasure } from './application/handlers/record-erasure'
 import { RecordExportPart } from './application/handlers/record-export-part'
@@ -32,11 +32,6 @@ import {
   ListDataExports,
   RequestDataExport,
 } from './application/use-cases/data-export'
-import {
-  type AccountErasureRequestedPayload,
-  PrivacyEvents,
-  participantEvents,
-} from './contracts/events'
 import { DrizzleAccountDeletionRepository } from './infrastructure/persistence/drizzle-deletion-repository'
 import { DrizzleDataExportRepository } from './infrastructure/persistence/drizzle-export-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
@@ -70,7 +65,12 @@ export interface PrivacyModule extends AppModule<'privacy', ReturnType<typeof pr
 }
 
 export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
-  const { database, clock, ids, storage, log, identity, verifier, stepUp, policy } = deps
+  const { database, clock, ids, storage, log, identity, verifier, stepUp } = deps
+  // Privacy erases its own leftovers like any other participant, so it always lists itself among the erasers.
+  const policy: PrivacyPolicy = {
+    ...deps.policy,
+    deletionParticipants: [...new Set([...deps.policy.deletionParticipants, 'privacy'])].sort(),
+  }
 
   const exports = new DrizzleDataExportRepository(database)
   const deletions = new DrizzleAccountDeletionRepository(database)
@@ -86,6 +86,17 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
     clock,
     log,
   )
+  const participation = privacyParticipation({
+    module: 'privacy',
+    storage,
+    outbox: outboxWriter,
+    inbox: inboxGuard,
+    clock,
+    erase: {
+      eraser: new PrivacyDataEraser(database, storage),
+      answerType: participantEvents('privacy').userDataErased,
+    },
+  })
   const resume = new ResumeStalledDeletion(deletions, database, outboxWriter, clock)
 
   // Row claims keep two instances that tick together apart.
@@ -147,20 +158,9 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
       ...policy.deletionParticipants.map(
         (module) => new RecordErasure(module, deletions, outboxWriter, inboxGuard, clock),
       ),
-      // Privacy erases its own leftovers like any other participant.
-      new EraseUserDataHandler<AccountErasureRequestedPayload>(
-        {
-          name: 'privacy.erase-user-data',
-          module: 'privacy',
-          requestType: PrivacyEvents.AccountErasureRequested,
-          answerType: participantEvents('privacy').userDataErased,
-        },
-        new PrivacyDataEraser(database, storage),
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
+      ...participation.handlers,
     ],
+    privacy: participation.privacy,
     outbox: { name: 'privacy', table: outbox },
     jobs,
     runJobs: () => privacyJobs.runOnce(),

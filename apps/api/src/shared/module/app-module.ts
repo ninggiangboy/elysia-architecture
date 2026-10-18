@@ -1,5 +1,6 @@
 import type { IntegrationEventHandler } from '#/shared/application/ports'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import type { PrivacyParticipation } from '#/shared/privacy-participant'
 
 /** Timers behind a module's background work. The container starts and stops them as a group (worker role, maintenance mode). */
 export interface ModuleJobs {
@@ -7,14 +8,6 @@ export interface ModuleJobs {
   start(): void
   /** Stops the timers and waits for the running pass to finish. Idempotent. */
   stop(): Promise<void>
-}
-
-/** Which of privacy's two jobs the module takes part in. The container derives the participant lists from this. */
-export interface PrivacyParticipation {
-  /** Answers `privacy.data_export_requested` with its part of the archive. */
-  exports: boolean
-  /** Answers `privacy.account_erasure_requested` once its data is gone. */
-  erases: boolean
 }
 
 /**

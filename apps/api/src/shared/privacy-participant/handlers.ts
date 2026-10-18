@@ -15,8 +15,7 @@ import type { Envelope } from '#/shared/messaging/envelope'
  *   privacy.data_export_requested.v1   ─►  ExportUserDataHandler ─►  <module>.data_exported.v1
  *   privacy.account_erasure_requested.v1 ─► EraseUserDataHandler ─►  <module>.user_data_erased.v1
  *
- * The payload types below are the minimum these handlers read. The real payloads live in `privacy/contracts`
- * (a module's wiring instantiates the handlers with that type, so a field that goes missing there fails to compile).
+ * The event names and payloads are the protocol (`protocol.ts`); `privacyParticipation` wires both handlers for a module.
  */
 
 /** A file the module wants shipped in the archive next to its JSON (e.g. the avatar). */

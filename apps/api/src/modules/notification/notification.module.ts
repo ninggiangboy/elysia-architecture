@@ -18,10 +18,8 @@ import {
   type AccountDeletedPayload,
   type AccountDeletionCancelledPayload,
   type AccountDeletionScheduledPayload,
-  type AccountErasureRequestedPayload,
   type DataExportFailedPayload,
   type DataExportReadyPayload,
-  type DataExportRequestedPayload,
   PrivacyEvents,
 } from '#/modules/privacy/contracts'
 import type {
@@ -32,7 +30,6 @@ import type {
   Mailer,
   ObjectStorage,
 } from '#/shared/application/ports'
-import { EraseUserDataHandler, ExportUserDataHandler } from '#/shared/application/privacy'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
@@ -40,6 +37,7 @@ import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outb
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import type { AppModule } from '#/shared/module/app-module'
 import { intervalJobs } from '#/shared/module/interval-jobs'
+import { privacyParticipation } from '#/shared/privacy-participant'
 import { CreateNotificationHandler } from './application/handlers/create-notification-handler'
 import { DropPushSubscriptionsHandler } from './application/handlers/drop-push-subscriptions-handler'
 import { MailEventHandler } from './application/handlers/mail-event-handler'
@@ -171,6 +169,21 @@ export function createNotificationModule({
       ids,
       clock,
     )
+  const participation = privacyParticipation({
+    module: 'notification',
+    storage,
+    outbox: outboxWriter,
+    inbox: guard,
+    clock,
+    export: {
+      exporter: new NotificationDataExporter(notifications, pushSubscriptions),
+      answerType: NotificationEvents.DataExported,
+    },
+    erase: {
+      eraser: new DrizzleNotificationDataEraser(database),
+      answerType: NotificationEvents.UserDataErased,
+    },
+  })
   const pruner = new PruneOldNotifications(notifications, retention, clock, log)
   // SKIP LOCKED keeps two instances that tick together apart.
   const jobs = intervalJobs({
@@ -197,6 +210,7 @@ export function createNotificationModule({
       },
       webPushPublicKey: webPush?.publicKey ?? null,
     }),
+    privacy: participation.privacy,
     outbox: { name: 'notification', table: outbox },
     jobs,
     prune: () => pruner.runOnce(),
@@ -339,31 +353,7 @@ export function createNotificationModule({
         log,
         locales,
       ),
-      new ExportUserDataHandler<DataExportRequestedPayload>(
-        {
-          name: 'notification.export-user-data',
-          module: 'notification',
-          requestType: PrivacyEvents.DataExportRequested,
-          answerType: NotificationEvents.DataExported,
-        },
-        new NotificationDataExporter(notifications, pushSubscriptions),
-        storage,
-        outboxWriter,
-        guard,
-        clock,
-      ),
-      new EraseUserDataHandler<AccountErasureRequestedPayload>(
-        {
-          name: 'notification.erase-user-data',
-          module: 'notification',
-          requestType: PrivacyEvents.AccountErasureRequested,
-          answerType: NotificationEvents.UserDataErased,
-        },
-        new DrizzleNotificationDataEraser(database),
-        outboxWriter,
-        guard,
-        clock,
-      ),
+      ...participation.handlers,
       new MailEventHandler<StepUpCodeRequestedPayload>(
         'notification.send-step-up-code',
         IdentityEvents.StepUpCodeRequested,

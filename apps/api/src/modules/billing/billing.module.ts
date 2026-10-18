@@ -1,9 +1,4 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
-import {
-  type AccountErasureRequestedPayload,
-  type DataExportRequestedPayload,
-  PrivacyEvents,
-} from '#/modules/privacy/contracts'
 import type { ProfileApi } from '#/modules/profile/contracts'
 import type {
   Clock,
@@ -12,7 +7,6 @@ import type {
   Log,
   ObjectStorage,
 } from '#/shared/application/ports'
-import { EraseUserDataHandler, ExportUserDataHandler } from '#/shared/application/privacy'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
@@ -20,6 +14,7 @@ import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outb
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
 import type { AppModule } from '#/shared/module/app-module'
 import { intervalJobs, noJobs } from '#/shared/module/interval-jobs'
+import { privacyParticipation } from '#/shared/privacy-participant'
 import { BillingDataExporter } from './application/billing-data-exporter'
 import { CurrencyPolicy, type CurrencyRule } from './application/currency-policy'
 import { DocumentIssuer } from './application/document-issuer'
@@ -102,6 +97,22 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
     ? new ReconcileTopUps(topUps, payments.gateway, handlePaymentEvent, deps.reconcile, clock, log)
     : undefined
 
+  const participation = privacyParticipation({
+    module: 'billing',
+    storage,
+    outbox: outboxWriter,
+    inbox: inboxGuard,
+    clock,
+    export: {
+      exporter: new BillingDataExporter(topUps, ledger, documents),
+      answerType: BillingEvents.DataExported,
+    },
+    erase: {
+      eraser: new DrizzleBillingDataEraser(database),
+      answerType: BillingEvents.UserDataErased,
+    },
+  })
+
   // Row claims keep two instances that tick together apart.
   const jobs = reconciler
     ? intervalJobs({
@@ -135,33 +146,8 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
         handlePaymentEvent,
       },
     }),
-    handlers: [
-      new ExportUserDataHandler<DataExportRequestedPayload>(
-        {
-          name: 'billing.export-user-data',
-          module: 'billing',
-          requestType: PrivacyEvents.DataExportRequested,
-          answerType: BillingEvents.DataExported,
-        },
-        new BillingDataExporter(topUps, ledger, documents),
-        storage,
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
-      new EraseUserDataHandler<AccountErasureRequestedPayload>(
-        {
-          name: 'billing.erase-user-data',
-          module: 'billing',
-          requestType: PrivacyEvents.AccountErasureRequested,
-          answerType: BillingEvents.UserDataErased,
-        },
-        new DrizzleBillingDataEraser(database),
-        outboxWriter,
-        inboxGuard,
-        clock,
-      ),
-    ],
+    handlers: [...participation.handlers],
+    privacy: participation.privacy,
     outbox: { name: 'billing', table: outbox },
     jobs,
     reconcile: async () => reconciler?.runOnce() ?? 0,

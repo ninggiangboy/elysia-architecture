@@ -1,3 +1,15 @@
+import { PrivacyProtocol } from '#/shared/privacy-participant'
+
+// The participation protocol lives in shared/privacy-participant: a participant depends on it, not on this module.
+// Re-exported here so privacy's own code and its consumers keep one place to import from.
+export type {
+  AccountErasureRequestedPayload,
+  DataExportRequestedPayload,
+  ModuleDataExportedPayload,
+  ModuleUserDataErasedPayload,
+} from '#/shared/privacy-participant'
+export { participantEvents } from '#/shared/privacy-participant'
+
 /**
  * Integration events of the privacy module. The payload is a public contract: only add fields (backward compatible);
  * breaking changes need a new version (`.v2`) emitted in parallel for a while.
@@ -7,51 +19,21 @@
  *   data_export_requested ─► <module>.data_exported ─► … ─► data_export_ready      (or data_export_failed)
  *   account_erasure_requested ─► <module>.user_data_erased ─► … ─► account_deleted
  *
- * A participant's answer is named by convention (see `participantEvents`), so a new module — or one that has been split
+ * A participant's answer is named by convention (see `participantEvents` in shared/privacy-participant), so a new module — or one that has been split
  * out into a service — joins by consuming the request and emitting its answer; privacy only needs its name in the list.
  */
 export const PrivacyEvents = {
-  DataExportRequested: 'privacy.data_export_requested.v1',
+  DataExportRequested: PrivacyProtocol.DataExportRequested,
   DataExportProgressed: 'privacy.data_export_progressed.v1',
   DataExportReady: 'privacy.data_export_ready.v1',
   DataExportFailed: 'privacy.data_export_failed.v1',
   AccountDeletionScheduled: 'privacy.account_deletion_scheduled.v1',
   AccountDeletionCancelled: 'privacy.account_deletion_cancelled.v1',
-  AccountErasureRequested: 'privacy.account_erasure_requested.v1',
+  AccountErasureRequested: PrivacyProtocol.AccountErasureRequested,
   AccountErasureProgressed: 'privacy.account_erasure_progressed.v1',
   AccountDeletionStalled: 'privacy.account_deletion_stalled.v1',
   AccountDeleted: 'privacy.account_deleted.v1',
 } as const
-
-/** The events a participant module answers with. `<module>` is the name privacy lists it under. */
-export const participantEvents = (module: string) =>
-  ({
-    dataExported: `${module}.data_exported.v1`,
-    userDataErased: `${module}.user_data_erased.v1`,
-  }) as const
-
-export interface DataExportRequestedPayload {
-  exportId: string
-  userId: string
-  /** Bucket prefix every participant writes its part under: `<uploadPrefix><module>.json`. */
-  uploadPrefix: string
-  /** Modules that still owe a part; on a re-sent request only those need to answer. */
-  modules: string[]
-  requestedAt: string
-}
-
-/** What a participant answers with once its part is in the bucket (`<module>.data_exported.v1`). */
-export interface ModuleDataExportedPayload {
-  exportId: string
-  userId: string
-  module: string
-  /** Where the module's JSON is. */
-  key: string
-  size: number
-  /** Extra objects to ship in the archive (path inside the archive → key in the bucket). */
-  files: { path: string; key: string }[]
-  exportedAt: string
-}
 
 export interface DataExportProgressedPayload {
   exportId: string
@@ -99,24 +81,6 @@ export interface AccountDeletionCancelledPayload {
   email: string
   locale?: string
   cancelledAt: string
-}
-
-export interface AccountErasureRequestedPayload {
-  deletionId: string
-  userId: string
-  /** Modules that still owe a confirmation; on a re-sent request only those need to answer. */
-  modules: string[]
-  /** 0 for the first request, then 1, 2… for each re-send. */
-  attempt: number
-  requestedAt: string
-}
-
-/** What a participant answers with once its data is gone (`<module>.user_data_erased.v1`). */
-export interface ModuleUserDataErasedPayload {
-  deletionId: string
-  userId: string
-  module: string
-  erasedAt: string
 }
 
 export interface AccountErasureProgressedPayload {

@@ -1,5 +1,5 @@
 import type { Clock } from '#/shared/application/ports'
-import type { DataExporter, ExportedPart } from '#/shared/application/privacy'
+import type { DataExporter, ExportedPart } from '#/shared/privacy-participant'
 import type {
   OAuthAccountRepository,
   PasskeyRepository,

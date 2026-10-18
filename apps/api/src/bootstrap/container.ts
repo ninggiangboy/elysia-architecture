@@ -25,6 +25,7 @@ import { S3ObjectStorage } from '#/shared/infrastructure/storage/s3-object-stora
 import { SystemClock, UuidV7Generator } from '#/shared/infrastructure/system'
 import { InProcessMessageBus } from '#/shared/messaging/in-process-bus'
 import type { AppModule } from '#/shared/module/app-module'
+import type { PrivacyParticipation } from '#/shared/privacy-participant'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.
@@ -176,6 +177,12 @@ export async function createContainer(
     },
   })
 
+  const participants = (job: keyof PrivacyParticipation) =>
+    [identity, profile, notification, billing]
+      .filter((m) => m.privacy?.[job])
+      .map((m) => m.name)
+      .sort()
+
   const privacy = createPrivacyModule({
     database,
     clock,
@@ -187,10 +194,10 @@ export async function createContainer(
     stepUp: new StepUpPolicy(clock, config.STEP_UP_TTL),
     jobsIntervalMs: config.PRIVACY_JOBS_INTERVAL_SECONDS * 1000,
     policy: {
-      // Who takes part is decided here, by name. A module that becomes a service stays in these lists and keeps
-      // answering with the same two events; a new module is added here and consumes the same two requests.
-      exportParticipants: ['billing', 'identity', 'notification', 'profile'],
-      deletionParticipants: ['billing', 'identity', 'notification', 'privacy', 'profile'],
+      // Who takes part is what the modules declare (`privacy` on the module). A module that becomes a service stays
+      // in these lists and keeps answering with the same two events.
+      exportParticipants: participants('exports'),
+      deletionParticipants: participants('erases'),
       deletionGraceMs: config.PRIVACY_DELETION_GRACE_PERIOD * 1000,
       exportTtlMs: config.PRIVACY_EXPORT_TTL * 1000,
       stallAfterMs: config.PRIVACY_STALL_AFTER * 1000,
