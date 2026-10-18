@@ -1,6 +1,6 @@
 import { type Database, isPgError } from '@kit/db'
+import type { Logger } from '@kit/telemetry'
 import { sql } from 'drizzle-orm'
-import type { Logger } from '#/shared/telemetry'
 
 export interface MaintenanceState {
   active: boolean

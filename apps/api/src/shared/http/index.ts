@@ -1,7 +1,6 @@
 export * from './client-info'
 export * from './constants'
 export * from './error-handler.plugin'
-export * from './locale.plugin'
 export * from './maintenance.plugin'
 export * from './openapi'
 export * from './request-context.plugin'

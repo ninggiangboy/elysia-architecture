@@ -35,6 +35,7 @@
     "@kit/core": "workspace:*",
     "@kit/db": "workspace:*",
     "@kit/i18n": "workspace:*",
+    "@kit/telemetry": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
     "@opentelemetry/resources": "^2.12.0",

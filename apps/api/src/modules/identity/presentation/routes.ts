@@ -2,14 +2,7 @@ import { LOCALES } from '@app/shared-types/locales'
 import { UnauthorizedError } from '@kit/core'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
-import {
-  API_PREFIX,
-  clientIp,
-  errorResponse,
-  localePlugin,
-  userAgent,
-  validationError,
-} from '#/shared/http'
+import { API_PREFIX, clientIp, errorResponse, userAgent, validationError } from '#/shared/http'
 import type { WebAuthnResponse } from '../application/ports'
 import type { ChangeLocale } from '../application/use-cases/change-locale'
 import type { ConfirmEmailChange } from '../application/use-cases/confirm-email-change'
@@ -45,6 +38,7 @@ import type {
   VerifyMagicLink,
   VerifyMagicLinkResult,
 } from '../application/use-cases/verify-magic-link'
+import { localePlugin } from './locale.plugin'
 
 export interface IdentityRouteDeps {
   verifier: TokenVerifier

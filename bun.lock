@@ -23,6 +23,7 @@
         "@kit/core": "workspace:*",
         "@kit/db": "workspace:*",
         "@kit/i18n": "workspace:*",
+        "@kit/telemetry": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
         "@opentelemetry/resources": "^2.12.0",
@@ -133,6 +134,26 @@
       "name": "@kit/i18n",
       "devDependencies": {
         "@types/bun": "latest",
+      },
+    },
+    "packages/kit-telemetry": {
+      "name": "@kit/telemetry",
+      "dependencies": {
+        "@kit/config": "workspace:*",
+        "@kit/context": "workspace:*",
+        "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
+        "@opentelemetry/resources": "^2.12.0",
+        "@opentelemetry/sdk-trace-node": "^2.12.0",
+        "pino": "^10.4.0",
+      },
+      "devDependencies": {
+        "@opentelemetry/api": "^1.9.1",
+        "@types/bun": "latest",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "@opentelemetry/api": "^1.9.1",
+        "zod": "^4.1.0",
       },
     },
     "packages/shared-types": {
@@ -398,6 +419,8 @@
     "@kit/db": ["@kit/db@workspace:packages/kit-db"],
 
     "@kit/i18n": ["@kit/i18n@workspace:packages/kit-i18n"],
+
+    "@kit/telemetry": ["@kit/telemetry@workspace:packages/kit-telemetry"],
 
     "@levischuck/tiny-cbor": ["@levischuck/tiny-cbor@0.2.11", "", {}, "sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow=="],
 

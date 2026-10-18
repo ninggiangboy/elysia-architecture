@@ -1,5 +1,5 @@
 import cluster from 'node:cluster'
-import type { Logger } from '#/shared/telemetry'
+import type { Logger } from '@kit/telemetry'
 
 const RESTART_DELAY_MS = 1000
 /** More than this many crashes within the window means a crash loop: give up and let the orchestrator decide. */

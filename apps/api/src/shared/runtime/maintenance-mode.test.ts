@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { createLogger } from '#/shared/telemetry'
+import { createLogger } from '@kit/telemetry'
 import { MaintenanceMode, type MaintenanceState } from './maintenance-mode'
 
 const state = (active: boolean): MaintenanceState => ({

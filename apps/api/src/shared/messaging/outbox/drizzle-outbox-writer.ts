@@ -1,7 +1,7 @@
 import { requestContext } from '@kit/context'
 import type { DomainEvent } from '@kit/core'
 import type { Database } from '@kit/db'
-import { currentTraceparent } from '#/shared/telemetry'
+import { currentTraceparent } from '@kit/telemetry'
 import type { OutboxWriter } from '../ports'
 import type { OutboxTable } from './tables'
 

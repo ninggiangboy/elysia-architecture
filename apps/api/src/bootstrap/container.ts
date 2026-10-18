@@ -1,5 +1,6 @@
 import { SystemClock, UuidV7Generator } from '@kit/core'
 import { Database } from '@kit/db'
+import type { Logger } from '@kit/telemetry'
 import type { Config } from '#/bootstrap/config'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
 import { createBillingModule } from '#/modules/billing/billing.module'
@@ -29,7 +30,6 @@ import type { PrivacyParticipation } from '#/shared/privacy-participant'
 import type { AppModule } from '#/shared/runtime'
 import { MaintenanceMode, MaintenanceStore } from '#/shared/runtime'
 import { S3ObjectStorage } from '#/shared/storage'
-import type { Logger } from '#/shared/telemetry'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.

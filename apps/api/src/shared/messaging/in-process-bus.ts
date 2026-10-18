@@ -1,5 +1,5 @@
-import type { Logger } from '#/shared/telemetry'
-import { SpanKind, withSpan } from '#/shared/telemetry'
+import type { Logger } from '@kit/telemetry'
+import { SpanKind, withSpan } from '@kit/telemetry'
 import type { Envelope } from './envelope'
 import { RetryLaterError } from './errors'
 import type { IntegrationEventHandler, MessagePublisher } from './ports'

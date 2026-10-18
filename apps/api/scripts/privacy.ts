@@ -5,10 +5,10 @@
 // Fix why (the module's handler is failing, or its dead-lettered message needs `outbox:requeue`), then resume.
 // Resuming only writes an event: a running worker's relay delivers it.
 
+import { createLogger } from '@kit/telemetry'
 import { sql } from 'drizzle-orm'
 import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
-import { createLogger } from '#/shared/telemetry'
 
 const [command, ...rest] = process.argv.slice(2)
 const idFlag = rest.indexOf('--id')

@@ -1,10 +1,10 @@
 import { type ConfigSlice, coreConfig, type Env, type LoadedConfig, loadConfig } from '@kit/config'
 import { dbConfig } from '@kit/db'
+import { telemetryConfig } from '@kit/telemetry'
 import { mailConfig } from '#/shared/mail'
 import { outboxConfig } from '#/shared/messaging'
 import { maintenanceConfig } from '#/shared/runtime'
 import { storageConfig } from '#/shared/storage'
-import { telemetryConfig } from '#/shared/telemetry'
 import { MODULE_CATALOG } from './module-catalog'
 
 /** The slices that belong to the infrastructure, in the order they appear in `.env.example`. */

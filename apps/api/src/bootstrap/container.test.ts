@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { createLogger } from '@kit/telemetry'
 import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
 import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
 import type { WebPushSender } from '#/modules/notification/application/ports'
 import type { AppModule } from '#/shared/runtime'
-import { createLogger } from '#/shared/telemetry'
 
 /**
  * A handler's name is its consumer group, i.e. the key in each module's `inbox` table. Renaming one makes messages

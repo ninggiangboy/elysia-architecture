@@ -1,8 +1,8 @@
 import { requestContext } from '@kit/context'
 import type { ErrorKind } from '@kit/core'
 import { DomainError, TooManyRequestsError } from '@kit/core'
+import type { Logger } from '@kit/telemetry'
 import { Elysia } from 'elysia'
-import type { Logger } from '#/shared/telemetry'
 
 const STATUS: Record<ErrorKind, number> = {
   validation: 400,
