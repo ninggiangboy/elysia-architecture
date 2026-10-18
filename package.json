@@ -22,7 +22,7 @@
     "infra:up": "docker compose up -d --wait postgres mailpit seaweedfs jaeger && docker compose --profile init run --rm seaweedfs-init",
     "infra:down": "docker compose --profile app down",
     "setup": "cp -n .env.example .env; bun install && bun run --filter @app/api keys:generate && bun run infra:up && bun run --filter @app/api db:migrate",
-    "test:e2e": "bun run --filter @app/api test:e2e && bun run --filter @app/web test:e2e",
+    "test:e2e": "bun run --filter @app/api test:integration && bun run --filter @app/api test:e2e && bun run --filter @app/web test:e2e",
     "check:arch": "bun run --filter @app/api check:arch && depcruise packages --config .dependency-cruiser.packages.cjs"
   },
   "devDependencies": {

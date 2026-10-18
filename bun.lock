@@ -274,6 +274,7 @@
       "name": "@kit/testing",
       "dependencies": {
         "@kit/core": "workspace:*",
+        "@kit/mail": "workspace:*",
         "@kit/messaging": "workspace:*",
         "@kit/storage": "workspace:*",
       },

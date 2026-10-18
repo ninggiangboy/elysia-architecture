@@ -2,8 +2,8 @@ import { sql } from 'drizzle-orm'
 import type { Database } from './database'
 
 /**
- * Chạy `fn` chỉ khi giành được advisory lock (theo transaction) — dùng cho job chỉ nên chạy ở MỘT instance.
- * Trả về `undefined` nếu instance khác đang giữ lock.
+ * Runs `fn` only if the transaction-scoped advisory lock for `key` is free: for jobs that must run on ONE instance at a time.
+ * Returns `undefined` when another instance holds the lock. The lock is released when the transaction ends.
  */
 export async function withAdvisoryXactLock<T>(
   database: Database,
