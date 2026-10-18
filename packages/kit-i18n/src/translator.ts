@@ -32,20 +32,24 @@ export function createTranslator<Base extends Catalog>(
   translations: Readonly<Record<string, Catalog>>,
 ) {
   const catalogs: Record<string, Catalog> = { [defaultLocale]: base, ...translations }
+  /** The first form the language (then the default one) has a message for. */
+  const find = (languages: readonly string[], forms: readonly string[]) => {
+    for (const lang of languages) {
+      const catalog = catalogs[lang]
+      const found =
+        catalog && forms.map((form) => lookup(catalog, form)).find((m) => m !== undefined)
+      if (found !== undefined) return found
+    }
+    return undefined
+  }
   return (locale: string): Translate<MessageKey<Base>> => {
     const rules = new Intl.PluralRules(locale)
     return (key, params) => {
       const count = typeof params?.count === 'number' ? params.count : undefined
       const forms =
         count === undefined ? [key] : [`${key}_${rules.select(count)}`, `${key}_other`, key]
-      let template: string | undefined
-      for (const lang of [locale, defaultLocale]) {
-        const catalog = catalogs[lang]
-        if (!catalog) continue
-        template = forms.map((form) => lookup(catalog, form)).find((m) => m !== undefined)
-        if (template !== undefined) break
-      }
-      return (template ?? key).replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, name: string) =>
+      const template = find([locale, defaultLocale], forms) ?? key
+      return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, name: string) =>
         params && name in params ? String(params[name]) : whole,
       )
     }

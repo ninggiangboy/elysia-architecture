@@ -14,6 +14,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY tsconfig.base.json ./
 COPY packages ./packages
+# Each kit package gets its own node_modules (the links to the packages it depends on).
+COPY --from=deps /app/packages ./packages
 COPY apps/api/package.json apps/api/tsconfig.json ./apps/api/
 COPY apps/api/src ./apps/api/src
 COPY apps/api/scripts ./apps/api/scripts

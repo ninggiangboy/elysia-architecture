@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { StepUpPolicy } from '@kit/auth'
 import { ForbiddenError } from '@kit/core'
-import { FakeClock } from '#/shared/testing'
+import { FakeClock } from '@kit/testing'
 import { Passkey } from '../domain/passkey'
 
 const NOW = new Date('2026-01-01T00:00:00Z')

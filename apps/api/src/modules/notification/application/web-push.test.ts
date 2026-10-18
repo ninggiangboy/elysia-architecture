@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import type { Log } from '@kit/core'
 import type { Envelope, InboxGuard } from '@kit/messaging'
-import { FakeClock, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
+import { FakeClock, PassthroughUnitOfWork, SequentialIds } from '@kit/testing'
 import { NotificationEvents } from '../contracts'
 import type { NotificationRepository } from '../domain/notification-repository'
 import { InvalidPushSubscriptionError, PushSubscription } from '../domain/push-subscription'

@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { AVATAR_MAX_BYTES, COVER_MAX_BYTES } from '@app/shared-types/profile'
 import { VersionConflictError } from '@kit/core'
-import type { IdentityApi } from '#/modules/identity/contracts'
 import {
   FakeClock,
   FakeStorage,
   InMemoryOutbox,
   PassthroughUnitOfWork,
   SequentialIds,
-} from '#/shared/testing'
+} from '@kit/testing'
+import type { IdentityApi } from '#/modules/identity/contracts'
 import { ProfileEvents } from '../contracts/events'
 import type { Profile } from '../domain/profile'
 import type { ProfileRepository } from '../domain/profile-repository'

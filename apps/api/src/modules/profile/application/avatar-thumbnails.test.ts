@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import type { Envelope, InboxGuard } from '@kit/messaging'
+import { FakeStorage } from '@kit/testing'
 import sharp from 'sharp'
-import { FakeStorage } from '#/shared/testing'
 import { ProfileEvents } from '../contracts/events'
 import { SharpImageResizer } from '../infrastructure/sharp-image-resizer'
 import { avatarThumbnailKey, avatarThumbnailKeys } from './avatar-thumbnails'

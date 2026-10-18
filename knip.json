@@ -1,6 +1,10 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
+    ".": {
+      "entry": ["scripts/*.ts"],
+      "project": ["scripts/*.ts"]
+    },
     "apps/api": {
       "entry": ["scripts/*.ts", "tests/e2e/*.test.ts", "src/**/*.test.ts"],
       "project": ["src/**/*.ts", "scripts/**/*.ts", "tests/**/*.ts"],
@@ -60,6 +64,10 @@
       "project": ["src/**/*.ts"]
     },
     "packages/kit-runtime": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/kit-testing": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
     }

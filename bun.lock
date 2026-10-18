@@ -20,7 +20,6 @@
         "@elysiajs/openapi": "^1.4.0",
         "@kit/auth": "workspace:*",
         "@kit/config": "workspace:*",
-        "@kit/context": "workspace:*",
         "@kit/core": "workspace:*",
         "@kit/db": "workspace:*",
         "@kit/http": "workspace:*",
@@ -32,8 +31,6 @@
         "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
-        "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
-        "@opentelemetry/resources": "^2.12.0",
         "@opentelemetry/sdk-trace-node": "^2.12.0",
         "@simplewebauthn/server": "^14.0.3",
         "arctic": "^3.7.0",
@@ -41,8 +38,6 @@
         "elysia": "^1.4.0",
         "fflate": "^0.8.3",
         "jose": "^6.1.0",
-        "nodemailer": "^10.1.1",
-        "pino": "^10.4.0",
         "postgres": "^3.4.7",
         "sharp": "^0.35.5",
         "stripe": "^23.0.0",
@@ -50,6 +45,7 @@
         "zod": "^4.1.0",
       },
       "devDependencies": {
+        "@kit/testing": "workspace:*",
         "@types/bun": "latest",
         "@types/web-push": "^3.6.4",
         "drizzle-kit": "^0.31.0",
@@ -272,6 +268,17 @@
       "peerDependencies": {
         "@opentelemetry/api": "^1.9.1",
         "zod": "^4.1.0",
+      },
+    },
+    "packages/kit-testing": {
+      "name": "@kit/testing",
+      "dependencies": {
+        "@kit/core": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/storage": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
       },
     },
     "packages/shared-types": {
@@ -553,6 +560,8 @@
     "@kit/storage": ["@kit/storage@workspace:packages/kit-storage"],
 
     "@kit/telemetry": ["@kit/telemetry@workspace:packages/kit-telemetry"],
+
+    "@kit/testing": ["@kit/testing@workspace:packages/kit-testing"],
 
     "@levischuck/tiny-cbor": ["@levischuck/tiny-cbor@0.2.11", "", {}, "sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow=="],
 

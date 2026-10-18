@@ -9,8 +9,6 @@ import {
   EraseUserDataHandler,
   ExportUserDataHandler,
 } from '@kit/privacy-participant'
-import { unzipSync } from 'fflate'
-import type { IdentityApi } from '#/modules/identity/contracts'
 import {
   FakeClock,
   FakeStorage,
@@ -18,7 +16,9 @@ import {
   InMemoryOutbox,
   PassthroughUnitOfWork,
   SequentialIds,
-} from '#/shared/testing'
+} from '@kit/testing'
+import { unzipSync } from 'fflate'
+import type { IdentityApi } from '#/modules/identity/contracts'
 import {
   type AccountErasureRequestedPayload,
   type DataExportRequestedPayload,
