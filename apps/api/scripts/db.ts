@@ -1,8 +1,8 @@
 // Per-module migration management:  bun scripts/db.ts generate | migrate
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { Database, migrateModule } from '@kit/db'
 import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
-import { Database, migrateModule } from '#/shared/db'
 
 const root = join(import.meta.dir, '..')
 const command = process.argv[2]

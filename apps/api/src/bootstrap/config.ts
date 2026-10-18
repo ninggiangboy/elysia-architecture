@@ -1,5 +1,5 @@
 import { type ConfigSlice, coreConfig, type Env, type LoadedConfig, loadConfig } from '@kit/config'
-import { dbConfig } from '#/shared/db'
+import { dbConfig } from '@kit/db'
 import { mailConfig } from '#/shared/mail'
 import { outboxConfig } from '#/shared/messaging'
 import { maintenanceConfig } from '#/shared/runtime'

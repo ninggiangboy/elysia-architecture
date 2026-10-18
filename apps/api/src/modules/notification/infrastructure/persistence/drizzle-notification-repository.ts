@@ -1,5 +1,5 @@
+import type { Database } from '@kit/db'
 import { and, count, desc, eq, gte, inArray, isNull, lt, sql } from 'drizzle-orm'
-import type { Database } from '#/shared/db'
 import {
   Notification,
   type NotificationKind,

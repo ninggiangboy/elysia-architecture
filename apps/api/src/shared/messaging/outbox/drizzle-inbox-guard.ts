@@ -1,5 +1,5 @@
+import type { Database } from '@kit/db'
 import { and, eq } from 'drizzle-orm'
-import type { Database } from '#/shared/db'
 import type { InboxGuard } from '../ports'
 import type { InboxTable } from './tables'
 

@@ -1,5 +1,5 @@
+import type { Database } from '@kit/db'
 import { and, desc, eq, notInArray } from 'drizzle-orm'
-import type { Database } from '#/shared/db'
 import { PushSubscription } from '../../domain/push-subscription'
 import type { PushSubscriptionRepository } from '../../domain/push-subscription-repository'
 import { pushSubscriptions } from './schema'

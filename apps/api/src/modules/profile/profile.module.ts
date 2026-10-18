@@ -1,7 +1,7 @@
 import type { Clock, IdGenerator, Log } from '@kit/core'
+import type { Database } from '@kit/db'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import type { TokenVerifier } from '#/shared/auth'
-import type { Database } from '#/shared/db'
 import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { privacyParticipation } from '#/shared/privacy-participant'

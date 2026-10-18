@@ -26,6 +26,10 @@
     "packages/kit-config": {
       "entry": [],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-db": {
+      "entry": [],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

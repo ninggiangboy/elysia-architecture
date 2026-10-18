@@ -1,5 +1,5 @@
+import type { Database } from '@kit/db'
 import { and, count, eq, gte, min, type SQL } from 'drizzle-orm'
-import type { Database } from '#/shared/db'
 import type { MagicLinkThrottle, ThrottleVerdict } from '../application/ports'
 import type { Email } from '../domain/email'
 import { magicLinks } from './persistence/schema'

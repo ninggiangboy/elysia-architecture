@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types/locales'
 import { ConflictError } from '@kit/core'
+import { type Database, isUniqueViolation } from '@kit/db'
 import { and, eq, inArray, lte, sql } from 'drizzle-orm'
-import { type Database, isUniqueViolation } from '#/shared/db'
 import { AccountDeletion, type DeletionStatus } from '../../domain/account-deletion'
 import type { AccountDeletionRepository } from '../../domain/repositories'
 import { accountDeletions, deletionSteps } from './schema'

@@ -21,6 +21,7 @@
         "@kit/config": "workspace:*",
         "@kit/context": "workspace:*",
         "@kit/core": "workspace:*",
+        "@kit/db": "workspace:*",
         "@kit/i18n": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
@@ -108,6 +109,24 @@
       "name": "@kit/core",
       "devDependencies": {
         "@types/bun": "latest",
+      },
+    },
+    "packages/kit-db": {
+      "name": "@kit/db",
+      "dependencies": {
+        "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "drizzle-orm": "^0.45.4",
+        "postgres": "^3.4.7",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "drizzle-orm": "^0.45.4",
+        "postgres": "^3.4.7",
+        "zod": "^4.1.0",
       },
     },
     "packages/kit-i18n": {
@@ -375,6 +394,8 @@
     "@kit/context": ["@kit/context@workspace:packages/kit-context"],
 
     "@kit/core": ["@kit/core@workspace:packages/kit-core"],
+
+    "@kit/db": ["@kit/db@workspace:packages/kit-db"],
 
     "@kit/i18n": ["@kit/i18n@workspace:packages/kit-i18n"],
 

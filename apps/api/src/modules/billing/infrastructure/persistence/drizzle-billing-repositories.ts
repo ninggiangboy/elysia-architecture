@@ -1,5 +1,5 @@
+import type { Database } from '@kit/db'
 import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from 'drizzle-orm'
-import type { Database } from '#/shared/db'
 import type {
   AnomalyKind,
   Balance,

@@ -18,8 +18,8 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
+import { Database } from '@kit/db'
 import { sql } from 'drizzle-orm'
-import { Database } from '#/shared/db'
 import { MaintenanceStore } from '#/shared/runtime'
 
 const root = join(import.meta.dir, '..')

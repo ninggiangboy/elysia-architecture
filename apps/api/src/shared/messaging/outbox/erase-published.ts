@@ -1,5 +1,5 @@
+import type { Database } from '@kit/db'
 import { and, eq, isNotNull, or, type SQL } from 'drizzle-orm'
-import type { Database } from '#/shared/db'
 import type { OutboxTable } from './tables'
 
 /**
