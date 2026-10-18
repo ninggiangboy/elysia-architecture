@@ -141,7 +141,7 @@ module.exports = {
     // The kit is checked on its own (.dependency-cruiser.packages.cjs); here it is a black box.
     doNotFollow: { path: ['node_modules', '^packages/'] },
     tsPreCompilationDeps: true,
-    exclude: { path: '\\.test\\.ts$' },
+    exclude: { path: ['\\.test\\.ts$', '/dist/'] },
     enhancedResolveOptions: {
       extensions: ['.ts', '.js'],
       mainFields: ['module', 'main'],

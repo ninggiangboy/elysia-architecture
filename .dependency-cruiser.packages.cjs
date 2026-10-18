@@ -96,7 +96,7 @@ module.exports = {
   options: {
     doNotFollow: { path: 'node_modules' },
     tsPreCompilationDeps: true,
-    exclude: { path: '\\.test\\.ts$' },
+    exclude: { path: ['\\.test\\.ts$', '/dist/'] },
     enhancedResolveOptions: {
       extensions: ['.ts', '.tsx', '.js'],
       mainFields: ['module', 'main'],
