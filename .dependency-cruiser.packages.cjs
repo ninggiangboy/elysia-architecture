@@ -9,6 +9,7 @@ const KIT_GRAPH = {
   config: [],
   context: [],
   i18n: [],
+  ui: [],
   telemetry: ['context', 'config'],
   db: ['core', 'config'],
   http: ['core', 'context', 'telemetry'],
@@ -87,7 +88,7 @@ module.exports = {
     tsPreCompilationDeps: true,
     exclude: { path: '\\.test\\.ts$' },
     enhancedResolveOptions: {
-      extensions: ['.ts', '.js'],
+      extensions: ['.ts', '.tsx', '.js'],
       mainFields: ['module', 'main'],
       conditionNames: ['import', 'require', 'node', 'default'],
       exportsFields: ['exports'],
