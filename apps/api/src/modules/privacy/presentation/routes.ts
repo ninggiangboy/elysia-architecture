@@ -1,6 +1,6 @@
+import { errorResponse } from '@kit/http'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
-import { errorResponse } from '#/shared/http'
 import type {
   CancelAccountDeletion,
   GetAccountDeletion,

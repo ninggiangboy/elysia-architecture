@@ -1,6 +1,6 @@
+import { errorResponse, validationError } from '@kit/http'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
-import { errorResponse, validationError } from '#/shared/http'
 import type {
   RealtimeConnection,
   RealtimeGateway,

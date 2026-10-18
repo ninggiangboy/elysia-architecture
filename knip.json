@@ -34,6 +34,10 @@
     "packages/kit-telemetry": {
       "entry": [],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-http": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

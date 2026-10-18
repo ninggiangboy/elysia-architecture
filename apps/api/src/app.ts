@@ -1,7 +1,5 @@
 import { cors } from '@elysiajs/cors'
 import { openapi } from '@elysiajs/openapi'
-import { Elysia } from 'elysia'
-import type { Container } from '#/bootstrap/container'
 import {
   API_PREFIX,
   errorHandlerPlugin,
@@ -9,7 +7,9 @@ import {
   openapiDocumentation,
   requestContextPlugin,
   tracingPlugin,
-} from '#/shared/http'
+} from '@kit/http'
+import { Elysia } from 'elysia'
+import type { Container } from '#/bootstrap/container'
 import { healthRoutes } from '#/shared/runtime'
 
 /** Shared by main.ts and e2e tests. `App` is the type the web app uses to infer the client (Eden Treaty). */

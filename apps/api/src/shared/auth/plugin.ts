@@ -1,7 +1,7 @@
 import { requestContext } from '@kit/context'
 import { UnauthorizedError } from '@kit/core'
+import { bearerSecurity, errorResponse } from '@kit/http'
 import { Elysia } from 'elysia'
-import { bearerSecurity, errorResponse } from '#/shared/http'
 
 export interface AuthSession {
   userId: string
