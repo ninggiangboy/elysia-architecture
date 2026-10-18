@@ -1,10 +1,6 @@
-import type {
-  Clock,
-  Log,
-  ObjectStorage,
-  OutboxWriter,
-  UnitOfWork,
-} from '#/shared/application/ports'
+import type { Clock, Log, UnitOfWork } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 import type { AccountDeletionRepository, DataExportRepository } from '../domain/repositories'
 import { exportFolder, exportPartsPrefix } from './keys'
 import type { PrivacyPolicy } from './ports'

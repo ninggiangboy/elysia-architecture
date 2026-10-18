@@ -1,8 +1,7 @@
 import { Elysia, t } from 'elysia'
-import { NotFoundError } from '#/shared/application/errors'
-import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
-import { userAgent } from '#/shared/http/client-info'
-import { errorResponse, validationError } from '#/shared/http/openapi'
+import { authPlugin, type TokenVerifier } from '#/shared/auth'
+import { NotFoundError } from '#/shared/core'
+import { errorResponse, userAgent, validationError } from '#/shared/http'
 import type {
   MarkAllNotificationsRead,
   MarkNotificationRead,

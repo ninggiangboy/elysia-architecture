@@ -1,13 +1,12 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
+import type { Clock, Log } from '#/shared/core'
 import type {
-  Clock,
+  Envelope,
   InboxGuard,
   IntegrationEventHandler,
-  Log,
-  ObjectStorage,
   OutboxWriter,
-} from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+} from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 import type { DataExport, ExportPart } from '../../domain/data-export'
 import type { DataExportRepository } from '../../domain/repositories'
 import { exportArchiveKey } from '../keys'

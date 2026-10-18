@@ -1,13 +1,8 @@
 import type { Locale } from '@app/shared-types'
-import { MailPermanentError } from '#/shared/application/mail-errors'
-import type {
-  Clock,
-  InboxGuard,
-  IntegrationEventHandler,
-  Log,
-  Mailer,
-} from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+import type { Clock, Log } from '#/shared/core'
+import type { Mailer } from '#/shared/mail'
+import { MailPermanentError } from '#/shared/mail'
+import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
 import type { LocaleResolver, Recipient } from '../../contracts'
 import type { MailContent } from '../mail-composer'
 import { payloadLocale } from '../payload-locale'

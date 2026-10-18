@@ -1,12 +1,8 @@
 import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
-import {
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-} from '#/shared/application/errors'
-import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
-import type { StepUpPolicy } from '#/shared/application/step-up-policy'
+import type { StepUpPolicy } from '#/shared/auth'
+import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import { OAUTH_STATE_TTL_MS, type OAuthPurpose } from '../../domain/auth-challenge'
 import { Email } from '../../domain/email'
 import { isOAuthProvider, OAuthAccount, type OAuthProviderId } from '../../domain/oauth-account'

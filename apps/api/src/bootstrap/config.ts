@@ -1,11 +1,16 @@
-import { type ConfigSlice, type Env, type LoadedConfig, loadConfig } from '#/shared/config'
-import { coreConfig } from '#/shared/config/core'
-import { dbConfig } from '#/shared/infrastructure/db/config'
-import { mailConfig } from '#/shared/infrastructure/mail/config'
-import { maintenanceConfig } from '#/shared/infrastructure/maintenance/config'
-import { outboxConfig } from '#/shared/infrastructure/outbox/config'
-import { storageConfig } from '#/shared/infrastructure/storage/config'
-import { telemetryConfig } from '#/shared/infrastructure/telemetry/config'
+import {
+  type ConfigSlice,
+  coreConfig,
+  type Env,
+  type LoadedConfig,
+  loadConfig,
+} from '#/shared/config'
+import { dbConfig } from '#/shared/db'
+import { mailConfig } from '#/shared/mail'
+import { outboxConfig } from '#/shared/messaging'
+import { maintenanceConfig } from '#/shared/runtime'
+import { storageConfig } from '#/shared/storage'
+import { telemetryConfig } from '#/shared/telemetry'
 import { MODULE_CATALOG } from './module-catalog'
 
 /** The slices that belong to the infrastructure, in the order they appear in `.env.example`. */

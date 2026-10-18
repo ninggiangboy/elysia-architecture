@@ -1,10 +1,10 @@
+import type { Clock } from '#/shared/core'
 import type {
-  Clock,
+  Envelope,
   InboxGuard,
   IntegrationEventHandler,
   OutboxWriter,
-} from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+} from '#/shared/messaging'
 import type { ModuleDataExportedPayload } from '../../contracts'
 import { participantEvents } from '../../contracts'
 import type { DataExportRepository } from '../../domain/repositories'

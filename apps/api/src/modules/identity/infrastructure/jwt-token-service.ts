@@ -7,8 +7,8 @@ import {
   jwtVerify,
   SignJWT,
 } from 'jose'
-import type { IdGenerator } from '#/shared/application/ports'
-import { hmacSha256Hex, randomDigits, randomToken, sha256Hex } from '#/shared/infrastructure/crypto'
+import { hmacSha256Hex, randomDigits, randomToken, sha256Hex } from '#/shared/auth'
+import type { IdGenerator } from '#/shared/core'
 import type { TokenService } from '../application/ports'
 import type { AccessTokenClaims, AccessTokenVerifier } from '../contracts/access-token-verifier'
 

@@ -1,11 +1,15 @@
 import { LOCALES } from '@app/shared-types'
 import { Elysia, t } from 'elysia'
-import { UnauthorizedError } from '#/shared/application/errors'
-import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
-import { clientIp, userAgent } from '#/shared/http/client-info'
-import { API_PREFIX } from '#/shared/http/constants'
-import { localePlugin } from '#/shared/http/locale.plugin'
-import { errorResponse, validationError } from '#/shared/http/openapi'
+import { authPlugin, type TokenVerifier } from '#/shared/auth'
+import { UnauthorizedError } from '#/shared/core'
+import {
+  API_PREFIX,
+  clientIp,
+  errorResponse,
+  localePlugin,
+  userAgent,
+  validationError,
+} from '#/shared/http'
 import type { WebAuthnResponse } from '../application/ports'
 import type { ChangeLocale } from '../application/use-cases/change-locale'
 import type { ConfirmEmailChange } from '../application/use-cases/confirm-email-change'

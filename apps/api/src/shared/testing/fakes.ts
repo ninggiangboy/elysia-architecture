@@ -1,13 +1,6 @@
-import type {
-  Clock,
-  IdGenerator,
-  InboxGuard,
-  ObjectStat,
-  ObjectStorage,
-  OutboxWriter,
-  UnitOfWork,
-} from '#/shared/application/ports'
-import type { DomainEvent } from '#/shared/domain/domain-event'
+import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '#/shared/core'
+import type { InboxGuard, OutboxWriter } from '#/shared/messaging'
+import type { ObjectStat, ObjectStorage } from '#/shared/storage'
 
 export class FakeClock implements Clock {
   constructor(private current = new Date('2026-01-01T00:00:00Z')) {}

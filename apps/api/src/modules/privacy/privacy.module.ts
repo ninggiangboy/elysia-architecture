@@ -1,20 +1,13 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
-import type {
-  Clock,
-  IdGenerator,
-  IntegrationEventHandler,
-  Log,
-  ObjectStorage,
-} from '#/shared/application/ports'
-import type { StepUpPolicy } from '#/shared/application/step-up-policy'
-import type { TokenVerifier } from '#/shared/http/auth.plugin'
-import type { Database } from '#/shared/infrastructure/db/database'
-import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
-import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
-import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
-import type { AppModule } from '#/shared/module/app-module'
-import { intervalJobs } from '#/shared/module/interval-jobs'
+import type { StepUpPolicy, TokenVerifier } from '#/shared/auth'
+import type { Clock, IdGenerator, Log } from '#/shared/core'
+import type { Database } from '#/shared/db'
+import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
+import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { participantEvents, privacyParticipation } from '#/shared/privacy-participant'
+import type { AppModule } from '#/shared/runtime'
+import { intervalJobs } from '#/shared/runtime'
+import type { ObjectStorage } from '#/shared/storage'
 import { AssembleExport } from './application/handlers/assemble-export'
 import { RecordErasure } from './application/handlers/record-erasure'
 import { RecordExportPart } from './application/handlers/record-export-part'

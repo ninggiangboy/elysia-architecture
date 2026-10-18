@@ -2,8 +2,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
-import { Database } from '#/shared/infrastructure/db/database'
-import { migrateModule } from '#/shared/infrastructure/db/migrate'
+import { Database, migrateModule } from '#/shared/db'
 
 const root = join(import.meta.dir, '..')
 const command = process.argv[2]

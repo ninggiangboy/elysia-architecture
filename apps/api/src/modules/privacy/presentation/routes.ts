@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
-import { authPlugin, type TokenVerifier } from '#/shared/http/auth.plugin'
-import { errorResponse } from '#/shared/http/openapi'
+import { authPlugin, type TokenVerifier } from '#/shared/auth'
+import { errorResponse } from '#/shared/http'
 import type {
   CancelAccountDeletion,
   GetAccountDeletion,

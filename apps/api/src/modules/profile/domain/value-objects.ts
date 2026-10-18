@@ -1,5 +1,5 @@
 import { BIO_MAX, DISPLAY_NAME_MAX } from '@app/shared-types'
-import { DomainError } from '#/shared/domain/errors'
+import { DomainError } from '#/shared/core'
 
 const isControl = (code: number) => code < 0x20 || code === 0x7f
 const hasControlChars = (s: string) => [...s].some((c) => isControl(c.charCodeAt(0)))

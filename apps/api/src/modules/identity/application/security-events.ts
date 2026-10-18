@@ -1,4 +1,4 @@
-import type { DomainEvent } from '#/shared/domain/domain-event'
+import type { DomainEvent } from '#/shared/core'
 import {
   IdentityEvents,
   type OAuthAccountUnlinkedPayload,

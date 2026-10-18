@@ -1,5 +1,5 @@
-import { MailRateLimitedError } from '#/shared/application/mail-errors'
-import type { Mailer } from '#/shared/application/ports'
+import type { Mailer } from '#/shared/mail'
+import { MailRateLimitedError } from '#/shared/mail'
 import type { SendRateLimiter } from './ports'
 
 const DEFAULT_PENALTY_MS = 30_000

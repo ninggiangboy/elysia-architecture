@@ -1,5 +1,5 @@
-import type { InboxGuard, IntegrationEventHandler, ObjectStorage } from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 import { type CoverChangedPayload, ProfileEvents } from '../../contracts/events'
 
 export class DeleteOldCover implements IntegrationEventHandler {

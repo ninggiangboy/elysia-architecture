@@ -1,4 +1,5 @@
-import type { Clock, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, UnitOfWork } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import type { RefreshTokenRepository } from '../../domain/repositories'
 import { sessionRevoked } from '../session-events'
 

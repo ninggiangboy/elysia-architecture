@@ -1,5 +1,5 @@
-import { UnauthorizedError } from '#/shared/application/errors'
-import type { Clock, IdGenerator, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import { UnauthorizedError } from '#/shared/core'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import type { UserRepository, WebAuthnChallengeRepository } from '../../domain/repositories'
 import type { PasskeyAssertions } from '../passkey-assertions'

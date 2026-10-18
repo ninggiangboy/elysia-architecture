@@ -1,13 +1,9 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
-import { ConflictError, NotFoundError } from '#/shared/application/errors'
-import type {
-  Clock,
-  IdGenerator,
-  ObjectStorage,
-  OutboxWriter,
-  UnitOfWork,
-} from '#/shared/application/ports'
-import type { StepUpPolicy } from '#/shared/application/step-up-policy'
+import type { StepUpPolicy } from '#/shared/auth'
+import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import { ConflictError, NotFoundError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 import { DataExport } from '../../domain/data-export'
 import type { AccountDeletionRepository, DataExportRepository } from '../../domain/repositories'
 import { exportPartsPrefix } from '../keys'

@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { ConflictError, UnauthorizedError, ValidationError } from '#/shared/application/errors'
-import { sha256Hex } from '#/shared/infrastructure/crypto'
-import {
-  FakeClock,
-  InMemoryOutbox,
-  PassthroughUnitOfWork,
-  SequentialIds,
-} from '#/shared/testing/fakes'
+import { sha256Hex } from '#/shared/auth'
+import { ConflictError, UnauthorizedError, ValidationError } from '#/shared/core'
+import { FakeClock, InMemoryOutbox, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from '../domain/email'
 import type { MagicLink } from '../domain/magic-link'

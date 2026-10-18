@@ -1,18 +1,12 @@
 import type { IdentityApi } from '#/modules/identity/contracts'
-import type {
-  Clock,
-  IdGenerator,
-  IntegrationEventHandler,
-  Log,
-  ObjectStorage,
-} from '#/shared/application/ports'
-import type { TokenVerifier } from '#/shared/http/auth.plugin'
-import type { Database } from '#/shared/infrastructure/db/database'
-import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
-import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
-import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
-import type { AppModule } from '#/shared/module/app-module'
+import type { TokenVerifier } from '#/shared/auth'
+import type { Clock, IdGenerator, Log } from '#/shared/core'
+import type { Database } from '#/shared/db'
+import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
+import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { privacyParticipation } from '#/shared/privacy-participant'
+import type { AppModule } from '#/shared/runtime'
+import type { ObjectStorage } from '#/shared/storage'
 import { CreateProfileOnUserRegistered } from './application/handlers/create-profile-on-user-registered'
 import { DeleteOldAvatar } from './application/handlers/delete-old-avatar'
 import { DeleteOldCover } from './application/handlers/delete-old-cover'

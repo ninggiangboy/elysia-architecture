@@ -1,5 +1,6 @@
-import { NotFoundError } from '#/shared/application/errors'
-import type { Clock, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, UnitOfWork } from '#/shared/core'
+import { NotFoundError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import type { NotificationRepository } from '../../domain/notification-repository'
 import { notificationRead, notificationsSeen } from '../notification-events'
 

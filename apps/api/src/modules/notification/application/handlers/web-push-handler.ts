@@ -1,5 +1,5 @@
-import type { Clock, InboxGuard, IntegrationEventHandler, Log } from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+import type { Clock, Log } from '#/shared/core'
+import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
 import type { LocaleResolver } from '../../contracts'
 import { type NotificationCreatedPayload, NotificationEvents } from '../../contracts'
 import type { NotificationRepository } from '../../domain/notification-repository'

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { DomainError } from '#/shared/domain/errors'
+import { DomainError } from '#/shared/core'
 import { ProfileEvents } from '../contracts/events'
 import { Profile } from './profile'
 import { Bio, DisplayName } from './value-objects'

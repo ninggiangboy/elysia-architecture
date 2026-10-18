@@ -1,5 +1,6 @@
-import { UnauthorizedError } from '#/shared/application/errors'
-import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import { UnauthorizedError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import type { RefreshTokenRepository, UserRepository } from '../../domain/repositories'
 import type { TokenService } from '../ports'
 import { sessionRevoked } from '../session-events'

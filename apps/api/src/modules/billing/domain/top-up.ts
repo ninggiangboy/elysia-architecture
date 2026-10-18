@@ -1,5 +1,5 @@
 import type { TopUpStatus } from '@app/shared-types'
-import { DomainError } from '#/shared/domain/errors'
+import { DomainError } from '#/shared/core'
 
 export type { TopUpStatus }
 

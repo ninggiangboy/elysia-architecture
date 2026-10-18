@@ -20,20 +20,16 @@ import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import { createRealtimeModule } from '#/modules/realtime/realtime.module'
-import type { Mailer } from '#/shared/application/ports'
-import { Database } from '#/shared/infrastructure/db/database'
-import type { Logger } from '#/shared/infrastructure/logger'
-import { SmtpMailer } from '#/shared/infrastructure/mail/smtp-mailer'
-import {
-  MaintenanceMode,
-  MaintenanceStore,
-} from '#/shared/infrastructure/maintenance/maintenance-mode'
-import { OutboxRelay } from '#/shared/infrastructure/outbox/outbox-relay'
-import { S3ObjectStorage } from '#/shared/infrastructure/storage/s3-object-storage'
-import { SystemClock, UuidV7Generator } from '#/shared/infrastructure/system'
-import { InProcessMessageBus } from '#/shared/messaging/in-process-bus'
-import type { AppModule } from '#/shared/module/app-module'
+import { SystemClock, UuidV7Generator } from '#/shared/core'
+import { Database } from '#/shared/db'
+import type { Mailer } from '#/shared/mail'
+import { SmtpMailer } from '#/shared/mail'
+import { InProcessMessageBus, OutboxRelay } from '#/shared/messaging'
 import type { PrivacyParticipation } from '#/shared/privacy-participant'
+import type { AppModule } from '#/shared/runtime'
+import { MaintenanceMode, MaintenanceStore } from '#/shared/runtime'
+import { S3ObjectStorage } from '#/shared/storage'
+import type { Logger } from '#/shared/telemetry'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.

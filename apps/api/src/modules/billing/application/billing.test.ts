@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import {
-  FakeClock,
-  InMemoryOutbox,
-  PassthroughUnitOfWork,
-  SequentialIds,
-} from '#/shared/testing/fakes'
+import { FakeClock, InMemoryOutbox, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
 import { BillingEvents } from '../contracts/events'
 import type {
   AnomalyKind,

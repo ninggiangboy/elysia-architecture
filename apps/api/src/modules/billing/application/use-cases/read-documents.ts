@@ -1,5 +1,5 @@
 import type { DocumentKind, DocumentStatus } from '@app/shared-types'
-import { NotFoundError } from '#/shared/application/errors'
+import { NotFoundError } from '#/shared/core'
 import type { DocumentRepository } from '../../domain/billing-repository'
 import type { BillingDocument, DocumentLine, Party } from '../../domain/document'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from './read-billing'

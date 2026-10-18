@@ -1,12 +1,12 @@
 import { type Span, SpanStatusCode } from '@opentelemetry/api'
 import { Elysia } from 'elysia'
-import { requestContext } from '#/shared/infrastructure/request-context'
+import { requestContext } from '#/shared/context'
 import {
   contextFromTraceparent,
   recordSpanError,
   SpanKind,
   startDetachedSpan,
-} from '#/shared/infrastructure/telemetry/tracing'
+} from '#/shared/telemetry'
 
 const spans = new WeakMap<Request, Span>()
 const errors = new WeakMap<Request, unknown>()

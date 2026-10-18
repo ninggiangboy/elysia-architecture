@@ -1,4 +1,4 @@
-import { DomainError } from '#/shared/domain/errors'
+import { DomainError } from '#/shared/core'
 
 import type { NotificationKind } from '../contracts'
 

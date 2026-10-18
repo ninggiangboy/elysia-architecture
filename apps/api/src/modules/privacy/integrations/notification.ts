@@ -6,7 +6,7 @@ import type {
   NotificationIntegration,
   TemplateValues,
 } from '#/modules/notification/contracts'
-import { formatDay } from '#/shared/i18n/format'
+import { formatDay } from '#/shared/i18n'
 import {
   type AccountDeletedPayload,
   type AccountDeletionCancelledPayload,

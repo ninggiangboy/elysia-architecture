@@ -1,10 +1,9 @@
 import cluster from 'node:cluster'
 import { buildApp } from '#/app'
-import { superviseProcesses } from '#/bootstrap/cluster'
 import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
-import { createLogger } from '#/shared/infrastructure/logger'
-import { initTracing } from '#/shared/infrastructure/telemetry/tracing'
+import { superviseProcesses } from '#/shared/runtime'
+import { createLogger, initTracing } from '#/shared/telemetry'
 
 const config = loadAppConfig()
 const { core } = config

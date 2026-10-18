@@ -1,4 +1,4 @@
-import { AggregateRoot } from '#/shared/domain/aggregate-root'
+import { AggregateRoot } from '#/shared/core'
 import { IdentityEvents } from '../contracts/events'
 
 const OAUTH_PROVIDERS = ['google', 'github'] as const

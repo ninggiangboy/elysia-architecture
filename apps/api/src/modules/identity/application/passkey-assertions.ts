@@ -1,5 +1,5 @@
-import { UnauthorizedError, ValidationError } from '#/shared/application/errors'
-import type { Clock } from '#/shared/application/ports'
+import type { Clock } from '#/shared/core'
+import { UnauthorizedError, ValidationError } from '#/shared/core'
 import type { Passkey } from '../domain/passkey'
 import type { PasskeyRepository, WebAuthnChallengeRepository } from '../domain/repositories'
 import type { WebAuthnResponse, WebAuthnService } from './ports'

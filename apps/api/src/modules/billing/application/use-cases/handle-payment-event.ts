@@ -1,4 +1,5 @@
-import type { Clock, IdGenerator, Log, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, IdGenerator, Log, UnitOfWork } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import type {
   AnomalyKind,
   LedgerEntryType,

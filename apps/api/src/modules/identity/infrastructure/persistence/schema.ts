@@ -10,7 +10,7 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { inboxTable, outboxTable } from '#/shared/infrastructure/outbox/tables'
+import { inboxTable, outboxTable } from '#/shared/messaging'
 
 export const identitySchema = pgSchema('identity')
 

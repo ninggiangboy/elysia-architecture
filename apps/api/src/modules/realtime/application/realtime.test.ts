@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import type { Envelope } from '#/shared/messaging/envelope'
-import { FakeClock } from '#/shared/testing/fakes'
+import type { Envelope } from '#/shared/messaging'
+import { FakeClock } from '#/shared/testing'
 import { MAX_PUSH_AGE_MS, RealtimePushHandler } from './handlers/realtime-push-handler'
 import type { RealtimeEvent, RealtimeGateway } from './ports'
 

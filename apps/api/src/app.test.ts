@@ -2,8 +2,8 @@ import { describe, expect, test } from 'bun:test'
 import { buildApp } from '#/app'
 import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
-import { API_PREFIX } from '#/shared/http/constants'
-import { createLogger } from '#/shared/infrastructure/logger'
+import { API_PREFIX } from '#/shared/http'
+import { createLogger } from '#/shared/telemetry'
 
 describe('buildApp', () => {
   // app.ts mounts each module with a static `.use(...)` so Eden can infer the client types; a loop would lose them.

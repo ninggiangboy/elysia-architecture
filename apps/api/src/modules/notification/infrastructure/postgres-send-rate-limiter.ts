@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import type { Database } from '#/shared/infrastructure/db/database'
+import type { Database } from '#/shared/db'
 import type { SendGrant, SendRateLimiter } from '../application/ports'
 
 export interface SendRateLimiterOptions {

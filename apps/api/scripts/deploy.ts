@@ -19,8 +19,8 @@ import {
 } from 'node:fs'
 import { join } from 'node:path'
 import { sql } from 'drizzle-orm'
-import { Database } from '#/shared/infrastructure/db/database'
-import { MaintenanceStore } from '#/shared/infrastructure/maintenance/maintenance-mode'
+import { Database } from '#/shared/db'
+import { MaintenanceStore } from '#/shared/runtime'
 
 const root = join(import.meta.dir, '..')
 const env = process.env as Record<string, string | undefined>

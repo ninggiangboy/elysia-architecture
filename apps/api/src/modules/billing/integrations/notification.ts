@@ -3,7 +3,7 @@ import type {
   NotificationIntegration,
   TemplateValues,
 } from '#/modules/notification/contracts'
-import { formatMoney } from '#/shared/i18n/format'
+import { formatMoney } from '#/shared/i18n'
 import { BillingEvents, type TopUpSucceededPayload } from '../contracts'
 import { en } from './messages/en'
 import { vi } from './messages/vi'

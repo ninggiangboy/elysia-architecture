@@ -1,5 +1,6 @@
-import { NotFoundError } from '#/shared/application/errors'
-import type { Clock, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, UnitOfWork } from '#/shared/core'
+import { NotFoundError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import type { DeviceSession } from '../../domain/refresh-token'
 import type { RefreshTokenRepository } from '../../domain/repositories'
 import { sessionRevoked } from '../session-events'

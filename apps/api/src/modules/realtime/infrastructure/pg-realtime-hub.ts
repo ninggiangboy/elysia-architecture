@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, lt, min, sql } from 'drizzle-orm'
-import type { Clock, Log } from '#/shared/application/ports'
-import type { Database } from '#/shared/infrastructure/db/database'
+import type { Clock, Log } from '#/shared/core'
+import type { Database } from '#/shared/db'
 import type {
   RealtimeConnection,
   RealtimeEvent,

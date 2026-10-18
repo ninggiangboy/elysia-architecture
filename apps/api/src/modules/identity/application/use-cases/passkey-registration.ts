@@ -1,6 +1,7 @@
-import { ConflictError, NotFoundError, ValidationError } from '#/shared/application/errors'
-import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
-import type { StepUpPolicy } from '#/shared/application/step-up-policy'
+import type { StepUpPolicy } from '#/shared/auth'
+import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import { ConflictError, NotFoundError, ValidationError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import { MAX_PASSKEYS_PER_USER, Passkey } from '../../domain/passkey'
 import type {

@@ -1,6 +1,5 @@
 import { type Catalog, DEFAULT_LOCALE, LOCALES, type Locale } from '@app/shared-types'
-import { mergeCatalogs, messagePaths, overrideCatalog } from '#/shared/i18n/merge'
-import { createTranslator } from '#/shared/i18n/translator'
+import { createTranslator, mergeCatalogs, messagePaths, overrideCatalog } from '#/shared/i18n'
 import type { NotificationIntegration, Translate } from '../../contracts'
 import { en } from './en'
 import { vi } from './vi'

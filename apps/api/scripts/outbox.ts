@@ -4,7 +4,7 @@
 // A handler that already finished a message is blocked by the inbox, so requeue does not send duplicates; only unfinished handlers run again.
 import { and, eq, isNotNull, sql } from 'drizzle-orm'
 import { MODULE_CATALOG, MODULE_NAMES } from '#/bootstrap/module-catalog'
-import { Database } from '#/shared/infrastructure/db/database'
+import { Database } from '#/shared/db'
 
 const SOURCES = MODULE_CATALOG.flatMap((m) => (m.outbox ? [{ name: m.name, table: m.outbox }] : []))
 

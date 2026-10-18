@@ -1,6 +1,6 @@
 import type { AccountDto, IdentityApi } from '#/modules/identity/contracts'
-import { NotFoundError } from '#/shared/application/errors'
-import type { Clock } from '#/shared/application/ports'
+import type { Clock } from '#/shared/core'
+import { NotFoundError } from '#/shared/core'
 import { Profile } from '../domain/profile'
 import type { ProfileRepository } from '../domain/profile-repository'
 

@@ -1,5 +1,5 @@
-import type { Clock, IntegrationEventHandler } from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+import type { Clock } from '#/shared/core'
+import type { Envelope, IntegrationEventHandler } from '#/shared/messaging'
 import type { RealtimePush } from '../../contracts'
 import type { RealtimeGateway } from '../ports'
 

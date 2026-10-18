@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
-import type { ObjectStorage } from '#/shared/application/ports'
-import type { Database } from '#/shared/infrastructure/db/database'
-import { erasePublishedOutbox } from '#/shared/infrastructure/outbox/erase-published'
+import type { Database } from '#/shared/db'
+import { erasePublishedOutbox } from '#/shared/messaging'
 import type { DataEraser } from '#/shared/privacy-participant'
+import type { ObjectStorage } from '#/shared/storage'
 import { outbox, profiles } from './schema'
 
 /**

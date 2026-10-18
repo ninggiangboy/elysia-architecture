@@ -1,6 +1,7 @@
 import { COVER_CONTENT_TYPES, COVER_MAX_BYTES, type CoverContentType } from '@app/shared-types'
-import { ValidationError } from '#/shared/application/errors'
-import type { IdGenerator, ObjectStorage } from '#/shared/application/ports'
+import type { IdGenerator } from '#/shared/core'
+import { ValidationError } from '#/shared/core'
+import type { ObjectStorage } from '#/shared/storage'
 import { coverKeyPrefix } from '../cover-keys'
 
 const UPLOAD_URL_TTL_SECONDS = 300

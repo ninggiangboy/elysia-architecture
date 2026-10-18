@@ -5,8 +5,8 @@ import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
 import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
 import type { WebPushSender } from '#/modules/notification/application/ports'
-import { createLogger } from '#/shared/infrastructure/logger'
-import type { AppModule } from '#/shared/module/app-module'
+import type { AppModule } from '#/shared/runtime'
+import { createLogger } from '#/shared/telemetry'
 
 /**
  * A handler's name is its consumer group, i.e. the key in each module's `inbox` table. Renaming one makes messages

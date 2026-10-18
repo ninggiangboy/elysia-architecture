@@ -1,10 +1,6 @@
-import type {
-  InboxGuard,
-  IntegrationEventHandler,
-  Log,
-  ObjectStorage,
-} from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+import type { Log } from '#/shared/core'
+import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 import { type AvatarChangedPayload, ProfileEvents } from '../../contracts/events'
 import { AVATAR_THUMBNAIL_SIZES, avatarThumbnailKey } from '../avatar-thumbnails'
 import { type ImageResizer, UnprocessableImageError } from '../ports'

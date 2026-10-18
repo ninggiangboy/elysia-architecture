@@ -9,8 +9,7 @@ import {
   notifications,
   outbox,
 } from '#/modules/notification/infrastructure/persistence/schema'
-import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
-import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
+import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { createTestApp, type TestApp } from './helpers'
 
 let t: TestApp

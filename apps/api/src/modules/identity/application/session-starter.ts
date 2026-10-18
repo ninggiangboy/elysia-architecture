@@ -1,4 +1,5 @@
-import type { Clock, OutboxWriter } from '#/shared/application/ports'
+import type { Clock } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import { sessionStarted } from './session-events'
 import type { SessionIssuer, SessionMeta, SessionTokens } from './session-issuer'
 

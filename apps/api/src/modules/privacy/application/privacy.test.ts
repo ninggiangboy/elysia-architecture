@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { unzipSync } from 'fflate'
 import type { IdentityApi } from '#/modules/identity/contracts'
-import { ConflictError } from '#/shared/application/errors'
-import type { IntegrationEventHandler } from '#/shared/application/ports'
-import { StepUpPolicy } from '#/shared/application/step-up-policy'
-import type { DomainEvent } from '#/shared/domain/domain-event'
-import type { Envelope } from '#/shared/messaging/envelope'
+import { StepUpPolicy } from '#/shared/auth'
+import type { DomainEvent } from '#/shared/core'
+import { ConflictError } from '#/shared/core'
+import type { Envelope, IntegrationEventHandler } from '#/shared/messaging'
 import {
   type DataEraser,
   type DataExporter,
@@ -19,7 +18,7 @@ import {
   InMemoryOutbox,
   PassthroughUnitOfWork,
   SequentialIds,
-} from '#/shared/testing/fakes'
+} from '#/shared/testing'
 import {
   type AccountErasureRequestedPayload,
   type DataExportRequestedPayload,

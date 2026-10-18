@@ -1,19 +1,13 @@
-import type {
-  Clock,
-  IdGenerator,
-  IntegrationEventHandler,
-  Log,
-  Mailer,
-  ObjectStorage,
-} from '#/shared/application/ports'
-import type { TokenVerifier } from '#/shared/http/auth.plugin'
-import type { Database } from '#/shared/infrastructure/db/database'
-import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
-import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
-import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
-import type { AppModule } from '#/shared/module/app-module'
-import { intervalJobs } from '#/shared/module/interval-jobs'
+import type { TokenVerifier } from '#/shared/auth'
+import type { Clock, IdGenerator, Log } from '#/shared/core'
+import type { Database } from '#/shared/db'
+import type { Mailer } from '#/shared/mail'
+import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
+import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { privacyParticipation } from '#/shared/privacy-participant'
+import type { AppModule } from '#/shared/runtime'
+import { intervalJobs } from '#/shared/runtime'
+import type { ObjectStorage } from '#/shared/storage'
 import { CreateNotificationHandler } from './application/handlers/create-notification-handler'
 import { DropPushSubscriptionsHandler } from './application/handlers/drop-push-subscriptions-handler'
 import { MailEventHandler } from './application/handlers/mail-event-handler'

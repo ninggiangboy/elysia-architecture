@@ -1,9 +1,8 @@
 import { Elysia } from 'elysia'
-import { TooManyRequestsError } from '#/shared/application/errors'
-import type { ErrorKind } from '#/shared/domain/errors'
-import { DomainError } from '#/shared/domain/errors'
-import type { Logger } from '#/shared/infrastructure/logger'
-import { requestContext } from '#/shared/infrastructure/request-context'
+import { requestContext } from '#/shared/context'
+import type { ErrorKind } from '#/shared/core'
+import { DomainError, TooManyRequestsError } from '#/shared/core'
+import type { Logger } from '#/shared/telemetry'
 
 const STATUS: Record<ErrorKind, number> = {
   validation: 400,

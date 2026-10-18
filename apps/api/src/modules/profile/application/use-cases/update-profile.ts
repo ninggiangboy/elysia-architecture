@@ -1,5 +1,6 @@
-import { VersionConflictError } from '#/shared/application/errors'
-import type { Clock, ObjectStorage } from '#/shared/application/ports'
+import type { Clock } from '#/shared/core'
+import { VersionConflictError } from '#/shared/core'
+import type { ObjectStorage } from '#/shared/storage'
 import type { ProfileRepository } from '../../domain/profile-repository'
 import { type MeView, toMeView } from '../me-view'
 import type { ProfileLoader } from '../profile-loader'

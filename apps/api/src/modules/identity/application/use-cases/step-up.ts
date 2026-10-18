@@ -1,5 +1,6 @@
-import { NotFoundError, TooManyRequestsError, ValidationError } from '#/shared/application/errors'
-import type { Clock, IdGenerator, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
+import { NotFoundError, TooManyRequestsError, ValidationError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import type {
   PasskeyRepository,

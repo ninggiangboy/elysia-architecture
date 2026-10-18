@@ -1,5 +1,6 @@
-import { NotFoundError, ValidationError } from '#/shared/application/errors'
-import type { Clock, OutboxWriter, UnitOfWork } from '#/shared/application/ports'
+import type { Clock, UnitOfWork } from '#/shared/core'
+import { NotFoundError, ValidationError } from '#/shared/core'
+import type { OutboxWriter } from '#/shared/messaging'
 import type { EmailChangeRequestRepository, UserRepository } from '../../domain/repositories'
 import type { TokenService } from '../ports'
 

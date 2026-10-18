@@ -1,5 +1,4 @@
-import type { IntegrationEventHandler } from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+import type { Envelope, IntegrationEventHandler } from '#/shared/messaging'
 import type { DropPushOn } from '../../contracts'
 import type { PushSubscriptionRepository } from '../../domain/push-subscription-repository'
 

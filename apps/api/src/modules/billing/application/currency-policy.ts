@@ -1,4 +1,4 @@
-import { ValidationError } from '#/shared/application/errors'
+import { ValidationError } from '#/shared/core'
 
 export interface CurrencyRule {
   code: string

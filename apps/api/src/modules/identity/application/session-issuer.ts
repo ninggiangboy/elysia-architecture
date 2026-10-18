@@ -1,4 +1,4 @@
-import type { Clock, IdGenerator } from '#/shared/application/ports'
+import type { Clock, IdGenerator } from '#/shared/core'
 import { RefreshToken } from '../domain/refresh-token'
 import type { RefreshTokenRepository } from '../domain/repositories'
 import type { TokenService } from './ports'

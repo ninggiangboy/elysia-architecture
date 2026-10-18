@@ -1,8 +1,8 @@
-import type { IntegrationEventHandler, MessagePublisher } from '#/shared/application/ports'
-import type { Logger } from '#/shared/infrastructure/logger'
-import { SpanKind, withSpan } from '#/shared/infrastructure/telemetry/tracing'
+import type { Logger } from '#/shared/telemetry'
+import { SpanKind, withSpan } from '#/shared/telemetry'
 import type { Envelope } from './envelope'
 import { RetryLaterError } from './errors'
+import type { IntegrationEventHandler, MessagePublisher } from './ports'
 
 /**
  * Default transport: calls handlers directly in-process. Each handler's errors are isolated:

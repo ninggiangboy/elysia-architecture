@@ -1,4 +1,4 @@
-import { AggregateRoot } from '#/shared/domain/aggregate-root'
+import { AggregateRoot } from '#/shared/core'
 import { ProfileEvents } from '../contracts/events'
 import { Bio, DisplayName } from './value-objects'
 

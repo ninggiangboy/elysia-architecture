@@ -1,4 +1,4 @@
-import type { IdGenerator } from '#/shared/application/ports'
+import type { IdGenerator } from '#/shared/core'
 import type { DocumentRepository } from '../domain/billing-repository'
 import {
   BillingDocument,

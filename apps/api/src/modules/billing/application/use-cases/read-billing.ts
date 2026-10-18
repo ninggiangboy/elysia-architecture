@@ -1,5 +1,5 @@
 import type { TopUpStatus } from '@app/shared-types'
-import { NotFoundError } from '#/shared/application/errors'
+import { NotFoundError } from '#/shared/core'
 import type { LedgerRepository, TopUpRepository } from '../../domain/billing-repository'
 import type { TopUp } from '../../domain/top-up'
 

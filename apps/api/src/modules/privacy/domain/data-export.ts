@@ -1,4 +1,4 @@
-import { DomainError } from '#/shared/domain/errors'
+import { DomainError } from '#/shared/core'
 
 const conflict = (code: string, message: string) => new DomainError(code, message, 'conflict')
 

@@ -1,11 +1,11 @@
+import type { Clock } from '#/shared/core'
 import type {
-  Clock,
+  Envelope,
   InboxGuard,
   IntegrationEventHandler,
-  ObjectStorage,
   OutboxWriter,
-} from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+} from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 
 /**
  * Building blocks for a module that takes part in the `privacy` module's two jobs (data export, account erasure).

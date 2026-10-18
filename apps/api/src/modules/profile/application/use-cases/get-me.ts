@@ -1,4 +1,4 @@
-import type { ObjectStorage } from '#/shared/application/ports'
+import type { ObjectStorage } from '#/shared/storage'
 import { type MeView, toMeView } from '../me-view'
 import type { ProfileLoader } from '../profile-loader'
 

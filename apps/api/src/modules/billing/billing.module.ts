@@ -1,21 +1,15 @@
 import { TOPUP_CURRENCIES } from '@app/shared-types'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import type { ProfileApi } from '#/modules/profile/contracts'
-import type {
-  Clock,
-  IdGenerator,
-  IntegrationEventHandler,
-  Log,
-  ObjectStorage,
-} from '#/shared/application/ports'
-import type { TokenVerifier } from '#/shared/http/auth.plugin'
-import type { Database } from '#/shared/infrastructure/db/database'
-import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
-import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
-import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
-import type { AppModule } from '#/shared/module/app-module'
-import { intervalJobs, noJobs } from '#/shared/module/interval-jobs'
+import type { TokenVerifier } from '#/shared/auth'
+import type { Clock, IdGenerator, Log } from '#/shared/core'
+import type { Database } from '#/shared/db'
+import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
+import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { privacyParticipation } from '#/shared/privacy-participant'
+import type { AppModule } from '#/shared/runtime'
+import { intervalJobs, noJobs } from '#/shared/runtime'
+import type { ObjectStorage } from '#/shared/storage'
 import { BillingDataExporter } from './application/billing-data-exporter'
 import { CurrencyPolicy, type CurrencyRule } from './application/currency-policy'
 import { DocumentIssuer } from './application/document-issuer'

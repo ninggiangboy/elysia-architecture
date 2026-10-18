@@ -1,12 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import type { InboxGuard } from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
-import {
-  FakeClock,
-  InMemoryOutbox,
-  PassthroughUnitOfWork,
-  SequentialIds,
-} from '#/shared/testing/fakes'
+import type { Envelope, InboxGuard } from '#/shared/messaging'
+import { FakeClock, InMemoryOutbox, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
 import { type NotificationDraft, NotificationEvents } from '../contracts'
 import { InvalidNotificationError, Notification } from '../domain/notification'
 import type { ListQuery, NotificationRepository } from '../domain/notification-repository'

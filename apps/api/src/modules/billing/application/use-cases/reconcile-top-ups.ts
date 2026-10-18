@@ -1,4 +1,4 @@
-import type { Clock, Log } from '#/shared/application/ports'
+import type { Clock, Log } from '#/shared/core'
 import type { TopUpRepository } from '../../domain/billing-repository'
 import type { PaymentGateway } from '../ports'
 import type { HandlePaymentEvent } from './handle-payment-event'

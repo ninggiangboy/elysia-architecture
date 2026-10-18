@@ -1,10 +1,6 @@
-import type {
-  Clock,
-  InboxGuard,
-  IntegrationEventHandler,
-  ObjectStorage,
-  OutboxWriter,
-} from '#/shared/application/ports'
+import type { Clock } from '#/shared/core'
+import type { InboxGuard, IntegrationEventHandler, OutboxWriter } from '#/shared/messaging'
+import type { ObjectStorage } from '#/shared/storage'
 import {
   type DataEraser,
   type DataExporter,

@@ -1,11 +1,10 @@
+import type { Clock, IdGenerator } from '#/shared/core'
 import type {
-  Clock,
-  IdGenerator,
+  Envelope,
   InboxGuard,
   IntegrationEventHandler,
   OutboxWriter,
-} from '#/shared/application/ports'
-import type { Envelope } from '#/shared/messaging/envelope'
+} from '#/shared/messaging'
 import type { NotificationDraft } from '../../contracts'
 import { Notification } from '../../domain/notification'
 import type { NotificationRepository } from '../../domain/notification-repository'

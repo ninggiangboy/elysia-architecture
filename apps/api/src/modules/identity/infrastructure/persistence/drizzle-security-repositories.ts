@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gt, gte, isNull, lt, min, sql } from 'drizzle-orm'
-import { ConflictError, VersionConflictError } from '#/shared/application/errors'
-import { type Database, isUniqueViolation } from '#/shared/infrastructure/db/database'
+import { ConflictError, VersionConflictError } from '#/shared/core'
+import { type Database, isUniqueViolation } from '#/shared/db'
 import type { OAuthState, WebAuthnChallenge, WebAuthnPurpose } from '../../domain/auth-challenge'
 import { OAuthAccount, type OAuthProviderId } from '../../domain/oauth-account'
 import { Passkey, type PasskeyDeviceType } from '../../domain/passkey'
