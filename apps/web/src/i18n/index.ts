@@ -1,4 +1,10 @@
-import { DEFAULT_LOCALE, isLocale, LOCALES, type Locale, negotiateLocale } from '@app/shared-types'
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  LOCALES,
+  type Locale,
+  negotiateLocale,
+} from '@app/shared-types/locales'
 import i18next from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import { en } from './locales/en'

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
+import { createTranslator } from '@kit/i18n'
 import type { Translate } from '#/modules/notification/contracts'
-import { createTranslator } from '#/shared/i18n'
 import { en } from './messages/en'
 import { vi } from './messages/vi'
 import {
@@ -12,7 +12,7 @@ import {
   suspiciousSessionNotification,
 } from './notification'
 
-const translate = createTranslator(en, { vi }) as unknown as (locale: Locale) => Translate
+const translate = createTranslator('en', en, { vi }) as unknown as (locale: Locale) => Translate
 const ALICE = 'alice'
 const chromeMac =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'

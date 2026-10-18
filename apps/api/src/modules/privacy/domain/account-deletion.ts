@@ -1,4 +1,4 @@
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
 import { DomainError } from '#/shared/core'
 
 const conflict = (code: string, message: string) => new DomainError(code, message, 'conflict')

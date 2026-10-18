@@ -9,7 +9,6 @@ const SHARED_GRAPH = {
   core: [],
   config: [],
   context: [],
-  i18n: [],
   telemetry: ['context', 'config'],
   db: ['core', 'config'],
   auth: ['core', 'context', 'http'],

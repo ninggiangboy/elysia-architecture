@@ -1,4 +1,4 @@
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
 import { setLocale } from '@/i18n'
 import { http, unwrap } from '@/lib/api'
 import { authStore } from '@/lib/auth-store'

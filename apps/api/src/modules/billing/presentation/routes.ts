@@ -1,4 +1,4 @@
-import { DOCUMENT_KINDS, DOCUMENT_STATUSES } from '@app/shared-types'
+import { DOCUMENT_KINDS, DOCUMENT_STATUSES } from '@app/shared-types/billing'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
 import { ConflictError, NotFoundError, ValidationError } from '#/shared/core'

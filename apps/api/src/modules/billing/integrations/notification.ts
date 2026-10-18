@@ -1,9 +1,9 @@
+import { formatMoney } from '@kit/i18n'
 import type {
   InAppDefinition,
   NotificationIntegration,
   TemplateValues,
 } from '#/modules/notification/contracts'
-import { formatMoney } from '#/shared/i18n'
 import { BillingEvents, type TopUpSucceededPayload } from '../contracts'
 import { en } from './messages/en'
 import { vi } from './messages/vi'

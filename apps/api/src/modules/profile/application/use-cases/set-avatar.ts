@@ -1,4 +1,4 @@
-import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES } from '@app/shared-types'
+import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES } from '@app/shared-types/profile'
 import type { Clock, UnitOfWork } from '#/shared/core'
 import { ValidationError } from '#/shared/core'
 import type { OutboxWriter } from '#/shared/messaging'

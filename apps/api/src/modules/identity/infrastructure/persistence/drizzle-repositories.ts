@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types'
+import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types/locales'
 import { and, desc, eq, gt, isNull, min, ne } from 'drizzle-orm'
 import { ConflictError, VersionConflictError } from '#/shared/core'
 import { type Database, isUniqueViolation } from '#/shared/db'

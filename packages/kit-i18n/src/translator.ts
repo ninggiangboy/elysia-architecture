@@ -1,4 +1,4 @@
-import { type Catalog, DEFAULT_LOCALE, type Locale } from '@app/shared-types'
+import type { Catalog } from './catalog'
 
 type PluralSuffix = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other'
 
@@ -27,19 +27,22 @@ const lookup = (catalog: Catalog, path: string): string | undefined => {
  * plural keys chosen by `count`), so a message reads the same on both sides. Falls back to the default language, then to the key.
  */
 export function createTranslator<Base extends Catalog>(
+  defaultLocale: string,
   base: Base,
-  translations: Record<Exclude<Locale, typeof DEFAULT_LOCALE>, Catalog>,
+  translations: Readonly<Record<string, Catalog>>,
 ) {
-  const catalogs: Record<Locale, Catalog> = { [DEFAULT_LOCALE]: base, ...translations }
-  return (locale: Locale): Translate<MessageKey<Base>> => {
+  const catalogs: Record<string, Catalog> = { [defaultLocale]: base, ...translations }
+  return (locale: string): Translate<MessageKey<Base>> => {
     const rules = new Intl.PluralRules(locale)
     return (key, params) => {
       const count = typeof params?.count === 'number' ? params.count : undefined
       const forms =
         count === undefined ? [key] : [`${key}_${rules.select(count)}`, `${key}_other`, key]
       let template: string | undefined
-      for (const lang of [locale, DEFAULT_LOCALE] as Locale[]) {
-        template = forms.map((form) => lookup(catalogs[lang], form)).find((m) => m !== undefined)
+      for (const lang of [locale, defaultLocale]) {
+        const catalog = catalogs[lang]
+        if (!catalog) continue
+        template = forms.map((form) => lookup(catalog, form)).find((m) => m !== undefined)
         if (template !== undefined) break
       }
       return (template ?? key).replace(/\{\{\s*(\w+)\s*\}\}/g, (whole, name: string) =>

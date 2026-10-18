@@ -1,4 +1,4 @@
-import { LOCALES } from '@app/shared-types'
+import { LOCALES } from '@app/shared-types/locales'
 import { Elysia, t } from 'elysia'
 import { authPlugin, type TokenVerifier } from '#/shared/auth'
 import { UnauthorizedError } from '#/shared/core'

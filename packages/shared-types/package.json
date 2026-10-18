@@ -3,6 +3,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    "./api-error": "./src/api-error.ts",
+    "./billing": "./src/billing.ts",
+    "./locales": "./src/locales.ts",
+    "./profile": "./src/profile.ts"
+  },
+  "dependencies": {
+    "@kit/i18n": "workspace:*"
   }
 }

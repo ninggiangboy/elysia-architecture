@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
-import { diffCatalogs, LOCALES } from '@app/shared-types'
+import { LOCALES } from '@app/shared-types/locales'
+import { diffCatalogs } from '@kit/i18n'
 import { billingNotifications } from '#/modules/billing/integrations/notification'
 import { identityNotifications } from '#/modules/identity/integrations/notification'
 import { createMessages } from '#/modules/notification/application/messages'

@@ -30,6 +30,7 @@
     "@app/shared-types": "workspace:*",
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/openapi": "^1.4.0",
+    "@kit/i18n": "workspace:*",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
     "@opentelemetry/resources": "^2.12.0",

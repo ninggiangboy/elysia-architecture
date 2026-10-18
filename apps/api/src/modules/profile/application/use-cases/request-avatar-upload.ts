@@ -1,4 +1,8 @@
-import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES, type AvatarContentType } from '@app/shared-types'
+import {
+  AVATAR_CONTENT_TYPES,
+  AVATAR_MAX_BYTES,
+  type AvatarContentType,
+} from '@app/shared-types/profile'
 import type { IdGenerator } from '#/shared/core'
 import { ValidationError } from '#/shared/core'
 import type { ObjectStorage } from '#/shared/storage'

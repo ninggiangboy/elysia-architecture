@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import { AVATAR_MAX_BYTES, COVER_MAX_BYTES } from '@app/shared-types'
+import { AVATAR_MAX_BYTES, COVER_MAX_BYTES } from '@app/shared-types/profile'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import { VersionConflictError } from '#/shared/core'
 import {

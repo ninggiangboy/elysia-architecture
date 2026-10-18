@@ -1,4 +1,4 @@
-import type { TopUpStatus } from '@app/shared-types'
+import type { TopUpStatus } from '@app/shared-types/billing'
 import { DomainError } from '#/shared/core'
 
 export type { TopUpStatus }

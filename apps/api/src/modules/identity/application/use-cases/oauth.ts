@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
+import { DEFAULT_LOCALE, type Locale } from '@app/shared-types/locales'
 import type { StepUpPolicy } from '#/shared/auth'
 import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '#/shared/core'

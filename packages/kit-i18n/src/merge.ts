@@ -1,4 +1,4 @@
-import type { Catalog } from '@app/shared-types'
+import type { Catalog } from './catalog'
 
 const isCatalog = (value: string | Catalog | undefined): value is Catalog =>
   typeof value === 'object' && value !== null

@@ -1,4 +1,4 @@
-import type { DocumentKind, DocumentStatus } from '@app/shared-types'
+import type { DocumentKind, DocumentStatus } from '@app/shared-types/billing'
 import { DomainError } from '#/shared/core'
 
 export type { DocumentKind, DocumentStatus }

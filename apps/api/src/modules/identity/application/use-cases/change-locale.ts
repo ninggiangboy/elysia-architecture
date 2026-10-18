@@ -1,4 +1,4 @@
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
 import type { Clock } from '#/shared/core'
 import { NotFoundError } from '#/shared/core'
 import type { UserRepository } from '../../domain/repositories'

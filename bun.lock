@@ -17,6 +17,7 @@
         "@app/shared-types": "workspace:*",
         "@elysiajs/cors": "^1.4.0",
         "@elysiajs/openapi": "^1.4.0",
+        "@kit/i18n": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
         "@opentelemetry/resources": "^2.12.0",
@@ -47,6 +48,7 @@
       "dependencies": {
         "@app/shared-types": "workspace:*",
         "@elysiajs/eden": "^1.4.9",
+        "@kit/i18n": "workspace:*",
         "@radix-ui/react-label": "^2.1.17",
         "@radix-ui/react-slot": "^1.5.0",
         "@scalar/api-reference-react": "^0.9.80",
@@ -79,8 +81,17 @@
         "vite": "^8.3.4",
       },
     },
+    "packages/kit-i18n": {
+      "name": "@kit/i18n",
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "packages/shared-types": {
       "name": "@app/shared-types",
+      "dependencies": {
+        "@kit/i18n": "workspace:*",
+      },
     },
   },
   "packages": {
@@ -329,6 +340,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@kit/i18n": ["@kit/i18n@workspace:packages/kit-i18n"],
 
     "@levischuck/tiny-cbor": ["@levischuck/tiny-cbor@0.2.11", "", {}, "sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow=="],
 

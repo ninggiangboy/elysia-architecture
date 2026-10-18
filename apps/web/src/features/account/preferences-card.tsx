@@ -1,4 +1,4 @@
-import { LOCALE_NAMES, LOCALES } from '@app/shared-types'
+import { LOCALE_NAMES, LOCALES } from '@app/shared-types/locales'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { type ReactNode, useRef } from 'react'
 import { useTranslation } from 'react-i18next'

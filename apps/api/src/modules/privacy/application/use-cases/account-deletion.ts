@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types'
+import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types/locales'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import type { StepUpPolicy } from '#/shared/auth'
 import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'

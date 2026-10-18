@@ -1,5 +1,11 @@
-import { type Catalog, DEFAULT_LOCALE, LOCALES, type Locale } from '@app/shared-types'
-import { createTranslator, mergeCatalogs, messagePaths, overrideCatalog } from '#/shared/i18n'
+import { DEFAULT_LOCALE, LOCALES, type Locale } from '@app/shared-types/locales'
+import {
+  type Catalog,
+  createTranslator,
+  mergeCatalogs,
+  messagePaths,
+  overrideCatalog,
+} from '@kit/i18n'
 import type { NotificationIntegration, Translate } from '../../contracts'
 import { en } from './en'
 import { vi } from './vi'
@@ -64,6 +70,10 @@ export function createMessages({ integrations, overrides }: MessagesOptions): Me
       catalogs[locale],
     ]),
   ) as Record<Exclude<Locale, typeof DEFAULT_LOCALE>, Catalog>
-  const translator = createTranslator<Catalog>(catalogs[DEFAULT_LOCALE], translations)
+  const translator = createTranslator<Catalog>(
+    DEFAULT_LOCALE,
+    catalogs[DEFAULT_LOCALE],
+    translations,
+  )
   return { catalogs, translate: (locale) => translator(locale) as Translate }
 }

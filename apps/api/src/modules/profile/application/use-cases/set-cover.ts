@@ -1,4 +1,4 @@
-import { COVER_CONTENT_TYPES, COVER_MAX_BYTES } from '@app/shared-types'
+import { COVER_CONTENT_TYPES, COVER_MAX_BYTES } from '@app/shared-types/profile'
 import type { Clock, UnitOfWork } from '#/shared/core'
 import { ValidationError } from '#/shared/core'
 import type { OutboxWriter } from '#/shared/messaging'

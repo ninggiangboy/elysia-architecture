@@ -1,8 +1,4 @@
-/** Constants shared by web ↔ api (no logic). */
-
-export * from './billing'
-export * from './i18n'
-export * from './i18n-catalog'
+/** Limits of a profile, shared by web ↔ api (the web checks before it uploads, the api enforces). */
 
 export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 
@@ -22,7 +18,3 @@ export type CoverContentType = keyof typeof COVER_CONTENT_TYPES
 
 export const DISPLAY_NAME_MAX = 50
 export const BIO_MAX = 280
-
-export interface ApiErrorBody {
-  error: { code: string; message: string; requestId?: string; details?: unknown }
-}

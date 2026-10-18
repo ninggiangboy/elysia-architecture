@@ -1,4 +1,4 @@
-import type { Catalog } from '@app/shared-types'
+import type { Catalog } from '@kit/i18n'
 
 /** What privacy says to people through the notification module (mail and in-app/push), in Vietnamese. Keys must not contain `_` except plural suffixes; the notification module merges every installed integration's catalog. */
 export const vi = {

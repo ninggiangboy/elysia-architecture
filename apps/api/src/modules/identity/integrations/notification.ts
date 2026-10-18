@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, isLocale, type Locale } from '@app/shared-types'
+import { DEFAULT_LOCALE, isLocale, type Locale } from '@app/shared-types/locales'
 import type {
   InAppDefinition,
   LocaleResolver,

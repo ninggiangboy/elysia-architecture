@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, type Locale } from '@app/shared-types'
+import { DEFAULT_LOCALE, type Locale } from '@app/shared-types/locales'
 import type { Clock, IdGenerator, UnitOfWork } from '#/shared/core'
 import { ConflictError, ValidationError } from '#/shared/core'
 import type { OutboxWriter } from '#/shared/messaging'

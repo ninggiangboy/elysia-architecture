@@ -1,4 +1,4 @@
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
 import { AggregateRoot } from '#/shared/core'
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from './email'

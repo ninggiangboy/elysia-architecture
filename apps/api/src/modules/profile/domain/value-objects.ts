@@ -1,4 +1,4 @@
-import { BIO_MAX, DISPLAY_NAME_MAX } from '@app/shared-types'
+import { BIO_MAX, DISPLAY_NAME_MAX } from '@app/shared-types/profile'
 import { DomainError } from '#/shared/core'
 
 const isControl = (code: number) => code < 0x20 || code === 0x7f

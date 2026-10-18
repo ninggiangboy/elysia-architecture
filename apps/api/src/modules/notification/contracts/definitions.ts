@@ -1,4 +1,5 @@
-import type { Catalog, Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
+import type { Catalog } from '@kit/i18n'
 
 /**
  * What a producer module hands to notification so its events reach people. Notification knows no producer: each one ships

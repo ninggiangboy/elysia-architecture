@@ -1,4 +1,4 @@
-import { LOCALE_NAMES, LOCALES } from '@app/shared-types'
+import { LOCALE_NAMES, LOCALES } from '@app/shared-types/locales'
 import { Check, Languages } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown'

@@ -1,4 +1,4 @@
-import { TOPUP_CURRENCY_CODES } from '@app/shared-types'
+import { TOPUP_CURRENCY_CODES } from '@app/shared-types/billing'
 import { z } from 'zod'
 import { allOrNone, blank, defineSlice, duration, list, posInt } from '#/shared/config'
 

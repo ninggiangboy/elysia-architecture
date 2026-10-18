@@ -1,4 +1,4 @@
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
 import type { TemplateValues, Translate } from '../contracts'
 
 /** The title and body of a templated notification in a language; `null` for a template this build does not know. */

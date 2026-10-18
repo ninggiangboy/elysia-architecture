@@ -1,3 +1,4 @@
+import { formatDay } from '@kit/i18n'
 import type {
   InAppDefinition,
   MailContext,
@@ -6,7 +7,6 @@ import type {
   NotificationIntegration,
   TemplateValues,
 } from '#/modules/notification/contracts'
-import { formatDay } from '#/shared/i18n'
 import {
   type AccountDeletedPayload,
   type AccountDeletionCancelledPayload,

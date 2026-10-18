@@ -1,11 +1,11 @@
 import type { App } from '@app/api'
+import type { ApiErrorBody } from '@app/shared-types/api-error'
 import {
-  type ApiErrorBody,
   AVATAR_MAX_BYTES,
   BIO_MAX,
   COVER_MAX_BYTES,
   DISPLAY_NAME_MAX,
-} from '@app/shared-types'
+} from '@app/shared-types/profile'
 import { treaty } from '@elysiajs/eden'
 import { currentLocale, i18n } from '@/i18n'
 import { authStore } from './auth-store'

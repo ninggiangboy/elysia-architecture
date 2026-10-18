@@ -1,4 +1,4 @@
-import type { Locale } from '@app/shared-types'
+import type { Locale } from '@app/shared-types/locales'
 import type { Clock, Log } from '#/shared/core'
 import type { Mailer } from '#/shared/mail'
 import { MailPermanentError } from '#/shared/mail'

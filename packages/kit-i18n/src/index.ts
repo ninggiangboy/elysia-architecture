@@ -1,3 +1,5 @@
+export * from './catalog'
 export * from './format'
+export * from './locales'
 export * from './merge'
 export * from './translator'

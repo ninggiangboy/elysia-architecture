@@ -1,4 +1,4 @@
-import { TOPUP_CURRENCIES } from '@app/shared-types'
+import { TOPUP_CURRENCIES } from '@app/shared-types/billing'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import type { ProfileApi } from '#/modules/profile/contracts'
 import type { TokenVerifier } from '#/shared/auth'
