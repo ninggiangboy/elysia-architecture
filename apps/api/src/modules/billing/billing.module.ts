@@ -124,6 +124,13 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
 
   return {
     name: 'billing',
+    docs: [
+      {
+        name: 'billing',
+        description:
+          'Top up a wallet with Stripe (one balance per currency) and read the transaction history. The wallet is credited by the Stripe webhook.',
+      },
+    ],
     routes: billingRoutes({
       verifier,
       currencies,

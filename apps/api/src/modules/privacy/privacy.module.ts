@@ -108,6 +108,13 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
 
   return {
     name: 'privacy',
+    docs: [
+      {
+        name: 'privacy',
+        description:
+          'Export a copy of your data and delete your account. Both need a recent confirmation (`403 step_up_required`); deleting waits out a grace period in which it can be cancelled.',
+      },
+    ],
     routes: privacyRoutes({
       verifier,
       useCases: {

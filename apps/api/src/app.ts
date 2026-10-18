@@ -75,7 +75,7 @@ export function buildApp(container: Container) {
           path: '/openapi',
           // By default the plugin excludes paths with a file extension (.json) — which would drop /.well-known/jwks.json from the docs.
           exclude: { staticFile: false },
-          documentation: openapiDocumentation,
+          documentation: openapiDocumentation(container.docs),
         }),
       )
       .use(healthRoutes(container))

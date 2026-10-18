@@ -291,6 +291,17 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
 
   return {
     name: 'identity',
+    docs: [
+      {
+        name: 'auth',
+        description: 'Passwordless sign-in (magic link, passkey, Google/GitHub), sessions and JWKS',
+      },
+      {
+        name: 'account',
+        description:
+          "Operations on the current user's account. Sensitive ones answer `403 step_up_required` until the user confirms again (`/account/step-up/*`).",
+      },
+    ],
     routes,
     api: new IdentityApiImpl(users),
     verifier: tokenService,

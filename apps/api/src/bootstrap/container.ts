@@ -232,6 +232,7 @@ export async function createContainer(
   const modules = { identity, profile, notification, privacy, billing, realtime } as const
   const list: readonly AppModule[] = Object.values(modules)
   const jobs = list.flatMap((m) => (m.jobs ? [m.jobs] : []))
+  const docs = list.flatMap((m) => m.docs ?? [])
 
   const bus = new InProcessMessageBus(logger)
   for (const handler of list.flatMap((m) => m.handlers ?? [])) bus.subscribe(handler)
@@ -278,6 +279,8 @@ export async function createContainer(
     ids,
     storage,
     modules,
+    /** The API doc sections the modules describe. */
+    docs,
     database,
     bus,
     relay,

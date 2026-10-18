@@ -74,6 +74,7 @@ export function createProfileModule(deps: ProfileModuleDeps): ProfileModule {
 
   return {
     name: 'profile',
+    docs: [{ name: 'profile', description: 'Profile and avatar of the current user' }],
     routes: profileRoutes({
       verifier,
       useCases: {

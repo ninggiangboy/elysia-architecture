@@ -137,6 +137,12 @@ export function createNotificationModule({
   })
   return {
     name: 'notification',
+    docs: [
+      {
+        name: 'notifications',
+        description: "The current user's in-app notifications (also pushed live over SSE)",
+      },
+    ],
     routes: notificationRoutes({
       verifier,
       useCases: {

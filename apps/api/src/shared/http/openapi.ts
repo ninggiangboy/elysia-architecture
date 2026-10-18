@@ -47,7 +47,8 @@ export const BEARER_SCHEME = 'bearerAuth'
 
 export const bearerSecurity = [{ [BEARER_SCHEME]: [] }]
 
-export const openapiDocumentation = {
+/** The document the API serves; `tags` are the sections each module describes itself (`AppModule.docs`). */
+export const openapiDocumentation = (tags: readonly { name: string; description: string }[]) => ({
   info: {
     title: 'Elysia Architecture API',
     version: '0.1.0',
@@ -56,33 +57,7 @@ export const openapiDocumentation = {
       'and the refresh token lives in the HttpOnly cookie `refresh_token`.\n\n' +
       'Every error has the shape `{ "error": { "code", "message", "requestId", "details?" } }`.',
   },
-  tags: [
-    { name: 'health', description: 'Service health checks' },
-    {
-      name: 'auth',
-      description: 'Passwordless sign-in (magic link, passkey, Google/GitHub), sessions and JWKS',
-    },
-    {
-      name: 'account',
-      description:
-        "Operations on the current user's account. Sensitive ones answer `403 step_up_required` until the user confirms again (`/account/step-up/*`).",
-    },
-    { name: 'profile', description: 'Profile and avatar of the current user' },
-    {
-      name: 'privacy',
-      description:
-        'Export a copy of your data and delete your account. Both need a recent confirmation (`403 step_up_required`); deleting waits out a grace period in which it can be cancelled.',
-    },
-    {
-      name: 'billing',
-      description:
-        'Top up a wallet with Stripe (one balance per currency) and read the transaction history. The wallet is credited by the Stripe webhook.',
-    },
-    {
-      name: 'notifications',
-      description: "The current user's in-app notifications (also pushed live over SSE)",
-    },
-  ],
+  tags: [{ name: 'health', description: 'Service health checks' }, ...tags],
   components: {
     securitySchemes: {
       [BEARER_SCHEME]: {
@@ -94,4 +69,4 @@ export const openapiDocumentation = {
       },
     },
   },
-}
+})
