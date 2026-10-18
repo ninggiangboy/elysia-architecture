@@ -99,6 +99,10 @@
     "packages/kit-ui": {
       "entry": ["src/index.ts"],
       "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/kit-web-core": {
+      "entry": ["src/index.ts", "src/react.ts", "src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

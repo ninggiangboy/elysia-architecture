@@ -1,4 +1,5 @@
 import { Button } from '@kit/ui'
+import { once } from '@kit/web-core'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -6,7 +7,6 @@ import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
 import { verifyMagicLink } from '@/features/auth/queries'
 import { errorMessage } from '@/lib/api'
-import { once } from '@/lib/once'
 
 export const Route = createFileRoute('/auth/callback')({
   validateSearch: (s: Record<string, unknown>) => ({

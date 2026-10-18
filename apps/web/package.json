@@ -15,6 +15,7 @@
     "@elysiajs/eden": "^1.4.9",
     "@kit/i18n": "workspace:*",
     "@kit/ui": "workspace:*",
+    "@kit/web-core": "workspace:*",
     "@mod/billing": "workspace:*",
     "@mod/profile": "workspace:*",
     "@radix-ui/react-label": "^2.1.17",

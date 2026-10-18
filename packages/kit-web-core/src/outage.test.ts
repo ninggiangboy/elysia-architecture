@@ -1,14 +1,11 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import {
-  maintenanceStore,
-  resetMaintenance,
-  watchNetworkFailure,
-  watchResponse,
-} from './maintenance'
+import { createOutageDetector } from './outage'
 
 const realFetch = globalThis.fetch
-// `apiOrigin()` falls back to the page's origin.
-;(globalThis as { window?: unknown }).window = { location: { origin: 'http://web.test' } }
+const outage = createOutageDetector({ healthUrl: () => 'http://web.test/api/health/ready' })
+const { watchResponse, watchNetworkFailure } = outage
+const maintenanceStore = outage.store
+const resetMaintenance = () => outage.reset()
 
 afterEach(() => {
   resetMaintenance()

@@ -74,7 +74,8 @@ for (const h of hits.sort((a, b) => a.file.localeCompare(b.file))) {
   groups.set(g, [...(groups.get(g) ?? []), h])
 }
 console.log(`Removing "${name}" (${own}) touches ${hits.length} file(s) outside its folder:`)
-for (const [g, list] of [...groups].sort((a, b) => (b[0].startsWith('host') ? 1 : -1))) {
+const host = (g: string) => (g.startsWith('host') ? 0 : 1)
+for (const [g, list] of [...groups].sort((a, b) => host(a[0]) - host(b[0]))) {
   console.log(`\n  ${g}`)
   for (const h of list) console.log(`    ${String(h.lines).padStart(3)}  ${h.file}`)
 }

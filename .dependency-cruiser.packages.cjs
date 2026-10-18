@@ -10,6 +10,7 @@ const KIT_GRAPH = {
   context: [],
   i18n: [],
   ui: [],
+  'web-core': [],
   telemetry: ['context', 'config'],
   db: ['core', 'config'],
   http: ['core', 'context', 'telemetry'],

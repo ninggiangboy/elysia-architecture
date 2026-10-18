@@ -1,4 +1,5 @@
 import { Button } from '@kit/ui'
+import { once } from '@kit/web-core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
@@ -10,7 +11,6 @@ import { connectedAccountsQuery } from '@/features/account/queries'
 import { providerName } from '@/features/auth/provider-icons'
 import { completeOAuth } from '@/features/auth/queries'
 import { errorMessage } from '@/lib/api'
-import { once } from '@/lib/once'
 import { ensureSession } from '@/lib/session'
 
 const str = (v: unknown) => (typeof v === 'string' ? v : undefined)

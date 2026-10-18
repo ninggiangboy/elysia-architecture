@@ -1,4 +1,5 @@
 import { Button } from '@kit/ui'
+import { once } from '@kit/web-core'
 import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
@@ -7,7 +8,6 @@ import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
 import { confirmEmailChange } from '@/features/account/queries'
 import { errorMessage } from '@/lib/api'
-import { once } from '@/lib/once'
 
 export const Route = createFileRoute('/account/confirm-email')({
   validateSearch: (s: Record<string, unknown>) => ({

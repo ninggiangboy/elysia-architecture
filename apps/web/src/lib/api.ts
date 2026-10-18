@@ -1,12 +1,13 @@
 import type { App } from '@app/api'
-import type { ApiErrorBody } from '@app/shared-types/api-error'
 import { treaty } from '@elysiajs/eden'
+import { apiOrigin, createAuthFetch, createUnwrap } from '@kit/web-core'
 import { AVATAR_MAX_BYTES, BIO_MAX, COVER_MAX_BYTES, DISPLAY_NAME_MAX } from '@mod/profile/public'
 import { currentLocale, i18n } from '@/i18n'
 import { authStore } from './auth-store'
-import { apiOrigin } from './config'
 import { watchNetworkFailure, watchResponse } from './maintenance'
 import { refreshSession } from './session'
+
+export { ApiError } from '@kit/web-core'
 
 const isAuthEndpoint = (input: RequestInfo | URL) =>
   String(input instanceof Request ? input.url : input).includes('/api/auth/')
@@ -22,33 +23,15 @@ const simulateLatency = async (input: RequestInfo | URL, init?: RequestInit) => 
   await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 500))
 }
 
-/** fetch with a Bearer token; on 401 it refreshes (single-flight) and retries exactly once. */
-const authFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-  const send = () => {
-    const headers = new Headers(init?.headers)
-    const token = authStore.get().accessToken
-    if (token) headers.set('authorization', `Bearer ${token}`)
-    // Lets the server write its answers (and, for a new account, its mail) in the language the app is showing.
-    headers.set('accept-language', currentLocale())
-    return fetch(input, { ...init, headers, credentials: 'include' })
-  }
-  // A request that gets no answer at all may mean the API is down: have a look (without holding up the caller's error).
-  const sendWatched = async () => {
-    try {
-      return await send()
-    } catch (err) {
-      void watchNetworkFailure(err)
-      throw err
-    }
-  }
-  await simulateLatency(input, init)
-  let res = await sendWatched()
-  if (res.status === 401 && !isAuthEndpoint(input) && authStore.get().accessToken) {
-    if (await refreshSession()) res = await sendWatched()
-  }
-  await watchResponse(res)
-  return res
-}) as typeof fetch // bun-types adds `preconnect` to typeof fetch; cast to match
+const authFetch = createAuthFetch({
+  store: authStore,
+  refresh: refreshSession,
+  locale: currentLocale,
+  isAuthEndpoint,
+  onNetworkFailure: watchNetworkFailure,
+  onResponse: watchResponse,
+  beforeSend: simulateLatency,
+})
 
 /** Fully typed client inferred from the backend (Eden Treaty) — change the API on the server and the web app fails to compile. */
 export const http = treaty<App>(apiOrigin(), { fetcher: authFetch })
@@ -72,29 +55,7 @@ function apiErrorMessage(code: string | undefined, serverMessage: string | undef
   return serverMessage ?? i18n.t('common.unknownError')
 }
 
-export class ApiError extends Error {
-  constructor(
-    readonly code: string,
-    message: string,
-    readonly status: number,
-  ) {
-    super(message)
-  }
-}
-
-export function unwrap<R extends { data: unknown; error: unknown }>(
-  res: R,
-): NonNullable<R['data']> {
-  if (res.error) {
-    const { status, value } = res.error as { status: number; value: ApiErrorBody | undefined }
-    throw new ApiError(
-      value?.error?.code ?? 'unknown_error',
-      apiErrorMessage(value?.error?.code, value?.error?.message),
-      status,
-    )
-  }
-  return res.data as NonNullable<R['data']>
-}
+export const unwrap = createUnwrap(apiErrorMessage)
 
 export const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : i18n.t('common.unknownError')

@@ -1,0 +1,23 @@
+{
+  "name": "@kit/web-core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.104.3",
+    "react": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.104.3",
+    "@types/bun": "latest",
+    "@types/react": "^19.3.0",
+    "react": "^19.3.1"
+  }
+}
