@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, matchLocale } from '@app/shared-types/locales'
 import { ConflictError, VersionConflictError } from '@kit/core'
 import { type Database, isUniqueViolation } from '@kit/db'
-import { and, desc, eq, gt, isNull, min, ne } from 'drizzle-orm'
+import { and, desc, eq, gt, isNull, lt, min, ne, sql } from 'drizzle-orm'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'
 import { MagicLink } from '../../domain/magic-link'
@@ -49,6 +49,10 @@ export class DrizzleUserRepository implements UserRepository {
           id: user.id,
           email: user.email.value,
           locale: user.locale,
+          passwordHash: user.passwordHash,
+          passwordChangedAt: user.passwordChangedAt,
+          termsVersion: user.termsVersion,
+          termsAcceptedAt: user.termsAcceptedAt,
           version: 1,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
@@ -59,6 +63,8 @@ export class DrizzleUserRepository implements UserRepository {
           .set({
             email: user.email.value,
             locale: user.locale,
+            passwordHash: user.passwordHash,
+            passwordChangedAt: user.passwordChangedAt,
             updatedAt: user.updatedAt,
             version: user.version + 1,
           })
@@ -81,6 +87,10 @@ function toUser(row: typeof users.$inferSelect): User {
     version: row.version,
     email: Email.create(row.email),
     locale: matchLocale(row.locale) ?? DEFAULT_LOCALE,
+    passwordHash: row.passwordHash,
+    passwordChangedAt: row.passwordChangedAt,
+    termsVersion: row.termsVersion,
+    termsAcceptedAt: row.termsAcceptedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -94,6 +104,7 @@ export class DrizzleMagicLinkRepository implements MagicLinkRepository {
       id: link.id,
       email: link.email.value,
       tokenHash: link.tokenHash,
+      codeHash: link.codeHash,
       requestedIp: link.requestedIp,
       createdAt: link.createdAt,
       expiresAt: link.expiresAt,
@@ -112,18 +123,48 @@ export class DrizzleMagicLinkRepository implements MagicLinkRepository {
         ),
       )
       .returning()
-    if (!row) return null
-    return MagicLink.restore({
-      id: row.id,
-      version: 1,
-      email: Email.create(row.email),
-      tokenHash: row.tokenHash,
-      requestedIp: row.requestedIp,
-      createdAt: row.createdAt,
-      expiresAt: row.expiresAt,
-      consumedAt: row.consumedAt,
-    })
+    return row ? toMagicLink(row) : null
   }
+
+  async consumeByCode(
+    email: Email,
+    codeHash: string,
+    now: Date,
+    maxAttempts: number,
+  ): Promise<MagicLink | null> {
+    const ex = this.database.executor
+    const live = and(
+      eq(magicLinks.email, email.value),
+      isNull(magicLinks.consumedAt),
+      gt(magicLinks.expiresAt, now),
+      lt(magicLinks.attempts, maxAttempts),
+    )
+    const [row] = await ex
+      .update(magicLinks)
+      .set({ consumedAt: now })
+      .where(and(live, eq(magicLinks.codeHash, codeHash)))
+      .returning()
+    if (row) return toMagicLink(row)
+    await ex
+      .update(magicLinks)
+      .set({ attempts: sql`${magicLinks.attempts} + 1` })
+      .where(live)
+    return null
+  }
+}
+
+function toMagicLink(row: typeof magicLinks.$inferSelect): MagicLink {
+  return MagicLink.restore({
+    id: row.id,
+    version: 1,
+    email: Email.create(row.email),
+    tokenHash: row.tokenHash,
+    codeHash: row.codeHash,
+    requestedIp: row.requestedIp,
+    createdAt: row.createdAt,
+    expiresAt: row.expiresAt,
+    consumedAt: row.consumedAt,
+  })
 }
 
 export class DrizzleEmailChangeRequestRepository implements EmailChangeRequestRepository {
@@ -266,6 +307,21 @@ export class DrizzleRefreshTokenRepository implements RefreshTokenRepository {
         and(
           eq(refreshTokens.userId, userId),
           ne(refreshTokens.familyId, exceptFamilyId),
+          isNull(refreshTokens.revokedAt),
+          gt(refreshTokens.expiresAt, now),
+        ),
+      )
+      .returning({ familyId: refreshTokens.familyId })
+    return [...new Set(rows.map((r) => r.familyId))]
+  }
+
+  async revokeAllSessions(userId: string, now: Date): Promise<string[]> {
+    const rows = await this.database.executor
+      .update(refreshTokens)
+      .set({ revokedAt: now })
+      .where(
+        and(
+          eq(refreshTokens.userId, userId),
           isNull(refreshTokens.revokedAt),
           gt(refreshTokens.expiresAt, now),
         ),

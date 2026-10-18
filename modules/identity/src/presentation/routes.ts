@@ -3,9 +3,16 @@ import { authPlugin, type TokenVerifier } from '@kit/auth'
 import { UnauthorizedError } from '@kit/core'
 import { API_PREFIX, clientIp, errorResponse, userAgent, validationError } from '@kit/http'
 import { Elysia, t } from 'elysia'
+import type { AuthOutcome, SessionResult } from '../application/auth-outcome'
 import type { WebAuthnResponse } from '../application/ports'
+import type { GetAuthOptions, GetSecuritySummary } from '../application/use-cases/auth-options'
 import type { ChangeLocale } from '../application/use-cases/change-locale'
 import type { ConfirmEmailChange } from '../application/use-cases/confirm-email-change'
+import type {
+  ListInvitations,
+  RevokeInvitation,
+  SendInvitation,
+} from '../application/use-cases/invitations'
 import type { Logout } from '../application/use-cases/logout'
 import type { ListPasskeys, RemovePasskey } from '../application/use-cases/manage-passkeys'
 import type {
@@ -25,19 +32,38 @@ import type {
   BeginPasskeyRegistration,
   FinishPasskeyRegistration,
 } from '../application/use-cases/passkey-registration'
+import type {
+  LoginWithPassword,
+  RemovePassword,
+  RequestPasswordReset,
+  ResetPassword,
+  SetPassword,
+} from '../application/use-cases/password'
 import type { RefreshSession } from '../application/use-cases/refresh-session'
 import type { RequestEmailChange } from '../application/use-cases/request-email-change'
 import type { RequestMagicLink } from '../application/use-cases/request-magic-link'
+import type {
+  CompleteSignup,
+  RegisterWithPassword,
+  VerifySignup,
+} from '../application/use-cases/signup'
 import type {
   BeginStepUpPasskey,
   FinishStepUpPasskey,
   RequestStepUpCode,
   VerifyStepUpCode,
+  VerifyStepUpPassword,
+  VerifyStepUpTotp,
 } from '../application/use-cases/step-up'
 import type {
-  VerifyMagicLink,
-  VerifyMagicLinkResult,
-} from '../application/use-cases/verify-magic-link'
+  BeginTwoFactorSetup,
+  DisableTwoFactor,
+  EnableTwoFactor,
+  GetTwoFactorStatus,
+  RegenerateRecoveryCodes,
+  VerifyMfaLogin,
+} from '../application/use-cases/two-factor'
+import type { VerifyMagicLink } from '../application/use-cases/verify-magic-link'
 import { localePlugin } from './locale.plugin'
 
 export interface IdentityRouteDeps {
@@ -45,8 +71,29 @@ export interface IdentityRouteDeps {
   jwks: () => unknown
   secureCookies: boolean
   useCases: {
+    getAuthOptions: GetAuthOptions
+    getSecuritySummary: GetSecuritySummary
     requestMagicLink: RequestMagicLink
     verifyMagicLink: VerifyMagicLink
+    loginWithPassword: LoginWithPassword
+    registerWithPassword: RegisterWithPassword
+    verifySignup: VerifySignup
+    completeSignup: CompleteSignup
+    requestPasswordReset: RequestPasswordReset
+    resetPassword: ResetPassword
+    setPassword: SetPassword
+    removePassword: RemovePassword
+    getTwoFactorStatus: GetTwoFactorStatus
+    beginTwoFactorSetup: BeginTwoFactorSetup
+    enableTwoFactor: EnableTwoFactor
+    regenerateRecoveryCodes: RegenerateRecoveryCodes
+    disableTwoFactor: DisableTwoFactor
+    verifyMfaLogin: VerifyMfaLogin
+    sendInvitation: SendInvitation
+    listInvitations: ListInvitations
+    revokeInvitation: RevokeInvitation
+    verifyStepUpTotp: VerifyStepUpTotp
+    verifyStepUpPassword: VerifyStepUpPassword
     refreshSession: RefreshSession
     logout: Logout
     listSessions: ListSessions
@@ -87,12 +134,47 @@ const tokenBody = t.Object({
 
 const sessionBody = t.Object(
   {
+    status: t.Literal('authenticated'),
     accessToken: t.String({ description: 'JWT, sent via `Authorization: Bearer`' }),
     expiresIn: t.Number({ description: 'Access token lifetime (seconds)' }),
     user: t.Object({ id: t.String(), email: t.String({ format: 'email' }) }),
   },
   { description: 'New session. The refresh token is set in the HttpOnly cookie `refresh_token`' },
 )
+
+const mfaRequiredBody = t.Object(
+  {
+    status: t.Literal('mfa_required'),
+    mfaToken: t.String({
+      description: 'Send it with the authenticator code to `/auth/mfa/verify`',
+    }),
+    expiresIn: t.Number({ description: 'Seconds the token stays valid' }),
+  },
+  {
+    description: 'The first factor was right; the account also needs a code from its authenticator',
+  },
+)
+
+const signupRequiredBody = t.Object(
+  {
+    status: t.Literal('signup_required'),
+    signupToken: t.String({ description: 'Send it to `/auth/signup/complete`' }),
+    email: t.String({ format: 'email' }),
+    suggestedName: t.Nullable(t.String({ description: 'Name the provider knows the person by' })),
+    termsVersion: t.String({ description: 'The terms that must be accepted' }),
+  },
+  {
+    description: 'The email is proven but no account exists: finish the sign-up form to create it',
+  },
+)
+
+/** What the first step of a sign-in answers: signed in, a second factor to give, or a sign-up form to finish. */
+const authBody = t.Union([sessionBody, mfaRequiredBody, signupRequiredBody])
+
+const emailBody = t.String({ maxLength: 254, description: 'Account email' })
+const passwordBody = t.String({ minLength: 1, maxLength: 256, description: 'Password' })
+const newPasswordBody = t.String({ minLength: 1, maxLength: 1024, description: 'The new password' })
+const codeBody = t.String({ minLength: 1, maxLength: 20, description: 'Code to type' })
 
 const deviceSessionBody = t.Object({
   id: t.String({
@@ -155,6 +237,33 @@ const oauthAccountBody = t.Object({
   linkedAt: t.String({ format: 'date-time' }),
 })
 
+const twoFactorBody = t.Object({
+  available: t.Boolean({ description: 'The deployment offers authenticator apps' }),
+  enabled: t.Boolean(),
+  recoveryCodesRemaining: t.Number(),
+})
+const recoveryCodesBody = t.Object({
+  recoveryCodes: t.Array(t.String(), { description: 'Shown once; each works once' }),
+})
+const invitationBody = t.Object({
+  id: t.String({ format: 'uuid' }),
+  email: t.String(),
+  status: t.UnionEnum(['pending', 'accepted', 'expired', 'revoked']),
+  createdAt: t.String({ format: 'date-time' }),
+  expiresAt: t.String({ format: 'date-time' }),
+})
+const invitationJson = (i: {
+  id: string
+  email: string
+  status: 'pending' | 'accepted' | 'expired' | 'revoked'
+  createdAt: Date
+  expiresAt: Date
+}) => ({
+  ...i,
+  createdAt: i.createdAt.toISOString(),
+  expiresAt: i.expiresAt.toISOString(),
+})
+
 const passkeyJson = (p: {
   id: string
   name: string
@@ -171,7 +280,8 @@ const passkeyJson = (p: {
   lastUsedAt: p.lastUsedAt?.toISOString() ?? null,
 })
 
-const sessionResponse = (result: VerifyMagicLinkResult) => ({
+const sessionResponse = (result: SessionResult) => ({
+  status: 'authenticated' as const,
   accessToken: result.session.accessToken,
   expiresIn: result.session.accessTokenExpiresIn,
   user: result.user,
@@ -179,6 +289,32 @@ const sessionResponse = (result: VerifyMagicLinkResult) => ({
 
 export const identityRoutes = (deps: IdentityRouteDeps) => {
   const { useCases: uc } = deps
+
+  /** Sets the refresh cookie only when the sign-in is complete. */
+  const authResponse = (outcome: AuthOutcome, cookie: CookieJar) => {
+    if (outcome.kind === 'session') {
+      setRefreshCookie(cookie, outcome, deps.secureCookies)
+      return sessionResponse(outcome)
+    }
+    if (outcome.kind === 'mfa_required') {
+      return {
+        status: 'mfa_required' as const,
+        mfaToken: outcome.mfaToken,
+        expiresIn: Math.max(0, Math.round((outcome.expiresAt.getTime() - Date.now()) / 1000)),
+      }
+    }
+    return {
+      status: 'signup_required' as const,
+      signupToken: outcome.signupToken,
+      email: outcome.email,
+      suggestedName: outcome.suggestedName,
+      termsVersion: outcome.termsVersion,
+    }
+  }
+  const meta = (request: Request, server: Parameters<typeof clientIp>[1]) => ({
+    ip: clientIp(request, server),
+    userAgent: userAgent(request),
+  })
 
   const authRoutes = new Elysia({ prefix: '/auth', tags: ['auth'] })
     .use(authPlugin(deps.verifier))
@@ -213,28 +349,305 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         },
       },
     )
+    .get('/options', () => uc.getAuthOptions.execute(), {
+      detail: {
+        summary: 'Sign-in and sign-up options',
+        description:
+          'What this deployment offers, for the login and sign-up pages: sign-in methods, who may register (and under which terms), enabled providers, password length, whether two-factor exists.',
+      },
+      response: {
+        200: t.Object({
+          methods: t.Array(t.String(), { description: '`email`, `password`, `passkey`' }),
+          registration: t.String({ description: '`open`, `invite` or `closed`' }),
+          passwordMinLength: t.Number(),
+          twoFactor: t.Boolean(),
+          termsVersion: t.Nullable(t.String()),
+          termsUrl: t.Nullable(t.String()),
+          providers: t.Array(t.String()),
+          providerNames: t.Record(t.String(), t.String()),
+        }),
+      },
+    })
     .post(
       '/magic-link/verify',
-      async ({ body, request, server, cookie, locale }) => {
-        const result = await uc.verifyMagicLink.execute({
-          token: body.token,
-          locale,
-          meta: { ip: clientIp(request, server), userAgent: userAgent(request) },
-        })
-        setRefreshCookie(cookie, result, deps.secureCookies)
-        return sessionResponse(result)
-      },
+      async ({ body, request, server, cookie, locale }) =>
+        authResponse(
+          await uc.verifyMagicLink.verifyToken({
+            token: body.token,
+            locale,
+            meta: meta(request, server),
+          }),
+          cookie,
+        ),
       {
         body: tokenBody,
         cookie: cookieSchema,
         detail: {
           summary: 'Sign in with magic link',
           description:
-            'Exchanges the token in the link for an access token and sets the refresh token cookie.',
+            'Exchanges the token in the link for an access token and sets the refresh token cookie. ' +
+            'With two-factor on, answers `mfa_required` first; for a new address where terms must be accepted, `signup_required`.',
+        },
+        response: {
+          200: authBody,
+          400: validationError('invalid_magic_link'),
+          403: errorResponse(
+            403,
+            'registration_closed',
+            'registration_invite_only',
+            'registration_domain_not_allowed',
+          ),
+        },
+      },
+    )
+    .post(
+      '/email-code/verify',
+      async ({ body, request, server, cookie, locale }) =>
+        authResponse(
+          await uc.verifyMagicLink.verifyCode({
+            email: body.email,
+            code: body.code,
+            locale,
+            meta: meta(request, server),
+          }),
+          cookie,
+        ),
+      {
+        body: t.Object({ email: emailBody, code: codeBody }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Sign in with the emailed code',
+          description:
+            'The 6 digits that come with the magic link, for when the mail is read on another device. A wrong code counts against 5 attempts.',
+        },
+        response: {
+          200: authBody,
+          400: validationError('invalid_email_code', 'invalid_email'),
+          403: errorResponse(
+            403,
+            'registration_closed',
+            'registration_invite_only',
+            'registration_domain_not_allowed',
+          ),
+          429: errorResponse(429, 'sign_in_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/login',
+      async ({ body, request, server, cookie }) =>
+        authResponse(
+          await uc.loginWithPassword.execute({
+            email: body.email,
+            password: body.password,
+            meta: meta(request, server),
+          }),
+          cookie,
+        ),
+      {
+        body: t.Object({ email: emailBody, password: passwordBody }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Sign in with a password',
+          description:
+            'Wrong password, unknown address and an account without a password all answer the same 401. Repeated failures answer 429.',
+        },
+        response: {
+          200: authBody,
+          401: errorResponse(401, 'invalid_credentials'),
+          404: errorResponse(404, 'sign_in_method_unavailable'),
+          429: errorResponse(429, 'sign_in_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/register',
+      async ({ body, request, server, set, locale }) => {
+        await uc.registerWithPassword.execute({
+          email: body.email,
+          password: body.password,
+          displayName: body.displayName,
+          acceptTerms: body.acceptTerms,
+          ip: clientIp(request, server),
+          locale,
+        })
+        set.status = 202
+        return { status: 'sent' as const }
+      },
+      {
+        body: t.Object({
+          email: emailBody,
+          password: newPasswordBody,
+          displayName: t.Optional(t.String({ maxLength: 100 })),
+          acceptTerms: t.Optional(
+            t.Boolean({ description: 'Required when the deployment has terms' }),
+          ),
+        }),
+        detail: {
+          summary: 'Sign up with a password',
+          description:
+            'Mails a verification link and code; the account exists only once the mailbox is proven (`/register/verify`). ' +
+            'The answer is the same when the address already has an account (its owner is told) or may not register.',
+        },
+        response: {
+          202: t.Object(sentBody.properties, { description: 'Verification mail on its way' }),
+          400: validationError(
+            'invalid_email',
+            'password_too_short',
+            'password_too_long',
+            'terms_not_accepted',
+          ),
+          404: errorResponse(404, 'sign_in_method_unavailable'),
+          429: errorResponse(429, 'signup_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/register/verify',
+      async ({ body, request, server, cookie }) => {
+        const result = body.token
+          ? await uc.verifySignup.verifyToken({ token: body.token, meta: meta(request, server) })
+          : await uc.verifySignup.verifyCode({
+              email: body.email ?? '',
+              code: body.code ?? '',
+              meta: meta(request, server),
+            })
+        setRefreshCookie(cookie, result, deps.secureCookies)
+        return sessionResponse(result)
+      },
+      {
+        body: t.Object({
+          token: t.Optional(
+            t.String({ minLength: 1, maxLength: 200, description: 'From the link' }),
+          ),
+          email: t.Optional(emailBody),
+          code: t.Optional(codeBody),
+        }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Verify a password sign-up',
+          description:
+            'Either the `token` from the link, or `email` and `code`. Creates the account and signs in.',
         },
         response: {
           200: sessionBody,
-          400: validationError('invalid_magic_link'),
+          400: validationError(
+            'invalid_signup_verification',
+            'invalid_email',
+            'terms_not_accepted',
+          ),
+          403: errorResponse(403, 'registration_closed', 'registration_invite_only'),
+          409: errorResponse(409, 'email_taken'),
+          429: errorResponse(429, 'sign_in_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/signup/complete',
+      async ({ body, request, server, cookie }) => {
+        const result = await uc.completeSignup.execute({
+          signupToken: body.signupToken,
+          displayName: body.displayName,
+          acceptTerms: body.acceptTerms,
+          meta: meta(request, server),
+        })
+        setRefreshCookie(cookie, result, deps.secureCookies)
+        return sessionResponse(result)
+      },
+      {
+        body: t.Object({
+          signupToken: t.String({ minLength: 1, maxLength: 200 }),
+          displayName: t.Optional(t.String({ maxLength: 100 })),
+          acceptTerms: t.Optional(t.Boolean()),
+        }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Finish a sign-up',
+          description:
+            'After a sign-in answered `signup_required`: choose a name, accept the terms, get the account and a session.',
+        },
+        response: {
+          200: sessionBody,
+          400: validationError('invalid_signup', 'terms_not_accepted'),
+          403: errorResponse(403, 'registration_closed', 'registration_invite_only'),
+          409: errorResponse(409, 'email_taken'),
+        },
+      },
+    )
+    .post(
+      '/mfa/verify',
+      async ({ body, request, server, cookie }) => {
+        const result = await uc.verifyMfaLogin.execute({
+          mfaToken: body.mfaToken,
+          code: body.code,
+          meta: meta(request, server),
+        })
+        setRefreshCookie(cookie, result, deps.secureCookies)
+        return sessionResponse(result)
+      },
+      {
+        body: t.Object({
+          mfaToken: t.String({ minLength: 1, maxLength: 200 }),
+          code: t.String({
+            minLength: 1,
+            maxLength: 30,
+            description: 'The 6 digits from the authenticator app, or a recovery code',
+          }),
+        }),
+        cookie: cookieSchema,
+        detail: {
+          summary: 'Second step of a sign-in',
+          description:
+            'Answers an `mfa_required` sign-in. Five wrong codes close the challenge; a recovery code works once.',
+        },
+        response: {
+          200: sessionBody,
+          401: errorResponse(401, 'invalid_mfa_code', 'mfa_challenge_expired'),
+          429: errorResponse(429, 'sign_in_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/password/forgot',
+      async ({ body, request, server, set }) => {
+        await uc.requestPasswordReset.execute({ email: body.email, ip: clientIp(request, server) })
+        set.status = 202
+        return { status: 'sent' as const }
+      },
+      {
+        body: t.Object({ email: emailBody }),
+        detail: {
+          summary: 'Forgot password',
+          description:
+            'Mails a reset link to the account. The answer is the same whether or not the address has an account. Also how an account without a password sets one.',
+        },
+        response: {
+          202: t.Object(sentBody.properties, {
+            description: 'If the account exists, the mail is on its way',
+          }),
+          400: validationError('invalid_email'),
+          404: errorResponse(404, 'sign_in_method_unavailable'),
+          429: errorResponse(429, 'password_reset_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/password/reset',
+      async ({ body, set }) => {
+        await uc.resetPassword.execute({ token: body.token, newPassword: body.newPassword })
+        set.status = 204
+      },
+      {
+        body: t.Object({ token: tokenBody.properties.token, newPassword: newPasswordBody }),
+        detail: {
+          summary: 'Reset password',
+          description:
+            'Sets the new password and signs the account out everywhere; sign in again afterwards.',
+        },
+        response: {
+          204: t.Void({ description: 'Password changed' }),
+          400: validationError('invalid_password_reset', 'password_too_short', 'password_too_long'),
+          404: errorResponse(404, 'sign_in_method_unavailable'),
         },
       },
     )
@@ -296,13 +709,18 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         response: { 204: t.Void({ description: 'Signed out' }) },
       },
     )
-    .get('/oauth/providers', () => ({ providers: uc.listOAuthProviders.execute() }), {
+    .get('/oauth/providers', () => uc.listOAuthProviders.execute(), {
       detail: {
         summary: 'List enabled OAuth providers',
         description:
           'Providers with credentials configured on the server, for the sign-in buttons.',
       },
-      response: { 200: t.Object({ providers: t.Array(t.String()) }) },
+      response: {
+        200: t.Object({
+          providers: t.Array(t.String()),
+          names: t.Record(t.String(), t.String(), { description: 'Display name per provider id' }),
+        }),
+      },
     })
     .post(
       '/oauth/:provider/start',
@@ -330,13 +748,12 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           code: body.code,
           locale,
           authUserId: maybeAuth?.userId,
-          meta: { ip: clientIp(request, server), userAgent: userAgent(request) },
+          meta: meta(request, server),
         })
         if (result.kind === 'link') {
           return { purpose: 'link' as const, provider: result.provider, email: result.email }
         }
-        setRefreshCookie(cookie, result, deps.secureCookies)
-        return { purpose: 'login' as const, ...sessionResponse(result) }
+        return { purpose: 'login' as const, ...authResponse(result.outcome, cookie) }
       },
       {
         authOptional: true,
@@ -354,6 +771,8 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
         response: {
           200: t.Union([
             t.Object({ purpose: t.Literal('login'), ...sessionBody.properties }),
+            t.Object({ purpose: t.Literal('login'), ...mfaRequiredBody.properties }),
+            t.Object({ purpose: t.Literal('login'), ...signupRequiredBody.properties }),
             t.Object({
               purpose: t.Literal('link'),
               provider: t.String(),
@@ -365,7 +784,13 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
             'oauth_exchange_failed',
             'oauth_email_unverified',
           ),
-          403: errorResponse(403, 'oauth_state_mismatch'),
+          403: errorResponse(
+            403,
+            'oauth_state_mismatch',
+            'registration_closed',
+            'registration_invite_only',
+            'registration_domain_not_allowed',
+          ),
           409: errorResponse(409, 'oauth_account_taken', 'oauth_provider_already_linked'),
         },
       },
@@ -558,6 +983,257 @@ export const identityRoutes = (deps: IdentityRouteDeps) => {
           description: 'A wrong code counts against 5 attempts; the code lasts 10 minutes.',
         },
         response: { 200: elevatedBody, 400: validationError('invalid_step_up_code') },
+      },
+    )
+    .get(
+      '/security',
+      async ({ auth }) => {
+        const summary = await uc.getSecuritySummary.execute({ userId: auth.userId })
+        return {
+          ...summary,
+          passwordChangedAt: summary.passwordChangedAt?.toISOString() ?? null,
+        }
+      },
+      {
+        auth: true,
+        detail: {
+          summary: 'Security overview',
+          description:
+            'Which sign-in methods the account has and the deployment offers, and the two-factor state.',
+        },
+        response: {
+          200: t.Object({
+            email: t.String(),
+            passwordAvailable: t.Boolean(),
+            hasPassword: t.Boolean(),
+            passwordChangedAt: t.Nullable(t.String({ format: 'date-time' })),
+            emailSignIn: t.Boolean(),
+            twoFactor: twoFactorBody,
+            canInvite: t.Boolean(),
+          }),
+        },
+      },
+    )
+    .put(
+      '/password',
+      async ({ auth, body }) =>
+        uc.setPassword.execute({
+          userId: auth.userId,
+          sessionId: auth.sessionId,
+          newPassword: body.newPassword,
+          authTime: auth.authTime,
+        }),
+      {
+        auth: true,
+        body: t.Object({ newPassword: newPasswordBody }),
+        detail: {
+          summary: 'Set or change the password',
+          description:
+            'Needs a recent confirmation. Every other device is signed out; this one stays.',
+        },
+        response: {
+          200: t.Object({ change: t.UnionEnum(['set', 'changed']) }),
+          400: validationError('password_too_short', 'password_too_long'),
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'sign_in_method_unavailable'),
+        },
+      },
+    )
+    .delete(
+      '/password',
+      async ({ auth, set }) => {
+        await uc.removePassword.execute({ userId: auth.userId, authTime: auth.authTime })
+        set.status = 204
+      },
+      {
+        auth: true,
+        detail: {
+          summary: 'Remove the password',
+          description: 'Needs a recent confirmation and another way to sign in.',
+        },
+        response: {
+          204: t.Void({ description: 'Password removed' }),
+          400: validationError('no_password'),
+          403: errorResponse(403, 'step_up_required'),
+          409: errorResponse(409, 'last_sign_in_method'),
+        },
+      },
+    )
+    .get('/two-factor', ({ auth }) => uc.getTwoFactorStatus.execute({ userId: auth.userId }), {
+      auth: true,
+      detail: { summary: 'Two-factor status' },
+      response: { 200: twoFactorBody },
+    })
+    .post(
+      '/two-factor/setup',
+      ({ auth }) =>
+        uc.beginTwoFactorSetup.execute({ userId: auth.userId, authTime: auth.authTime }),
+      {
+        auth: true,
+        detail: {
+          summary: 'Start setting up an authenticator app',
+          description:
+            'Returns the secret and the `otpauth://` URI for the QR code. Nothing is on until `/two-factor/enable` gets a correct code. Needs a recent confirmation.',
+        },
+        response: {
+          200: t.Object({ secret: t.String(), uri: t.String() }),
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'two_factor_unavailable'),
+          409: errorResponse(409, 'totp_already_enabled'),
+        },
+      },
+    )
+    .post(
+      '/two-factor/enable',
+      ({ auth, body }) => uc.enableTwoFactor.execute({ userId: auth.userId, code: body.code }),
+      {
+        auth: true,
+        body: t.Object({ code: codeBody }),
+        detail: {
+          summary: 'Turn on two-factor',
+          description:
+            'A correct code from the authenticator app turns it on and returns the recovery codes — the only time they are shown.',
+        },
+        response: {
+          200: recoveryCodesBody,
+          400: validationError('invalid_totp_code', 'totp_not_started'),
+          404: errorResponse(404, 'two_factor_unavailable'),
+          409: errorResponse(409, 'totp_already_enabled'),
+        },
+      },
+    )
+    .post(
+      '/two-factor/recovery-codes',
+      ({ auth }) =>
+        uc.regenerateRecoveryCodes.execute({ userId: auth.userId, authTime: auth.authTime }),
+      {
+        auth: true,
+        detail: {
+          summary: 'New recovery codes',
+          description: 'Replaces the old codes. Needs a recent confirmation.',
+        },
+        response: {
+          200: recoveryCodesBody,
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'two_factor_not_enabled', 'two_factor_unavailable'),
+        },
+      },
+    )
+    .delete(
+      '/two-factor',
+      async ({ auth, set }) => {
+        await uc.disableTwoFactor.execute({ userId: auth.userId, authTime: auth.authTime })
+        set.status = 204
+      },
+      {
+        auth: true,
+        detail: { summary: 'Turn off two-factor', description: 'Needs a recent confirmation.' },
+        response: {
+          204: t.Void({ description: 'Turned off' }),
+          403: errorResponse(403, 'step_up_required'),
+          404: errorResponse(404, 'two_factor_not_enabled'),
+        },
+      },
+    )
+    .post(
+      '/step-up/totp',
+      ({ auth, body, request, server }) =>
+        uc.verifyStepUpTotp.execute({
+          userId: auth.userId,
+          sessionId: auth.sessionId,
+          code: body.code,
+          ip: clientIp(request, server),
+        }),
+      {
+        auth: true,
+        body: t.Object({ code: codeBody }),
+        detail: {
+          summary: 'Confirm with the authenticator app',
+          description:
+            'A code is accepted once. Wrong codes count against the sign-in guess limits.',
+        },
+        response: {
+          200: elevatedBody,
+          400: validationError('invalid_step_up_code'),
+          429: errorResponse(429, 'sign_in_rate_limited'),
+        },
+      },
+    )
+    .post(
+      '/step-up/password',
+      ({ auth, body, request, server }) =>
+        uc.verifyStepUpPassword.execute({
+          userId: auth.userId,
+          sessionId: auth.sessionId,
+          password: body.password,
+          ip: clientIp(request, server),
+        }),
+      {
+        auth: true,
+        body: t.Object({ password: passwordBody }),
+        detail: { summary: 'Confirm with the password' },
+        response: {
+          200: elevatedBody,
+          400: validationError('invalid_step_up_password'),
+          429: errorResponse(429, 'sign_in_rate_limited'),
+        },
+      },
+    )
+    .get(
+      '/invitations',
+      async ({ auth }) => ({
+        invitations: (await uc.listInvitations.execute({ userId: auth.userId })).map(
+          invitationJson,
+        ),
+      }),
+      {
+        auth: true,
+        detail: { summary: 'Invitations you sent' },
+        response: { 200: t.Object({ invitations: t.Array(invitationBody) }) },
+      },
+    )
+    .post(
+      '/invitations',
+      async ({ auth, body, set }) => {
+        const invitation = await uc.sendInvitation.execute({
+          userId: auth.userId,
+          email: body.email,
+        })
+        set.status = 201
+        return invitationJson(invitation)
+      },
+      {
+        auth: true,
+        body: t.Object({ email: emailBody }),
+        detail: {
+          summary: 'Invite someone',
+          description:
+            'Only where registration is by invitation: lets the address create an account and mails them.',
+        },
+        response: {
+          201: invitationBody,
+          400: validationError('invalid_email'),
+          404: errorResponse(404, 'invitations_unavailable'),
+          409: errorResponse(409, 'already_a_member', 'invitation_exists'),
+          429: errorResponse(429, 'invitation_rate_limited'),
+        },
+      },
+    )
+    .delete(
+      '/invitations/:id',
+      async ({ auth, params, set }) => {
+        await uc.revokeInvitation.execute({ userId: auth.userId, invitationId: params.id })
+        set.status = 204
+      },
+      {
+        auth: true,
+        params: t.Object({ id: t.String({ format: 'uuid' }) }),
+        detail: { summary: 'Withdraw an invitation' },
+        response: {
+          204: t.Void({ description: 'Withdrawn' }),
+          400: validationError(),
+          404: errorResponse(404, 'invitation_not_found'),
+        },
       },
     )
     .post(
@@ -778,7 +1454,7 @@ type CookieJar = Record<
   { set(opts: Record<string, unknown>): unknown; remove(): unknown } | undefined
 >
 
-function setRefreshCookie(cookie: CookieJar, result: VerifyMagicLinkResult, secure: boolean) {
+function setRefreshCookie(cookie: CookieJar, result: SessionResult, secure: boolean) {
   cookie[REFRESH_COOKIE]?.set({
     value: result.session.refreshToken,
     httpOnly: true,

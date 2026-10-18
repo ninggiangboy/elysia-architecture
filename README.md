@@ -9,7 +9,7 @@ out into its own service later **without rewriting domain or application code**.
 
 **Stack:** Elysia · Bun · Drizzle · Postgres · SeaweedFS (S3) · Mailpit — React 19 + Vite + TanStack Router/Query + Tailwind on the front.
 
-It is not a CRUD demo. Passwordless sign-in, rotating sessions, realtime, in-app + Web Push notifications, avatar upload,
+It is not a CRUD demo. Sign-in and sign-up in several ways, rotating sessions, realtime, in-app + Web Push notifications, avatar upload,
 rate-limited mail and GDPR export/erasure across modules are all there to exercise the architecture under real distributed-systems pressure (retries, duplicates,
 races, N instances).
 
@@ -56,10 +56,13 @@ No sticky sessions, no Redis. Rate limits, throttles and token consumption live 
 an advisory lock; process roles (`APP_ROLES=api,worker`) let you peel the worker off the same image — it runs the outbox relay and every handler, so heavy ones such as avatar thumbnails (sharp) can sit on their own box — and `APP_PROCESSES=N` runs N processes per container (cluster mode).
 `docker compose --profile app up` runs 2 API replicas behind nginx so you can see it work.
 
-### 5. Passwordless auth done properly
-- **Magic link** sign-in, consumed atomically, throttled per email and IP.
-- **Passkeys** (WebAuthn, usernameless) and **Google / GitHub** sign-in (authorization code + PKCE, account matched only on a provider-verified email).
-- **Step-up**: changing the email or a sign-in method needs a recent confirmation — a passkey or an emailed code — on top of a valid session.
+### 5. Sign-in and sign-up done properly
+- **Magic link and the 6-digit code in the same mail**, consumed atomically, throttled per email and IP.
+- **Passwords** (argon2id, mailbox verified before the account exists, forgotten-password reset, guesses slowed per address and IP) and **passkeys** (WebAuthn, usernameless).
+- **Google, GitHub, Microsoft, Discord and any OpenID Connect provider** (authorization code + PKCE, account matched only on a provider-verified email).
+- **Who may sign up** is configuration: open, by invitation or closed, an email-domain list, terms to accept — enforced in one place, whatever the method.
+- **Two-factor with an authenticator app** (TOTP, one-time codes, recovery codes) after the single-secret methods.
+- **Step-up**: changing the email or a sign-in method needs a recent confirmation — a passkey, the authenticator app, the password or an emailed code — on top of a valid session.
 - **ES256 JWT** access tokens (15 min) with a `kid` and a public **JWKS** endpoint — other services verify tokens with no shared secret, and keys rotate.
 - **Rotating refresh tokens** in an httpOnly cookie, with **reuse detection**: replaying a rotated token outside a 10 s grace window is treated as theft and revokes the whole family — while two tabs refreshing at once don't log you out.
 - **Device management**: list signed-in devices, remote logout of one or all others.

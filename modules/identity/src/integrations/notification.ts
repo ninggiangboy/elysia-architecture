@@ -14,14 +14,21 @@ import {
   type EmailChangeRequestedPayload,
   type IdentityApi,
   IdentityEvents,
+  type InvitationSentPayload,
   type MagicLinkRequestedPayload,
   type OAuthAccountLinkedPayload,
   type OAuthAccountUnlinkedPayload,
   type PasskeyAddedPayload,
   type PasskeyRemovedPayload,
+  type PasswordChangedPayload,
+  type PasswordResetRequestedPayload,
   type SessionRevokedPayload,
   type SessionStartedPayload,
+  type SignupExistingAccountPayload,
+  type SignupVerificationRequestedPayload,
   type StepUpCodeRequestedPayload,
+  type TwoFactorDisabledPayload,
+  type TwoFactorEnabledPayload,
   type UserRegisteredPayload,
 } from '../contracts'
 import { en } from './messages/en'
@@ -54,7 +61,12 @@ export function describeDevice(userAgent: string | null, t: Translate): string {
   return browser ?? os ?? t('common.unknownDevice')
 }
 
-const PROVIDER_NAMES: Record<string, string> = { google: 'Google', github: 'GitHub' }
+const PROVIDER_NAMES: Record<string, string> = {
+  google: 'Google',
+  github: 'GitHub',
+  microsoft: 'Microsoft',
+  discord: 'Discord',
+}
 const providerName = (provider: string) => PROVIDER_NAMES[provider] ?? provider
 const str = (value: unknown) => (typeof value === 'string' ? value : '')
 
@@ -71,9 +83,15 @@ export const identityTemplates = {
   passkeyRemoved: (d) => ({ name: str(d.name) }),
   oauthLinked: (d) => ({ provider: providerName(str(d.provider)) }),
   oauthUnlinked: (d) => ({ provider: providerName(str(d.provider)) }),
+  passwordChanged: (d, { t }) => ({ what: t(`common.passwordChange.${passwordChange(d.change)}`) }),
+  twoFactorEnabled: () => ({}),
+  twoFactorDisabled: () => ({}),
 } satisfies Record<string, TemplateValues>
 
 type IdentityTemplate = keyof typeof identityTemplates
+
+const CHANGES = ['set', 'changed', 'removed', 'reset'] as const
+const passwordChange = (value: unknown) => CHANGES.find((c) => c === value) ?? 'changed'
 
 const templated = (
   userId: string,
@@ -124,6 +142,15 @@ export const oauthLinkedNotification = (p: { userId: string; provider: string })
 
 export const oauthUnlinkedNotification = (p: { userId: string; provider: string }) =>
   securityAlert(p.userId, 'oauthUnlinked', { provider: p.provider })
+
+export const passwordChangedNotification = (p: { userId: string; change: string }) =>
+  securityAlert(p.userId, 'passwordChanged', { change: p.change })
+
+export const twoFactorEnabledNotification = (p: { userId: string }) =>
+  securityAlert(p.userId, 'twoFactorEnabled')
+
+export const twoFactorDisabledNotification = (p: { userId: string }) =>
+  securityAlert(p.userId, 'twoFactorDisabled')
 
 const minutesUntil = (iso: string) =>
   Math.max(1, Math.round((new Date(iso).getTime() - Date.now()) / 60_000))
@@ -180,6 +207,21 @@ export const identityNotifications = {
       eventType: IdentityEvents.OAuthAccountUnlinked,
       build: (p: OAuthAccountUnlinkedPayload) => oauthUnlinkedNotification(p),
     },
+    {
+      name: 'notification.in-app-password-changed',
+      eventType: IdentityEvents.PasswordChanged,
+      build: (p: PasswordChangedPayload) => passwordChangedNotification(p),
+    },
+    {
+      name: 'notification.in-app-two-factor-enabled',
+      eventType: IdentityEvents.TwoFactorEnabled,
+      build: (p: TwoFactorEnabledPayload) => twoFactorEnabledNotification(p),
+    },
+    {
+      name: 'notification.in-app-two-factor-disabled',
+      eventType: IdentityEvents.TwoFactorDisabled,
+      build: (p: TwoFactorDisabledPayload) => twoFactorDisabledNotification(p),
+    },
   ] satisfies InAppDefinition[],
   mails: [
     {
@@ -199,8 +241,66 @@ export const identityNotifications = {
       template: 'magicLink',
       build: (p: MagicLinkRequestedPayload, ctx: MailContext) => ({
         to: p.email,
-        values: { expires: expiresIn(ctx, p.expiresAt) },
+        // Messages queued before codes existed carry none: the dash keeps the sentence readable.
+        values: { expires: expiresIn(ctx, p.expiresAt), code: p.code ?? '—' },
+        markup: { code: 'code' as const },
         actionUrl: link(ctx, '/auth/callback', p.token),
+        expiresAt: p.expiresAt,
+      }),
+    },
+    {
+      name: 'notification.send-signup-verification',
+      eventType: IdentityEvents.SignupVerificationRequested,
+      template: 'signupVerification',
+      build: (p: SignupVerificationRequestedPayload, ctx: MailContext) => ({
+        to: p.email,
+        values: { expires: expiresIn(ctx, p.expiresAt), code: p.code },
+        markup: { code: 'code' as const },
+        actionUrl: link(ctx, '/register/verify', p.token),
+        expiresAt: p.expiresAt,
+      }),
+    },
+    {
+      name: 'notification.send-signup-existing-account',
+      eventType: IdentityEvents.SignupExistingAccount,
+      template: 'accountExists',
+      build: (p: SignupExistingAccountPayload, ctx: MailContext) => ({
+        to: p.email,
+        values: { email: p.email },
+        markup: { email: 'bold' as const },
+        actionUrl: `${ctx.webAppUrl}/login`,
+      }),
+    },
+    {
+      name: 'notification.send-password-reset',
+      eventType: IdentityEvents.PasswordResetRequested,
+      template: 'passwordReset',
+      build: (p: PasswordResetRequestedPayload, ctx: MailContext) => ({
+        to: p.email,
+        values: { expires: expiresIn(ctx, p.expiresAt) },
+        actionUrl: link(ctx, '/password/reset', p.token),
+        expiresAt: p.expiresAt,
+      }),
+    },
+    {
+      name: 'notification.send-password-changed-notice',
+      eventType: IdentityEvents.PasswordChanged,
+      template: 'passwordChanged',
+      // Older messages carry no address; there is nobody to write to then.
+      build: (p: PasswordChangedPayload, ctx: MailContext) => ({
+        to: p.email ?? '',
+        values: { what: ctx.t(`common.passwordChange.${passwordChange(p.change)}`) },
+      }),
+    },
+    {
+      name: 'notification.send-invitation',
+      eventType: IdentityEvents.InvitationSent,
+      template: 'invitation',
+      build: (p: InvitationSentPayload, ctx: MailContext) => ({
+        to: p.email,
+        values: { inviter: p.inviterEmail ?? ctx.t('common.someone'), email: p.email },
+        markup: { inviter: 'bold' as const, email: 'bold' as const },
+        actionUrl: `${ctx.webAppUrl}/login`,
         expiresAt: p.expiresAt,
       }),
     },

@@ -29,6 +29,13 @@
       "when": 1792162286598,
       "tag": "0003_salty_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792316385506,
+      "tag": "0004_identity_sign_in_methods",
+      "breakpoints": true
     }
   ]
 }

@@ -75,18 +75,33 @@ export interface OAuthProfile {
   email: string | null
   /** True only when the provider vouches that the user controls `email`. */
   emailVerified: boolean
+  /** The name the provider knows the person by, offered as the display name of a new account. */
+  displayName?: string | null
 }
 
-/** Talks to Google / GitHub. Only providers with credentials in the config are enabled. */
+/** Talks to Google, GitHub, Microsoft, Discord and configured OIDC providers. Only configured providers are enabled. */
 export interface OAuthGateway {
   enabledProviders(): OAuthProviderId[]
+  /** Names for the sign-in buttons; a provider missing here is shown under its id. */
+  providerNames?(): Record<OAuthProviderId, string>
+  /** Async because an OIDC provider's endpoints come from its discovery document. */
   authorizationUrl(
     provider: OAuthProviderId,
     params: { state: string; codeVerifier: string },
-  ): string
+  ): string | Promise<string>
   /** null when the provider rejects the code (expired, already used, wrong verifier). */
   exchange(
     provider: OAuthProviderId,
     params: { code: string; codeVerifier: string },
   ): Promise<OAuthProfile | null>
+}
+
+/** Slow, salted password hashing (argon2id). */
+export interface PasswordHasher {
+  hash(plain: string): Promise<string>
+  /**
+   * `hash` null (no such account, or one without a password) burns the time a real check takes and answers false, so
+   * response time does not tell which addresses are registered.
+   */
+  verify(plain: string, hash: string | null): Promise<boolean>
 }

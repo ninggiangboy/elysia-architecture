@@ -1,137 +1,25 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import { sha256Hex } from '@kit/auth'
-import { ConflictError, UnauthorizedError, ValidationError } from '@kit/core'
-import { FakeClock, InMemoryOutbox, PassthroughUnitOfWork, SequentialIds } from '@kit/testing'
+import { UnauthorizedError, ValidationError } from '@kit/core'
+import type { FakeClock, InMemoryOutbox, SequentialIds } from '@kit/testing'
 import { IdentityEvents } from '../contracts/events'
-import type { Email } from '../domain/email'
-import type { MagicLink } from '../domain/magic-link'
-import { type DeviceSession, RefreshToken } from '../domain/refresh-token'
-import type {
-  MagicLinkRepository,
-  RefreshTokenRepository,
-  UserRepository,
-} from '../domain/repositories'
-import type { User } from '../domain/user'
-import type { TokenService } from './ports'
-import { SessionIssuer } from './session-issuer'
+import type { AuthOutcome, SessionOutcome } from './auth-outcome'
+import {
+  buildWorld,
+  type MemMagicLinks,
+  type MemRefreshTokens,
+  type MemUsers,
+  tokens,
+} from './test-support'
 import { Logout } from './use-cases/logout'
 import { ListSessions, RevokeOtherSessions, RevokeSession } from './use-cases/manage-sessions'
 import { RefreshSession } from './use-cases/refresh-session'
 import { RequestMagicLink } from './use-cases/request-magic-link'
 import { VerifyMagicLink } from './use-cases/verify-magic-link'
 
-class MemUsers implements UserRepository {
-  rows = new Map<string, User>()
-  async findById(id: string) {
-    return this.rows.get(id) ?? null
-  }
-  async findByEmail(email: Email) {
-    return [...this.rows.values()].find((u) => u.email.equals(email)) ?? null
-  }
-  async existsByEmail(email: Email) {
-    return (await this.findByEmail(email)) !== null
-  }
-  async save(user: User) {
-    const clash = [...this.rows.values()].find(
-      (u) => u.id !== user.id && u.email.equals(user.email),
-    )
-    if (clash) throw new ConflictError('email_taken')
-    user.version += 1
-    this.rows.set(user.id, user)
-  }
-}
-
-class MemMagicLinks implements MagicLinkRepository {
-  links: (MagicLink & { used?: boolean })[] = []
-  async add(link: MagicLink) {
-    this.links.push(link)
-  }
-  async consume(hash: string, now: Date) {
-    const link = this.links.find((l) => l.tokenHash === hash && !l.used && l.expiresAt > now)
-    if (!link) return null
-    link.used = true
-    return link
-  }
-}
-
-class MemRefreshTokens implements RefreshTokenRepository {
-  rows: { token: RefreshToken; revokedAt: Date | null; replacedById: string | null }[] = []
-  async add(token: RefreshToken) {
-    this.rows.push({ token, revokedAt: null, replacedById: null })
-  }
-  private view(r: (typeof this.rows)[number]) {
-    const t = r.token
-    return new RefreshToken(
-      t.id,
-      t.userId,
-      t.familyId,
-      t.tokenHash,
-      t.expiresAt,
-      t.createdAt,
-      r.revokedAt,
-      r.replacedById,
-      null,
-      null,
-    )
-  }
-  async findByHash(hash: string) {
-    const r = this.rows.find((x) => x.token.tokenHash === hash)
-    return r ? this.view(r) : null
-  }
-  async consume(hash: string, replacedById: string | null, now: Date) {
-    const r = this.rows.find(
-      (x) => x.token.tokenHash === hash && !x.revokedAt && x.token.expiresAt > now,
-    )
-    if (!r) return null
-    r.revokedAt = now
-    r.replacedById = replacedById
-    return this.view(r)
-  }
-  private live(userId: string, now: Date) {
-    return this.rows.filter(
-      (r) => r.token.userId === userId && !r.revokedAt && r.token.expiresAt > now,
-    )
-  }
-  async listActiveSessions(userId: string, now: Date) {
-    const live = this.live(userId, now).sort(
-      (a, b) => b.token.createdAt.getTime() - a.token.createdAt.getTime(),
-    )
-    return live.map<DeviceSession>((r) => ({
-      id: r.token.familyId,
-      userAgent: null,
-      ip: null,
-      startedAt: this.rows.find((x) => x.token.familyId === r.token.familyId)!.token.createdAt,
-      lastActiveAt: r.token.createdAt,
-    }))
-  }
-  async revokeUserSession(userId: string, familyId: string, now: Date) {
-    const rows = this.live(userId, now).filter((r) => r.token.familyId === familyId)
-    for (const r of rows) r.revokedAt = now
-    return rows.length > 0
-  }
-  async revokeOtherSessions(userId: string, exceptFamilyId: string, now: Date) {
-    const rows = this.live(userId, now).filter((r) => r.token.familyId !== exceptFamilyId)
-    for (const r of rows) r.revokedAt = now
-    return [...new Set(rows.map((r) => r.token.familyId))]
-  }
-  active(familyId: string) {
-    return this.rows.filter((r) => r.token.familyId === familyId && !r.revokedAt).length
-  }
-}
-
-let seq = 0
-const tokens: TokenService = {
-  newOpaqueToken: () => {
-    const token = `tok-${++seq}`
-    return { token, hash: sha256Hex(token) }
-  },
-  hashOpaqueToken: sha256Hex,
-  keyedHash: (input) => sha256Hex(`test-secret:${input}`),
-  newNumericCode: () => '123456',
-  signAccessToken: async ({ userId, sessionId }) => ({
-    token: `jwt:${userId}:${sessionId}`,
-    expiresInSeconds: 900,
-  }),
+const sessionOf = (outcome: AuthOutcome): SessionOutcome => {
+  if (outcome.kind !== 'session') throw new Error(`expected a session, got ${outcome.kind}`)
+  return outcome
 }
 
 describe('identity use cases', () => {
@@ -142,40 +30,57 @@ describe('identity use cases', () => {
   let clock: FakeClock
   let ids: SequentialIds
   let allow: boolean
+  let world: ReturnType<typeof buildWorld>
   const meta = { ip: '1.1.1.1', userAgent: 'test' }
 
   const build = () => {
-    const uow = new PassthroughUnitOfWork()
-    const sessions = new SessionIssuer(refresh, tokens, ids, clock, 3600)
+    const w = world
+    const verify = new VerifyMagicLink(
+      links,
+      users,
+      w.completer,
+      w.registrar,
+      w.guard,
+      tokens,
+      w.uow,
+      clock,
+    )
     return {
       request: new RequestMagicLink(
         links,
+        users,
+        w.invitations,
         {
           check: async () =>
             allow ? { allowed: true as const } : { allowed: false as const, retryAfterMs: 60_000 },
         },
         tokens,
+        w.policy,
         outbox,
-        uow,
+        w.uow,
         ids,
         clock,
       ),
-      verify: new VerifyMagicLink(links, users, sessions, tokens, outbox, uow, ids, clock),
-      refresh: new RefreshSession(refresh, users, sessions, tokens, outbox, uow, ids, clock),
+      verify: {
+        execute: async (cmd: { token: string; meta: typeof meta }) =>
+          sessionOf(await verify.verifyToken(cmd)),
+      },
+      refresh: new RefreshSession(refresh, users, w.sessions, tokens, outbox, w.uow, ids, clock),
       list: new ListSessions(refresh, clock),
-      revoke: new RevokeSession(refresh, outbox, uow, clock),
-      revokeOthers: new RevokeOtherSessions(refresh, outbox, uow, clock),
-      logout: new Logout(refresh, outbox, uow, clock),
+      revoke: new RevokeSession(refresh, outbox, w.uow, clock),
+      revokeOthers: new RevokeOtherSessions(refresh, outbox, w.uow, clock),
+      logout: new Logout(refresh, outbox, w.uow, clock),
     }
   }
 
   beforeEach(() => {
-    users = new MemUsers()
-    links = new MemMagicLinks()
-    refresh = new MemRefreshTokens()
-    outbox = new InMemoryOutbox()
-    clock = new FakeClock()
-    ids = new SequentialIds()
+    world = buildWorld()
+    users = world.users
+    links = world.links
+    refresh = world.refresh
+    outbox = world.outbox
+    clock = world.clock
+    ids = world.ids
     allow = true
   })
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Passwordless sign-in (magic link, passkeys, Google and GitHub), rotating refresh tokens with reuse detection, sessions, step-up confirmation, email change and the JWKS.
+Sign-in and sign-up (emailed link or code, password, passkeys, Google, GitHub, Microsoft, Discord and any OpenID Connect provider), who may register (open, by invitation, closed, domains, terms), two-factor with an authenticator app, rotating refresh tokens with reuse detection, sessions, step-up confirmation, email change and the JWKS.
 
 ## Install
 
@@ -42,19 +42,34 @@ _Generated from the config slice by `bun scripts/package-docs.ts`; the reference
 | `GOOGLE_CLIENT_SECRET` | unset | Google client secret. |
 | `GITHUB_CLIENT_ID` | unset | Sign in with GitHub (same rule as Google). |
 | `GITHUB_CLIENT_SECRET` | unset | GitHub client secret. |
+| `MICROSOFT_CLIENT_ID` | unset | Sign in with Microsoft (Entra ID, same rule as Google). Only personal accounts, and work accounts whose tenant sends the `xms_edov` claim, have an email Microsoft vouches for. |
+| `MICROSOFT_CLIENT_SECRET` | unset | Microsoft client secret. |
+| `MICROSOFT_TENANT` | `common` | `common` (any account), `consumers`, `organizations` or one tenant id. |
+| `DISCORD_CLIENT_ID` | unset | Sign in with Discord (same rule as Google). |
+| `DISCORD_CLIENT_SECRET` | unset | Discord client secret. |
+| `OIDC_PROVIDERS` | unset | Any OpenID Connect provider (Keycloak, Auth0, Okta…), as a JSON array of `{"id","name","issuer","clientId","clientSecret","scopes"?}`. Endpoints come from the issuer's discovery document; the provider must send `email_verified`. |
+| `SIGN_IN_METHODS` | `email,password,passkey` | Ways to sign in, comma-separated: `email` (a link and a code by mail), `password`, `passkey`. OAuth providers are on when their credentials are set. |
+| `REGISTRATION_MODE` | `open` | `open`: anyone can create an account; `invite`: only addresses a member invited; `closed`: no new accounts. |
+| `REGISTRATION_EMAIL_DOMAINS` | unset | Only addresses at these domains may create an account (comma-separated); unset = any domain. |
+| `REGISTRATION_ALLOWED_EMAILS` | unset | Addresses that may always create an account, also when the mode is `invite` or `closed` (the owner who seeds the app). |
+| `TERMS_VERSION` | unset | When set, creating an account requires accepting these terms; the version is recorded on the account. |
+| `TERMS_URL` | unset | Where the terms are published, linked from the sign-up page. |
+| `PASSWORD_MIN_LENGTH` | `8` | Shortest password accepted (at most 128). |
+| `TOTP_ENCRYPTION_KEY` | unset | Two-factor authentication with an authenticator app is on when set: the key (32+ chars) that encrypts the stored TOTP secrets. Changing it locks every enrolled account out of password and email sign-in until the old key is back; unset, two-factor is off. |
+| `TOTP_ISSUER` | unset | Name the authenticator app shows next to the code; defaults to WEBAUTHN_RP_NAME. |
 | `MAGIC_LINK_MAX_PER_EMAIL` | `3` | Magic links one address can ask for within the throttle window. |
 | `MAGIC_LINK_MAX_PER_IP` | `10` | Magic links one IP can ask for within the throttle window. |
 <!-- config:end -->
 
 ## Tables and migrations
 
-Schema `identity`: users, magic links, refresh tokens, passkeys, OAuth accounts and states, step-up codes, WebAuthn challenges, email-change requests, magic-link throttle, plus the outbox and inbox.
+Schema `identity`: users (with an optional password hash and the accepted terms), magic links (with their code), refresh tokens, passkeys, OAuth accounts and states, the authenticator app (`totp_credentials`, secret encrypted) and recovery codes, invitations, step-up codes, WebAuthn challenges, email-change requests, and the short-lived `signups`, `password_resets`, `mfa_challenges` and `sign_in_failures`, plus the outbox and inbox.
 
 Migrations ship in `migrations/` and are applied by `bun run db:migrate` from the module's manifest (`@mod/identity/manifest`).
 
 ## Events
 
-`identity.user_registered.v1`, `session_started`, `session_revoked`, `email_changed`, `email_change_requested`, `magic_link_requested`, `step_up_code_requested`, `passkey_added`/`removed`, `oauth_account_linked`/`unlinked`, and the privacy answers.
+`identity.user_registered.v1` (with the chosen `displayName` and the `method`), `session_started` (with `method` and `secondFactor`), `session_revoked`, `email_changed`, `email_change_requested`, `magic_link_requested` (with the `code`), `signup_verification_requested`, `signup_existing_account`, `password_reset_requested`, `password_changed`, `two_factor_enabled`/`disabled`, `invitation_sent`, `step_up_code_requested`, `passkey_added`/`removed`, `oauth_account_linked`/`unlinked`, and the privacy answers.
 
 ## Wiring
 
@@ -65,17 +80,17 @@ const identity = use(await installIdentity(host))
 
 ## Extension points
 
-Adapters (`overrides: { webauthn, oauth }`), the config slice (token lifetimes, keys, providers), the integrations it ships for notification (mails and in-app messages) and realtime (`session.revoked`), and app handlers on its events.
+Adapters (`overrides: { webauthn, oauth, hasher }`), the config slice (token lifetimes, keys, providers), the integrations it ships for notification (mails and in-app messages) and realtime (`session.revoked`), and app handlers on its events.
 
 Anything else (hooks inside a use case, changing a domain rule, changing a table) changes the module's invariants: eject it. Copy the package into `modules/identity`, rename it `@app/identity`, point the app's imports at it and keep the schema name and the `migrations/` folder, so the database is untouched. From then on the copy is yours and upstream CHANGELOG entries are merged by hand.
 
 ## Guarantees
 
-Refresh tokens rotate on use and reuse revokes the session; sensitive actions need a recent confirmation; the token issuer is the only place that signs.
+Refresh tokens rotate on use and reuse revokes the session; sensitive actions need a recent confirmation; the token issuer is the only place that signs; accounts are created in one place (`AccountRegistrar`) and only for an email the person has proven; no change can remove the last way to sign in; a one-time code or token is consumed by a single statement.
 
 ## Limits
 
-ES256 keys only; one issuer.
+ES256 keys only; one issuer. Passwords are checked for length, not against breaches. TOTP is SHA-1/6 digits/30 s with one encryption key and no rotation; there is no SMS, SAML or WebAuthn-as-second-factor. See [trade-offs and known gaps](../../docs/architecture/13-trade-offs-and-known-gaps.md).
 
 ## Related
 

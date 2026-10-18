@@ -14,8 +14,10 @@ export class SessionStarter {
   async start(params: {
     userId: string
     meta: SessionMeta
-    /** `passkey`, `oauth:google`… */
+    /** `passkey`, `password`, `oauth:google`… */
     method: string
+    /** `totp` or `recovery_code` when a second factor was asked for. */
+    secondFactor?: string
     newUser?: boolean
   }): Promise<SessionTokens> {
     const session = await this.sessions.issue({
@@ -32,6 +34,7 @@ export class SessionStarter {
           userAgent: params.meta.userAgent,
           newUser: params.newUser ?? false,
           method: params.method,
+          ...(params.secondFactor && { secondFactor: params.secondFactor }),
         },
         this.clock.now(),
       ),

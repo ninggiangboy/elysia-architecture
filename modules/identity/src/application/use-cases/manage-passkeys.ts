@@ -4,6 +4,7 @@ import { NotFoundError } from '@kit/core'
 import type { OutboxWriter } from '@kit/messaging'
 import type { PasskeyRepository } from '../../domain/repositories'
 import { passkeyRemoved } from '../security-events'
+import type { SignInMethodGuard } from '../sign-in-method-guard'
 import { type PasskeyView, toPasskeyView } from './passkey-registration'
 
 export class ListPasskeys {
@@ -18,6 +19,7 @@ export class ListPasskeys {
 export class RemovePasskey {
   constructor(
     private passkeys: PasskeyRepository,
+    private methods: SignInMethodGuard,
     private stepUp: StepUpPolicy,
     private outbox: OutboxWriter,
     private uow: UnitOfWork,
@@ -31,6 +33,7 @@ export class RemovePasskey {
   }): Promise<void> {
     this.stepUp.assertFresh(cmd.authTime)
     await this.uow.run(async () => {
+      await this.methods.assertKeepsOne(cmd.userId, 'passkey')
       const passkey = await this.passkeys.findByUserAndId(cmd.userId, cmd.passkeyId)
       if (!passkey || !(await this.passkeys.remove(cmd.userId, cmd.passkeyId))) {
         throw new NotFoundError('passkey_not_found', 'Passkey not found')

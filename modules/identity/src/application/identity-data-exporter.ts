@@ -3,7 +3,9 @@ import type { DataExporter, ExportedPart } from '@kit/privacy-participant'
 import type {
   OAuthAccountRepository,
   PasskeyRepository,
+  RecoveryCodeRepository,
   RefreshTokenRepository,
+  TotpCredentialRepository,
   UserRepository,
 } from '../domain/repositories'
 
@@ -17,15 +19,21 @@ export class IdentityDataExporter implements DataExporter {
     private passkeys: PasskeyRepository,
     private oauthAccounts: OAuthAccountRepository,
     private refreshTokens: RefreshTokenRepository,
+    private totp: TotpCredentialRepository,
+    private recoveryCodes: RecoveryCodeRepository,
     private clock: Clock,
+    /** Whether authenticator apps are on: the stored secret cannot be read without the key. */
+    private twoFactor: boolean,
   ) {}
 
   async collect(userId: string): Promise<ExportedPart> {
     const user = await this.users.findById(userId)
-    const [passkeys, connected, devices] = await Promise.all([
+    const [passkeys, connected, devices, authenticator, recoveryCodesLeft] = await Promise.all([
       this.passkeys.listByUser(userId),
       this.oauthAccounts.listByUser(userId),
       this.refreshTokens.listActiveSessions(userId, this.clock.now()),
+      this.twoFactor ? this.totp.find(userId) : null,
+      this.twoFactor ? this.recoveryCodes.remaining(userId) : 0,
     ])
     return {
       data: {
@@ -33,6 +41,14 @@ export class IdentityDataExporter implements DataExporter {
           id: user.id,
           email: user.email.value,
           createdAt: user.createdAt.toISOString(),
+          hasPassword: user.hasPassword,
+          passwordChangedAt: user.passwordChangedAt?.toISOString() ?? null,
+          termsVersion: user.termsVersion,
+          termsAcceptedAt: user.termsAcceptedAt?.toISOString() ?? null,
+        },
+        twoFactor: {
+          authenticatorApp: authenticator?.confirmed ?? false,
+          recoveryCodesLeft,
         },
         passkeys: passkeys.map((p) => ({
           name: p.name,

@@ -5,18 +5,54 @@ export const vi = {
   common: {
     unknownDevice: 'một thiết bị không xác định',
     deviceOn: '{{browser}} trên {{os}}',
+    passwordChange: {
+      set: 'đã được đặt',
+      changed: 'đã được thay đổi',
+      removed: 'đã được gỡ',
+      reset: 'đã được đặt lại',
+    },
+    someone: 'Một người',
   },
   mail: {
     magicLink: {
       subject: 'Liên kết đăng nhập của bạn',
       title: 'Đăng nhập',
-      body: 'Đăng nhập bằng liên kết bên dưới. Liên kết hết hạn sau {{expires}} và chỉ dùng được một lần. Nếu bạn không yêu cầu, hãy bỏ qua email này.',
+      body: 'Đăng nhập bằng liên kết bên dưới, hoặc nhập mã {{code}} ở trang đăng nhập (tiện khi bạn đọc email trên thiết bị khác). Cả hai hết hạn sau {{expires}} và chỉ dùng được một lần. Nếu bạn không yêu cầu, hãy bỏ qua email này.',
       action: 'Đăng nhập',
     },
     stepUpCode: {
       subject: 'Mã xác nhận của bạn: {{code}}',
       title: 'Xác nhận là bạn',
       body: 'Mã xác nhận của bạn là {{code}}. Mã hết hạn sau {{expires}}. Nếu bạn không yêu cầu, có thể ai đó đang dùng tài khoản của bạn: bạn có thể bỏ qua email này, nhưng nên đăng xuất các thiết bị khác.',
+    },
+    signupVerification: {
+      subject: 'Xác nhận email của bạn: {{code}}',
+      title: 'Xác nhận email của bạn',
+      body: 'Dùng liên kết bên dưới để hoàn tất tạo tài khoản, hoặc nhập mã {{code}} ở trang đăng ký. Cả hai hết hạn sau {{expires}}. Nếu bạn không đăng ký, hãy bỏ qua email này.',
+      action: 'Xác nhận email',
+    },
+    accountExists: {
+      subject: 'Bạn đã có tài khoản',
+      title: 'Bạn đã có tài khoản',
+      body: 'Có người vừa thử tạo tài khoản bằng {{email}}, địa chỉ này đã có tài khoản. Nếu là bạn, hãy đăng nhập (hoặc đặt lại mật khẩu ở trang đăng nhập). Nếu không, không có gì xảy ra và bạn có thể bỏ qua email này.',
+      action: 'Đăng nhập',
+    },
+    passwordReset: {
+      subject: 'Đặt lại mật khẩu',
+      title: 'Đặt lại mật khẩu',
+      body: 'Dùng liên kết bên dưới để chọn mật khẩu mới. Liên kết hết hạn sau {{expires}}, chỉ dùng một lần và sẽ đăng xuất bạn khỏi mọi thiết bị. Nếu bạn không yêu cầu, hãy bỏ qua email này.',
+      action: 'Chọn mật khẩu mới',
+    },
+    passwordChanged: {
+      subject: 'Mật khẩu của bạn đã thay đổi',
+      title: 'Mật khẩu đã thay đổi',
+      body: 'Mật khẩu của tài khoản bạn {{what}}. Nếu không phải bạn, hãy đặt lại ngay và liên hệ hỗ trợ.',
+    },
+    invitation: {
+      subject: 'Bạn được mời',
+      title: 'Bạn được mời',
+      body: '{{inviter}} đã mời {{email}} tham gia. Đăng nhập bằng địa chỉ này để tạo tài khoản.',
+      action: 'Bắt đầu',
     },
     welcome: {
       subject: 'Chào mừng bạn!',
@@ -64,6 +100,18 @@ export const vi = {
     oauthLinked: {
       title: 'Đã kết nối {{provider}}',
       body: 'Tài khoản {{provider}} của bạn giờ có thể đăng nhập vào tài khoản này. Nếu không phải bạn, hãy ngắt kết nối và đăng xuất các thiết bị khác.',
+    },
+    passwordChanged: {
+      title: 'Mật khẩu của bạn đã thay đổi',
+      body: 'Mật khẩu của tài khoản bạn {{what}}. Nếu không phải bạn, hãy đặt lại và đăng xuất các thiết bị khác.',
+    },
+    twoFactorEnabled: {
+      title: 'Đã bật xác thực hai lớp',
+      body: 'Từ giờ đăng nhập sẽ yêu cầu mã từ ứng dụng xác thực. Hãy giữ kỹ các mã khôi phục.',
+    },
+    twoFactorDisabled: {
+      title: 'Đã tắt xác thực hai lớp',
+      body: 'Đăng nhập không còn yêu cầu mã từ ứng dụng xác thực. Nếu không phải bạn, hãy bật lại và đăng xuất các thiết bị khác.',
     },
     oauthUnlinked: {
       title: 'Đã ngắt kết nối {{provider}}',

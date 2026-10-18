@@ -5,6 +5,7 @@ import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import type {
   PasskeyRepository,
   StepUpCodeRepository,
+  TotpCredentialRepository,
   UserRepository,
   WebAuthnChallengeRepository,
 } from '../../domain/repositories'
@@ -15,8 +16,10 @@ import {
   STEP_UP_CODE_WINDOW_MS,
 } from '../../domain/step-up-code'
 import type { PasskeyAssertions } from '../passkey-assertions'
-import type { TokenService, WebAuthnResponse, WebAuthnService } from '../ports'
+import type { PasswordHasher, TokenService, WebAuthnResponse, WebAuthnService } from '../ports'
 import { stepUpCodeRequested } from '../security-events'
+import type { SignInGuard } from '../sign-in-guard'
+import { useTotpCode } from './two-factor'
 
 export interface ElevatedToken {
   accessToken: string
@@ -156,6 +159,65 @@ export class FinishStepUpPasskey {
       response: cmd.response,
       userId: cmd.userId,
     })
+    return elevate(this.tokens, this.clock, cmd)
+  }
+}
+
+/** Step-up with the authenticator app. Counts against the same guess limits as signing in. */
+export class VerifyStepUpTotp {
+  constructor(
+    private users: UserRepository,
+    private totp: TotpCredentialRepository,
+    private guard: SignInGuard,
+    private tokens: TokenService,
+    private clock: Clock,
+  ) {}
+
+  async execute(cmd: {
+    userId: string
+    sessionId: string
+    code: string
+    ip: string
+  }): Promise<ElevatedToken> {
+    const user = await this.users.findById(cmd.userId)
+    if (!user) throw new NotFoundError('user_not_found', 'User not found')
+    await this.guard.assertAllowed(user.email.value, cmd.ip)
+    const credential = await this.totp.find(cmd.userId)
+    const ok =
+      credential?.confirmed &&
+      (await useTotpCode(this.totp, credential, cmd.code, this.clock.now()))
+    if (!ok) {
+      await this.guard.recordFailure(user.email.value, cmd.ip, 'step_up_totp')
+      throw new ValidationError('invalid_step_up_code', 'This code is wrong or has expired')
+    }
+    return elevate(this.tokens, this.clock, cmd)
+  }
+}
+
+/** Step-up by typing the password again. */
+export class VerifyStepUpPassword {
+  constructor(
+    private users: UserRepository,
+    private hasher: PasswordHasher,
+    private guard: SignInGuard,
+    private tokens: TokenService,
+    private clock: Clock,
+  ) {}
+
+  async execute(cmd: {
+    userId: string
+    sessionId: string
+    password: string
+    ip: string
+  }): Promise<ElevatedToken> {
+    const user = await this.users.findById(cmd.userId)
+    if (!user) throw new NotFoundError('user_not_found', 'User not found')
+    await this.guard.assertAllowed(user.email.value, cmd.ip)
+    const ok = await this.hasher.verify(cmd.password, user.passwordHash)
+    if (!ok) {
+      await this.guard.recordFailure(user.email.value, cmd.ip, 'step_up_password')
+      throw new ValidationError('invalid_step_up_password', 'This password is wrong')
+    }
     return elevate(this.tokens, this.clock, cmd)
   }
 }

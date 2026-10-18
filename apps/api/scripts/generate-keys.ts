@@ -1,4 +1,4 @@
-// Generates the dev keys (JWT ES256 pair + Web Push VAPID pair + step-up code secret) and writes them to the monorepo root .env.
+// Generates the dev keys (JWT ES256 pair + Web Push VAPID pair + step-up code secret + TOTP encryption key) and writes them to the monorepo root .env.
 
 import { randomBytes } from 'node:crypto'
 import { exportPKCS8, exportSPKI, generateKeyPair } from 'jose'
@@ -26,6 +26,10 @@ if (!/^VAPID_PRIVATE_KEY=.+$/m.test(existing)) {
 // The secret behind the hashed step-up codes: keep an existing one (changing it voids the codes in flight).
 if (!/^STEP_UP_CODE_SECRET=.+$/m.test(existing))
   entries.STEP_UP_CODE_SECRET = randomBytes(32).toString('hex')
+
+// The key behind the stored authenticator secrets: keep an existing one (changing it locks enrolled accounts out).
+if (!/^TOTP_ENCRYPTION_KEY=.+$/m.test(existing))
+  entries.TOTP_ENCRYPTION_KEY = randomBytes(32).toString('hex')
 
 let content = (await Bun.file(envPath).exists()) ? await Bun.file(envPath).text() : ''
 for (const [key, value] of Object.entries(entries)) {

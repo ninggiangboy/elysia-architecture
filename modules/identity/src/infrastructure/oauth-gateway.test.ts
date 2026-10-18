@@ -44,11 +44,12 @@ describe('ArcticOAuthGateway', () => {
     })
     expect(githubOnly.enabledProviders()).toEqual(['github'])
     expect(() => githubOnly.authorizationUrl('google', { state: 's', codeVerifier: 'v' })).toThrow()
+    expect(githubOnly.providerNames()).toEqual({ github: 'GitHub' })
   })
 
-  test('authorization URLs carry state, the redirect URI and, for Google, a PKCE challenge', () => {
+  test('authorization URLs carry state, the redirect URI and, for Google, a PKCE challenge', async () => {
     const google = new URL(
-      gateway.authorizationUrl('google', { state: 'st', codeVerifier: 'v'.repeat(43) }),
+      await gateway.authorizationUrl('google', { state: 'st', codeVerifier: 'v'.repeat(43) }),
     )
     expect(google.origin + google.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth')
     expect(google.searchParams.get('state')).toBe('st')
@@ -56,7 +57,9 @@ describe('ArcticOAuthGateway', () => {
     expect(google.searchParams.get('code_challenge_method')).toBe('S256')
     expect(google.searchParams.get('scope')).toContain('email')
 
-    const github = new URL(gateway.authorizationUrl('github', { state: 'st', codeVerifier: 'v' }))
+    const github = new URL(
+      await gateway.authorizationUrl('github', { state: 'st', codeVerifier: 'v' }),
+    )
     expect(github.origin + github.pathname).toBe('https://github.com/login/oauth/authorize')
     expect(github.searchParams.get('state')).toBe('st')
     expect(github.searchParams.get('scope')).toBe('user:email')
@@ -83,6 +86,7 @@ describe('ArcticOAuthGateway', () => {
         providerUserId: '1234',
         email: 'a@example.com',
         emailVerified: true,
+        displayName: null,
       })
     })
 
@@ -125,6 +129,7 @@ describe('ArcticOAuthGateway', () => {
         providerUserId: '42',
         email: 'main@example.com',
         emailVerified: true,
+        displayName: null,
       })
       const emailsCall = calls.find((c) => c.url.endsWith('/user/emails'))
       expect(new Headers(emailsCall?.init?.headers).get('authorization')).toBe('Bearer gh-token')
@@ -136,6 +141,7 @@ describe('ArcticOAuthGateway', () => {
         providerUserId: '7',
         email: null,
         emailVerified: false,
+        displayName: null,
       })
     })
 
@@ -155,6 +161,145 @@ describe('ArcticOAuthGateway', () => {
       await expect(gateway.exchange('github', { code: 'c', codeVerifier: 'v' })).rejects.toThrow(
         '502',
       )
+    })
+  })
+
+  describe('Microsoft', () => {
+    const ms = new ArcticOAuthGateway({
+      redirectUri: REDIRECT,
+      microsoft: { clientId: 'ms-id', clientSecret: 's', tenant: 'common' },
+    })
+    const TENANT = 'a1b2c3d4-0000-0000-0000-000000000000'
+    const exchange = (claims: Record<string, unknown>) => {
+      fakeFetch({
+        'https://login.microsoftonline.com/common/oauth2/v2.0/token': () =>
+          json({ access_token: 'at', token_type: 'Bearer', id_token: idToken(claims) }),
+      })
+      return ms.exchange('microsoft', { code: 'c', codeVerifier: 'v' })
+    }
+    const claims = {
+      iss: `https://login.microsoftonline.com/${TENANT}/v2.0`,
+      aud: 'ms-id',
+      sub: 'ms-sub',
+      tid: TENANT,
+      email: 'a@corp.example',
+      name: 'Ada',
+    }
+
+    test('a work account is verified only when Microsoft says the tenant owns the domain', async () => {
+      expect((await exchange(claims))?.emailVerified).toBe(false)
+      expect((await exchange({ ...claims, xms_edov: true }))?.emailVerified).toBe(true)
+      expect((await exchange({ ...claims, xms_edov: false }))?.emailVerified).toBe(false)
+    })
+
+    test('a personal account’s address is verified by Microsoft itself', async () => {
+      const tid = '9188040d-6c67-4c5b-b112-36a304b66dad'
+      const profile = await exchange({
+        ...claims,
+        tid,
+        iss: `https://login.microsoftonline.com/${tid}/v2.0`,
+      })
+      expect(profile).toMatchObject({ emailVerified: true, displayName: 'Ada' })
+    })
+
+    test('a token for another app or from a mismatched issuer is refused', async () => {
+      expect(await exchange({ ...claims, aud: 'other' })).toBeNull()
+      expect(
+        await exchange({ ...claims, iss: 'https://login.microsoftonline.com/x/v2.0' }),
+      ).toBeNull()
+    })
+  })
+
+  describe('Discord', () => {
+    const discord = new ArcticOAuthGateway({
+      redirectUri: REDIRECT,
+      discord: { clientId: 'dc-id', clientSecret: 's' },
+    })
+    const api = (user: unknown) =>
+      fakeFetch({
+        'https://discord.com/api/oauth2/token': () =>
+          json({ access_token: 'dc-token', token_type: 'Bearer' }),
+        'https://discord.com/api/users/@me': () => json(user),
+      })
+
+    test('uses the verified flag Discord reports', async () => {
+      api({ id: '9', email: 'a@example.com', verified: true, global_name: 'Ada' })
+      expect(await discord.exchange('discord', { code: 'c', codeVerifier: 'v' })).toEqual({
+        providerUserId: '9',
+        email: 'a@example.com',
+        emailVerified: true,
+        displayName: 'Ada',
+      })
+      api({ id: '9', email: 'a@example.com', verified: false, username: 'ada' })
+      expect(
+        (await discord.exchange('discord', { code: 'c', codeVerifier: 'v' }))?.emailVerified,
+      ).toBe(false)
+    })
+  })
+
+  describe('generic OIDC', () => {
+    const ISSUER = 'https://sso.example.com/realms/acme'
+    const oidc = () =>
+      new ArcticOAuthGateway({
+        redirectUri: REDIRECT,
+        oidc: [
+          { id: 'acme', name: 'Acme SSO', issuer: ISSUER, clientId: 'acme-id', clientSecret: 's' },
+        ],
+      })
+    const discovery = (doc: Record<string, unknown> = {}) => ({
+      [`${ISSUER}/.well-known/openid-configuration`]: () =>
+        json({
+          issuer: ISSUER,
+          authorization_endpoint: `${ISSUER}/auth`,
+          token_endpoint: `${ISSUER}/token`,
+          ...doc,
+        }),
+    })
+
+    test('endpoints come from the discovery document, with PKCE', async () => {
+      fakeFetch(discovery())
+      const gw = oidc()
+      expect(gw.enabledProviders()).toEqual(['acme'])
+      expect(gw.providerNames()).toEqual({ acme: 'Acme SSO' })
+      const url = new URL(
+        await gw.authorizationUrl('acme', { state: 'st', codeVerifier: 'v'.repeat(43) }),
+      )
+      expect(url.origin + url.pathname).toBe(`${ISSUER}/auth`)
+      expect(url.searchParams.get('code_challenge_method')).toBe('S256')
+      expect(url.searchParams.get('client_id')).toBe('acme-id')
+    })
+
+    test('a discovery document for another issuer is refused', async () => {
+      fakeFetch(discovery({ issuer: 'https://evil.example' }))
+      await expect(
+        oidc().authorizationUrl('acme', { state: 's', codeVerifier: 'v' }),
+      ).rejects.toThrow('another issuer')
+    })
+
+    test('reads the profile, and only a boolean email_verified counts', async () => {
+      const claims = { iss: ISSUER, aud: 'acme-id', sub: 'u1', email: 'a@example.com', name: 'Ada' }
+      const exchange = (extra: Record<string, unknown>) => {
+        fakeFetch({
+          ...discovery(),
+          [`${ISSUER}/token`]: () =>
+            json({
+              access_token: 'at',
+              token_type: 'Bearer',
+              id_token: idToken({ ...claims, ...extra }),
+            }),
+        })
+        return oidc().exchange('acme', { code: 'c', codeVerifier: 'v' })
+      }
+      expect(await exchange({ email_verified: true })).toEqual({
+        providerUserId: 'u1',
+        email: 'a@example.com',
+        emailVerified: true,
+        displayName: 'Ada',
+      })
+      expect((await exchange({ email_verified: 'true' }))?.emailVerified).toBe(false)
+      expect((await exchange({}))?.emailVerified).toBe(false)
+      expect(await exchange({ aud: 'someone-else' })).toBeNull()
+      expect(await exchange({ iss: 'https://evil.example' })).toBeNull()
     })
   })
 })

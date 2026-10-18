@@ -2,11 +2,11 @@ import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { UnauthorizedError } from '@kit/core'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import type { UserRepository, WebAuthnChallengeRepository } from '../../domain/repositories'
+import type { SessionResult } from '../auth-outcome'
 import type { PasskeyAssertions } from '../passkey-assertions'
 import type { WebAuthnResponse, WebAuthnService } from '../ports'
 import type { SessionMeta } from '../session-issuer'
 import type { SessionStarter } from '../session-starter'
-import type { VerifyMagicLinkResult } from './verify-magic-link'
 
 /** Usernameless sign-in, step 1: options that let the browser offer any passkey it holds for this site. */
 export class BeginPasskeyLogin {
@@ -46,7 +46,7 @@ export class FinishPasskeyLogin {
     challengeId: string
     response: WebAuthnResponse
     meta: SessionMeta
-  }): Promise<VerifyMagicLinkResult> {
+  }): Promise<SessionResult> {
     const passkey = await this.assertions.verify({
       purpose: 'login',
       challengeId: cmd.challengeId,

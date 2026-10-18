@@ -5,17 +5,20 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@
 import type { OutboxWriter } from '@kit/messaging'
 import { OAUTH_STATE_TTL_MS, type OAuthPurpose } from '../../domain/auth-challenge'
 import { Email } from '../../domain/email'
-import { isOAuthProvider, OAuthAccount, type OAuthProviderId } from '../../domain/oauth-account'
+import { OAuthAccount, type OAuthProviderId } from '../../domain/oauth-account'
 import type {
   OAuthAccountRepository,
   OAuthStateRepository,
   UserRepository,
 } from '../../domain/repositories'
-import { User } from '../../domain/user'
+import type { User } from '../../domain/user'
+import type { AccountRegistrar } from '../account-registrar'
+import type { AuthOutcome } from '../auth-outcome'
 import type { OAuthGateway, OAuthProfile, TokenService } from '../ports'
 import { oauthAccountUnlinked } from '../security-events'
-import type { SessionMeta, SessionTokens } from '../session-issuer'
-import type { SessionStarter } from '../session-starter'
+import type { SessionMeta } from '../session-issuer'
+import type { SignInCompleter } from '../sign-in-completer'
+import type { SignInMethodGuard } from '../sign-in-method-guard'
 
 const unavailable = () =>
   new NotFoundError('oauth_provider_unavailable', 'This sign-in method is not available')
@@ -23,8 +26,11 @@ const unavailable = () =>
 export class ListOAuthProviders {
   constructor(private gateway: OAuthGateway) {}
 
-  execute(): OAuthProviderId[] {
-    return this.gateway.enabledProviders()
+  execute(): { providers: OAuthProviderId[]; names: Record<string, string> } {
+    return {
+      providers: this.gateway.enabledProviders(),
+      names: this.gateway.providerNames?.() ?? {},
+    }
   }
 }
 
@@ -48,9 +54,7 @@ export class BeginOAuth {
     userId?: string
     authTime?: number
   }): Promise<{ url: string }> {
-    if (!isOAuthProvider(cmd.provider) || !this.gateway.enabledProviders().includes(cmd.provider)) {
-      throw unavailable()
-    }
+    if (!this.gateway.enabledProviders().includes(cmd.provider)) throw unavailable()
     if (cmd.purpose === 'link') this.stepUp.assertFresh(cmd.authTime)
 
     const state = this.tokens.newOpaqueToken()
@@ -67,13 +71,13 @@ export class BeginOAuth {
       expiresAt: new Date(now.getTime() + OAUTH_STATE_TTL_MS),
     })
     return {
-      url: this.gateway.authorizationUrl(cmd.provider, { state: state.token, codeVerifier }),
+      url: await this.gateway.authorizationUrl(cmd.provider, { state: state.token, codeVerifier }),
     }
   }
 }
 
 export type CompleteOAuthResult =
-  | { kind: 'login'; user: { id: string; email: string }; session: SessionTokens }
+  | { kind: 'login'; outcome: AuthOutcome }
   | { kind: 'link'; provider: OAuthProviderId; email: string | null }
 
 /**
@@ -86,7 +90,8 @@ export class CompleteOAuth {
     private states: OAuthStateRepository,
     private accounts: OAuthAccountRepository,
     private users: UserRepository,
-    private starter: SessionStarter,
+    private completer: SignInCompleter,
+    private registrar: AccountRegistrar,
     private tokens: TokenService,
     private outbox: OutboxWriter,
     private uow: UnitOfWork,
@@ -105,7 +110,7 @@ export class CompleteOAuth {
   }): Promise<CompleteOAuthResult> {
     const now = this.clock.now()
     const state = await this.states.consume(this.tokens.hashOpaqueToken(cmd.state), now)
-    if (!state || !isOAuthProvider(state.provider)) {
+    if (!state) {
       throw new ValidationError(
         'invalid_oauth_state',
         'This sign-in attempt expired, please try again',
@@ -117,7 +122,7 @@ export class CompleteOAuth {
       throw new ForbiddenError('oauth_state_mismatch', 'Sign in to the account you are connecting')
     }
 
-    const provider = state.provider
+    const provider: OAuthProviderId = state.provider
     const profile = await this.gateway.exchange(provider, {
       code: cmd.code,
       codeVerifier: state.codeVerifier,
@@ -188,60 +193,62 @@ export class CompleteOAuth {
     meta: SessionMeta,
     locale: Locale,
   ): Promise<CompleteOAuthResult> {
-    return this.uow.run(async () => {
-      const { user, newUser } = await this.resolveUser(provider, profile, locale)
-      const session = await this.starter.start({
-        userId: user.id,
+    return this.uow.run(async (): Promise<CompleteOAuthResult> => {
+      const method = `oauth:${provider}`
+      const user = await this.knownUser(provider, profile)
+      if (user) {
+        return { kind: 'login', outcome: await this.completer.complete({ user, method, meta }) }
+      }
+      // An identity nobody has used here, with no account for its address: this is a sign-up.
+      const email = this.verifiedEmail(profile)
+      const outcome = await this.registrar.onProvenEmail({
+        email,
+        method,
+        locale,
         meta,
-        method: `oauth:${provider}`,
-        newUser,
+        displayName: profile.displayName,
+        oauth: { provider, providerUserId: profile.providerUserId, email: profile.email },
       })
-      return { kind: 'login', user: { id: user.id, email: user.email.value }, session } as const
+      return { kind: 'login', outcome }
     })
   }
 
-  /** The user this provider identity belongs to — found by the link, else matched by email, else created. */
-  private async resolveUser(
-    provider: OAuthProviderId,
-    profile: OAuthProfile,
-    locale: Locale,
-  ): Promise<{ user: User; newUser: boolean }> {
+  /**
+   * The user this provider identity belongs to — found by the link, else matched by email and linked; null when
+   * there is none. Matching an existing account by email is safe only because the provider vouches the user controls
+   * that address (the same proof a magic link gives).
+   */
+  private async knownUser(provider: OAuthProviderId, profile: OAuthProfile): Promise<User | null> {
     const linked = await this.accounts.findByProviderUser(provider, profile.providerUserId)
     if (linked) {
       const user = await this.users.findById(linked.userId)
       if (!user) throw new NotFoundError('user_not_found', 'User not found')
-      return { user, newUser: false }
+      return user
     }
-
-    // First time we see this identity. Matching an existing account by email is safe only because the provider
-    // vouches the user controls that address (the same proof a magic link gives).
-    if (!profile.email || !profile.emailVerified) {
-      throw new ValidationError(
-        'oauth_email_unverified',
-        'The provider has no verified email for this account',
-      )
-    }
-    const now = this.clock.now()
-    const email = Email.create(profile.email)
-    let user = await this.users.findByEmail(email)
-    const newUser = !user
-    if (!user) {
-      user = User.register({ id: this.ids.next(), email, locale, now })
-      await this.users.save(user)
-      await this.outbox.add(user.pullEvents())
-    }
+    const email = this.verifiedEmail(profile)
+    const user = await this.users.findByEmail(email)
+    if (!user) return null
     const account = OAuthAccount.link({
       id: this.ids.next(),
       userId: user.id,
       provider,
       providerUserId: profile.providerUserId,
       email: profile.email,
-      now,
+      now: this.clock.now(),
     })
     await this.accounts.add(account)
-    // A brand-new account does not need to be told about the one method it was created with.
-    if (!newUser) await this.outbox.add(account.pullEvents())
-    return { user, newUser }
+    await this.outbox.add(account.pullEvents())
+    return user
+  }
+
+  private verifiedEmail(profile: OAuthProfile): Email {
+    if (!profile.email || !profile.emailVerified) {
+      throw new ValidationError(
+        'oauth_email_unverified',
+        'The provider has no verified email for this account',
+      )
+    }
+    return Email.create(profile.email)
   }
 }
 
@@ -263,10 +270,11 @@ export class ListOAuthAccounts {
   }
 }
 
-/** Email sign-in always remains, so the user can never be locked out by disconnecting. */
+/** What is left must still let the user in (email sign-in, a password, a passkey or another provider). */
 export class UnlinkOAuthAccount {
   constructor(
     private accounts: OAuthAccountRepository,
+    private methods: SignInMethodGuard,
     private stepUp: StepUpPolicy,
     private outbox: OutboxWriter,
     private uow: UnitOfWork,
@@ -279,10 +287,9 @@ export class UnlinkOAuthAccount {
     authTime: number | undefined
   }): Promise<void> {
     this.stepUp.assertFresh(cmd.authTime)
-    if (!isOAuthProvider(cmd.provider))
-      throw new NotFoundError('oauth_account_not_found', 'Account not found')
     const provider = cmd.provider
     await this.uow.run(async () => {
+      await this.methods.assertKeepsOne(cmd.userId, 'oauth')
       if (!(await this.accounts.remove(cmd.userId, provider))) {
         throw new NotFoundError('oauth_account_not_found', 'Account not found')
       }

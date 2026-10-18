@@ -2,10 +2,10 @@ import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { UnauthorizedError } from '@kit/core'
 import type { OutboxWriter } from '@kit/messaging'
 import type { RefreshTokenRepository, UserRepository } from '../../domain/repositories'
+import type { SessionResult } from '../auth-outcome'
 import type { TokenService } from '../ports'
 import { sessionRevoked } from '../session-events'
 import type { SessionIssuer, SessionMeta } from '../session-issuer'
-import type { VerifyMagicLinkResult } from './verify-magic-link'
 
 export class RefreshSession {
   constructor(
@@ -19,7 +19,7 @@ export class RefreshSession {
     private clock: Clock,
   ) {}
 
-  async execute(cmd: { refreshToken: string; meta: SessionMeta }): Promise<VerifyMagicLinkResult> {
+  async execute(cmd: { refreshToken: string; meta: SessionMeta }): Promise<SessionResult> {
     const now = this.clock.now()
     const hash = this.tokens.hashOpaqueToken(cmd.refreshToken)
 

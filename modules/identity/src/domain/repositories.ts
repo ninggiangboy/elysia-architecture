@@ -1,12 +1,25 @@
 import type { OAuthState, WebAuthnChallenge, WebAuthnPurpose } from './auth-challenge'
 import type { Email } from './email'
 import type { EmailChangeRequest } from './email-change-request'
+import type { Invitation } from './invitation'
 import type { MagicLink } from './magic-link'
 import type { OAuthAccount, OAuthProviderId } from './oauth-account'
 import type { Passkey } from './passkey'
+import type { PasswordReset } from './password'
 import type { DeviceSession, RefreshToken } from './refresh-token'
+import type { Signup } from './signup'
 import type { StepUpCode } from './step-up-code'
+import type { MfaChallenge, TotpCredential } from './two-factor'
 import type { User } from './user'
+
+/** How many requests a scope made inside a window, and when the oldest of them was made (for `Retry-After`). */
+export interface WindowCount {
+  count: number
+  oldest: Date | null
+}
+
+/** Throttles count rows per address or per IP. */
+export type ThrottleScope = { email: string } | { ip: string }
 
 export interface UserRepository {
   findById(id: string): Promise<User | null>
@@ -20,6 +33,89 @@ export interface MagicLinkRepository {
   add(link: MagicLink): Promise<void>
   /** Atomic: mark as used if still valid and unused; returns null if invalid. */
   consume(tokenHash: string, now: Date): Promise<MagicLink | null>
+  /**
+   * Atomic: consumes a live link of `email` whose code hash matches and that took fewer than `maxAttempts` wrong codes.
+   * On a mismatch every live link of that address counts the attempt, and null is returned.
+   */
+  consumeByCode(
+    email: Email,
+    codeHash: string,
+    now: Date,
+    maxAttempts: number,
+  ): Promise<MagicLink | null>
+}
+
+export interface SignupRepository {
+  /** Also deletes rows that expired long ago (anyone can start a sign-up). */
+  add(signup: Signup): Promise<void>
+  /** Atomic and single-use: the signup if the token matches, unused and unexpired. */
+  consume(tokenHash: string, now: Date): Promise<Signup | null>
+  /** Same shape as `MagicLinkRepository.consumeByCode`, for unverified (password) sign-ups. */
+  consumeByCode(
+    email: Email,
+    codeHash: string,
+    now: Date,
+    maxAttempts: number,
+  ): Promise<Signup | null>
+  /** Unverified sign-ups started by the scope since `since` (each one sent a mail). */
+  startedSince(scope: ThrottleScope, since: Date): Promise<WindowCount>
+}
+
+export interface PasswordResetRepository {
+  /** Earlier pending resets of the user stop working: only the newest mail counts. */
+  issue(reset: PasswordReset): Promise<void>
+  consume(tokenHash: string, now: Date): Promise<PasswordReset | null>
+  requestedSince(scope: ThrottleScope, since: Date): Promise<WindowCount>
+}
+
+export interface SignInFailureRepository {
+  record(failure: {
+    id: string
+    email: string
+    ip: string
+    method: string
+    at: Date
+  }): Promise<void>
+  since(scope: ThrottleScope, since: Date): Promise<WindowCount>
+}
+
+export interface TotpCredentialRepository {
+  find(userId: string): Promise<TotpCredential | null>
+  /** Replaces a pending (unconfirmed) enrolment; never a confirmed one (ConflictError('totp_already_enabled')). */
+  savePending(credential: TotpCredential): Promise<void>
+  /** Confirmation / last used step, with an optimistic lock (VersionConflictError): one code, one sign-in. */
+  saveUse(credential: TotpCredential): Promise<void>
+  remove(userId: string): Promise<boolean>
+}
+
+export interface RecoveryCodeRepository {
+  /** Drops the user's previous codes and stores these. */
+  replace(userId: string, codeHashes: string[], now: Date): Promise<void>
+  /** Atomic and single-use. */
+  consume(userId: string, codeHash: string, now: Date): Promise<boolean>
+  remaining(userId: string): Promise<number>
+  removeAll(userId: string): Promise<void>
+}
+
+export interface MfaChallengeRepository {
+  add(challenge: MfaChallenge): Promise<void>
+  /** The challenge if unused, unexpired and under `maxAttempts` wrong codes. */
+  findLive(tokenHash: string, now: Date, maxAttempts: number): Promise<MfaChallenge | null>
+  recordFailure(id: string): Promise<void>
+  /** Atomic: false when another request consumed it first. */
+  consume(id: string, now: Date): Promise<boolean>
+}
+
+export interface InvitationRepository {
+  add(invitation: Invitation): Promise<void>
+  hasPending(email: Email, now: Date): Promise<boolean>
+  /** Marks the pending invitations of `email` accepted (the account now exists). */
+  accept(email: Email, now: Date): Promise<void>
+  /** Newest first. */
+  listByInviter(userId: string): Promise<Invitation[]>
+  sentSince(userId: string, since: Date): Promise<WindowCount>
+  /** Scoped to the inviter; false when they have no pending invitation with this id. */
+  revoke(userId: string, id: string, now: Date): Promise<boolean>
 }
 
 export interface EmailChangeRequestRepository {
@@ -41,6 +137,8 @@ export interface RefreshTokenRepository {
   revokeUserSession(userId: string, familyId: string, now: Date): Promise<boolean>
   /** Revokes every live session of the user except `exceptFamilyId`; returns the ids of the sessions ended. */
   revokeOtherSessions(userId: string, exceptFamilyId: string, now: Date): Promise<string[]>
+  /** Revokes every live session of the user (password reset); returns the ids of the sessions ended. */
+  revokeAllSessions(userId: string, now: Date): Promise<string[]>
 }
 
 export interface PasskeyRepository {

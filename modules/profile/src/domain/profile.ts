@@ -2,6 +2,15 @@ import { AggregateRoot } from '@kit/core'
 import { ProfileEvents } from '../contracts/events'
 import { Bio, DisplayName } from './value-objects'
 
+function chosenName(raw: string | undefined): DisplayName | null {
+  if (!raw) return null
+  try {
+    return DisplayName.create(raw)
+  } catch {
+    return null
+  }
+}
+
 export class Profile extends AggregateRoot {
   private constructor(
     userId: string,
@@ -35,11 +44,17 @@ export class Profile extends AggregateRoot {
     return this._updatedAt
   }
 
-  static createDefault(params: { userId: string; email: string; now: Date }): Profile {
+  /** A name the person chose at sign-up wins when it is acceptable; otherwise one is made from the email. */
+  static createDefault(params: {
+    userId: string
+    email: string
+    displayName?: string
+    now: Date
+  }): Profile {
     return new Profile(
       params.userId,
       0,
-      DisplayName.fromEmail(params.email),
+      chosenName(params.displayName) ?? DisplayName.fromEmail(params.email),
       null,
       null,
       null,

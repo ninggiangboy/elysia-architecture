@@ -1,13 +1,10 @@
 import { AggregateRoot } from '@kit/core'
 import { IdentityEvents } from '../contracts/events'
 
-const OAUTH_PROVIDERS = ['google', 'github'] as const
-export type OAuthProviderId = (typeof OAUTH_PROVIDERS)[number]
+/** `google`, `github`, `microsoft`, `discord` or the id of a configured OIDC provider. */
+export type OAuthProviderId = string
 
-export const isOAuthProvider = (value: string): value is OAuthProviderId =>
-  (OAUTH_PROVIDERS as readonly string[]).includes(value)
-
-/** An external identity (Google / GitHub account) that can sign its owner in. */
+/** An external identity (Google, GitHub, an OIDC provider…) that can sign its owner in. */
 export class OAuthAccount extends AggregateRoot {
   private constructor(
     id: string,

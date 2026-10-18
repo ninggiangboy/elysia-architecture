@@ -22,6 +22,7 @@ export class CreateProfileOnUserRegistered implements IntegrationEventHandler {
         Profile.createDefault({
           userId: payload.userId,
           email: payload.email,
+          displayName: payload.displayName,
           now: new Date(payload.registeredAt ?? this.clock.now()),
         }),
       )
