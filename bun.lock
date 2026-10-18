@@ -10,6 +10,7 @@
         "drizzle-kit": "^0.31.0",
         "jscpd": "^5.4.1",
         "knip": "^6.41.0",
+        "postgres": "^3.4.7",
         "typescript": "^5.9.0",
       },
     },

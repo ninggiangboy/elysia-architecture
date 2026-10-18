@@ -8,6 +8,7 @@
  */
 import { rmSync } from 'node:fs'
 import { join } from 'node:path'
+import postgres from 'postgres'
 
 const ROOT = join(import.meta.dir, '..')
 const APP = '@example/starter'
@@ -32,6 +33,20 @@ async function check(step: string) {
   await run(['bun', 'run', '--filter', APP, 'db:migrate'], `${step}: db:migrate`)
   await run(['bun', 'run', '--filter', APP, 'test:e2e'], `${step}: starter e2e`)
   console.log(`  ✓ ${step} (${((Date.now() - started) / 1000).toFixed(0)}s)`)
+}
+
+/** The generated module's schema and migration history stay in the database after it is removed: clear them, or the next run collides. */
+async function dropScratchSchemas(name: string) {
+  const env = await Bun.file(join(ROOT, 'examples/starter/.env')).text()
+  const url = /^DATABASE_URL="?([^"\n]+)"?$/m.exec(env)?.[1]
+  if (!url) throw new Error('DATABASE_URL not found in examples/starter/.env')
+  const client = postgres(url, { max: 1, onnotice: () => {} })
+  try {
+    await client.unsafe(`drop schema if exists ${name} cascade`)
+    await client.unsafe(`drop schema if exists drizzle_${name} cascade`)
+  } finally {
+    await client.end()
+  }
 }
 
 const kit = (...args: string[]) =>
@@ -59,6 +74,7 @@ if (!quick) {
 
   console.log('\ngenerate a module')
   const name = 'scratch'
+  await dropScratchSchemas(name)
   try {
     await run(['bun', 'scripts/kit.ts', 'gen', name, '--app', 'examples/starter'], 'gen scratch')
     await run(['bun', 'run', '--filter', '@example/starter', 'db:generate'], 'db:generate')
@@ -73,6 +89,7 @@ if (!quick) {
     ).catch(() => {})
     rmSync(join(ROOT, 'modules', name), { recursive: true, force: true })
     await run(['bun', 'install'])
+    await dropScratchSchemas(name)
   }
   await run(
     ['git', 'status', '--porcelain', '--', 'examples/starter', 'modules'],

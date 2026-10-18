@@ -28,6 +28,14 @@ const comment = (text: string) =>
     .map((line) => (line ? `# ${line}` : '#'))
     .join('\n')
 
+/** The line a variable gets: its example value when it has one, else its default commented out, else a blank to fill in. */
+function valueLine(name: string, field: z.ZodType, example: string | null | undefined): string {
+  if (example !== undefined && example !== null) return `${name}=${example}`
+  const fallback = defaultOf(field)
+  if (fallback !== undefined) return `# ${name}=${fallback}`
+  return isOptional(field) ? `# ${name}=` : `${name}=`
+}
+
 function renderSlice(
   slice: ConfigSlice,
   listed: Set<string>,
@@ -42,12 +50,7 @@ function renderSlice(
     listed.add(name)
     if (field.description) lines.push(comment(field.description))
     // `set` wins over the slice's own example; `null` there means "leave it commented out".
-    const example = name in set ? set[name] : slice.example?.[name]
-    const fallback = defaultOf(field)
-    if (example !== undefined && example !== null) lines.push(`${name}=${example}`)
-    else if (fallback !== undefined) lines.push(`# ${name}=${fallback}`)
-    else if (isOptional(field)) lines.push(`# ${name}=`)
-    else lines.push(`${name}=`)
+    lines.push(valueLine(name, field, name in set ? set[name] : slice.example?.[name]))
   }
   return lines.join('\n')
 }

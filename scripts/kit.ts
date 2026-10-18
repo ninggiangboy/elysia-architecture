@@ -54,10 +54,10 @@ class App {
   }
 }
 
-const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 function insertBefore(content: string, marker: string, text: string): string {
-  const re = new RegExp(`^([ \\t]*)// <kit:${escape(marker)}>[ \\t]*$`, 'm')
+  const re = new RegExp(`^([ \\t]*)// <kit:${escapeRe(marker)}>[ \\t]*$`, 'm')
   const match = re.exec(content)
   if (!match) throw new Error(`marker "// <kit:${marker}>" not found`)
   const indent = match[1] ?? ''
@@ -65,7 +65,7 @@ function insertBefore(content: string, marker: string, text: string): string {
     .split('\n')
     .map((l) => (l ? indent + l : l))
     .join('\n')
-  return content.slice(0, match.index) + lines + '\n' + content.slice(match.index)
+  return `${content.slice(0, match.index)}${lines}\n${content.slice(match.index)}`
 }
 
 /** `import { a, type B } from 'spec'` statements: parse enough to merge and remove names. */
@@ -118,6 +118,46 @@ function sortedDeps(deps: Record<string, string>) {
 
 // ---- add / remove ------------------------------------------------------------------------------------------------------
 
+function addToPackage(app: App, kit: KitFile) {
+  const pkg = JSON.parse(app.read(app.pkg))
+  pkg.dependencies = sortedDeps({ ...pkg.dependencies, ...kit.appDependencies })
+  app.write(app.pkg, `${JSON.stringify(pkg, null, 2)}\n`)
+}
+
+function addToCatalog(app: App, name: string) {
+  let catalog = app.read(app.catalog)
+  catalog = addImport(catalog, `import { ${name}Manifest } from '@mod/${name}/manifest'`)
+  app.write(app.catalog, insertBefore(catalog, 'catalog', `${name}Manifest,`))
+}
+
+/** Imports, the install block between sentinels, the modules record. */
+function addToContainer(container: string, name: string, kit: KitFile) {
+  let out = container
+  for (const statement of kit.container.imports) out = addImport(out, statement)
+  out = insertBefore(
+    out,
+    kit.late ? 'install-late' : 'install',
+    `// <kit:module ${name}>\n${kit.container.install}\n// </kit:module ${name}>`,
+  )
+  return insertBefore(out, 'modules', `${name},`)
+}
+
+/** What the new module ships for the installed consumers, and what the installed producers ship for it if it is one. */
+function wireIntegrations(container: string, name: string, kit: KitFile, installed: string[]) {
+  let out = container
+  for (const consumer of Object.keys(kit.integrations)) {
+    if ([...installed, name].includes(consumer))
+      out = addIntegration(out, consumer, kit.integrations[consumer] as KitIntegration)
+  }
+  if (kit.consumes) {
+    for (const producer of installed) {
+      const entry = readKit(producer).integrations[kit.consumes]
+      if (entry) out = addIntegration(out, kit.consumes, entry)
+    }
+  }
+  return out
+}
+
 function add(app: App, name: string) {
   const kit = readKit(name)
   const installed = app.installed()
@@ -128,45 +168,19 @@ function add(app: App, name: string) {
       `${name} requires ${missing.join(', ')}: add ${missing.length > 1 ? 'them' : 'it'} first`,
     )
 
-  // 1. package.json
-  const pkg = JSON.parse(app.read(app.pkg))
-  pkg.dependencies = sortedDeps({ ...pkg.dependencies, ...kit.appDependencies })
-  app.write(app.pkg, `${JSON.stringify(pkg, null, 2)}\n`)
-
-  // 2. catalog
-  let catalog = app.read(app.catalog)
-  catalog = addImport(catalog, `import { ${name}Manifest } from '@mod/${name}/manifest'`)
-  catalog = insertBefore(catalog, 'catalog', `${name}Manifest,`)
-  app.write(app.catalog, catalog)
-
-  // 3. container: imports, the install block between sentinels, the modules record
-  let container = app.read(app.container)
-  for (const statement of kit.container.imports) container = addImport(container, statement)
-  container = insertBefore(
-    container,
-    kit.late ? 'install-late' : 'install',
-    `// <kit:module ${name}>\n${kit.container.install}\n// </kit:module ${name}>`,
+  addToPackage(app, kit)
+  addToCatalog(app, name)
+  const container = wireIntegrations(
+    addToContainer(app.read(app.container), name, kit),
+    name,
+    kit,
+    installed,
   )
-  container = insertBefore(container, 'modules', `${name},`)
-
-  // 4. routes
-  let routes = app.read(app.routes)
-  routes = insertBefore(routes, 'routes', `.use(container.modules.${name}.routes)`)
-  app.write(app.routes, routes)
-
-  // 5. integrations, both directions, from whatever is installed now
-  const all = [...installed, name]
-  for (const consumer of Object.keys(kit.integrations)) {
-    if (all.includes(consumer))
-      container = addIntegration(container, consumer, kit.integrations[consumer] as KitIntegration)
-  }
-  if (kit.consumes) {
-    for (const producer of installed) {
-      const entry = readKit(producer).integrations[kit.consumes]
-      if (entry) container = addIntegration(container, kit.consumes, entry)
-    }
-  }
   app.write(app.container, container)
+  app.write(
+    app.routes,
+    insertBefore(app.read(app.routes), 'routes', `.use(container.modules.${name}.routes)`),
+  )
   console.log(`+ ${name}`)
 }
 
@@ -174,6 +188,38 @@ function addIntegration(container: string, list: string, integration: KitIntegra
   if (new RegExp(`^\\s+${integration.entry},`, 'm').test(container)) return container
   container = addImport(container, integration.import)
   return insertBefore(container, `${list}-integrations`, `${integration.entry},`)
+}
+
+function removeFromContainer(container: string, name: string, kit: KitFile, installed: string[]) {
+  // the install block, its modules-record entry, and the imports its snippet needed
+  let out = container.replace(
+    new RegExp(`^[ \\t]*// <kit:module ${name}>[\\s\\S]*?// </kit:module ${name}>\\n`, 'm'),
+    '',
+  )
+  out = out.replace(new RegExp(`^[ \\t]+${name},\\n`, 'm'), '')
+  for (const statement of kit.container.imports) out = removeImport(out, statement)
+  // the imports of what the other modules ship for it (the lists went with its install block)
+  for (const producer of kit.consumes ? installed : []) {
+    const entry = readKit(producer).integrations[kit.consumes as string]
+    if (producer !== name && entry) out = removeImport(out, entry.import)
+  }
+  // its entries in the other modules' integration lists
+  for (const integration of Object.values(kit.integrations)) {
+    out = out.replace(new RegExp(`^[ \\t]+${integration.entry},\\n`, 'm'), '')
+    out = removeImport(out, integration.import)
+  }
+  return out
+}
+
+function removeFromPackage(app: App, name: string, kit: KitFile, installed: string[]) {
+  // dependencies nobody else asks for any more
+  const stillNeeded = new Set(
+    installed.filter((m) => m !== name).flatMap((m) => Object.keys(readKit(m).appDependencies)),
+  )
+  const pkg = JSON.parse(app.read(app.pkg))
+  for (const dep of Object.keys(kit.appDependencies))
+    if (!stillNeeded.has(dep)) delete pkg.dependencies[dep]
+  app.write(app.pkg, `${JSON.stringify(pkg, null, 2)}\n`)
 }
 
 function remove(app: App, name: string) {
@@ -186,33 +232,12 @@ function remove(app: App, name: string) {
       `${dependents.join(', ')} require${dependents.length > 1 ? '' : 's'} ${name}: remove ${dependents.length > 1 ? 'them' : 'it'} first`,
     )
 
-  let container = app.read(app.container)
-  // the install block, its modules-record entry, and the imports its snippet needed
-  container = container.replace(
-    new RegExp(`^[ \\t]*// <kit:module ${name}>[\\s\\S]*?// </kit:module ${name}>\\n`, 'm'),
-    '',
+  app.write(app.container, removeFromContainer(app.read(app.container), name, kit, installed))
+  const catalog = app.read(app.catalog).replace(new RegExp(`^[ \\t]+${name}Manifest,\\n`, 'm'), '')
+  app.write(
+    app.catalog,
+    removeImport(catalog, `import { ${name}Manifest } from '@mod/${name}/manifest'`),
   )
-  container = container.replace(new RegExp(`^[ \\t]+${name},\\n`, 'm'), '')
-  for (const statement of kit.container.imports) container = removeImport(container, statement)
-  // the imports of what the other modules ship for it (the lists went with its install block)
-  if (kit.consumes) {
-    for (const producer of installed) {
-      const entry = readKit(producer).integrations[kit.consumes]
-      if (producer !== name && entry) container = removeImport(container, entry.import)
-    }
-  }
-  // its entries in the other modules' integration lists
-  for (const integration of Object.values(kit.integrations)) {
-    container = container.replace(new RegExp(`^[ \\t]+${integration.entry},\\n`, 'm'), '')
-    container = removeImport(container, integration.import)
-  }
-  app.write(app.container, container)
-
-  let catalog = app.read(app.catalog)
-  catalog = catalog.replace(new RegExp(`^[ \\t]+${name}Manifest,\\n`, 'm'), '')
-  catalog = removeImport(catalog, `import { ${name}Manifest } from '@mod/${name}/manifest'`)
-  app.write(app.catalog, catalog)
-
   app.write(
     app.routes,
     app
@@ -222,15 +247,7 @@ function remove(app: App, name: string) {
         '',
       ),
   )
-
-  // dependencies nobody else asks for any more
-  const stillNeeded = new Set(
-    installed.filter((m) => m !== name).flatMap((m) => Object.keys(readKit(m).appDependencies)),
-  )
-  const pkg = JSON.parse(app.read(app.pkg))
-  for (const dep of Object.keys(kit.appDependencies))
-    if (!stillNeeded.has(dep)) delete pkg.dependencies[dep]
-  app.write(app.pkg, `${JSON.stringify(pkg, null, 2)}\n`)
+  removeFromPackage(app, name, kit, installed)
   console.log(`- ${name}`)
 }
 
