@@ -11,11 +11,11 @@ Two jobs that run *through* every module. The `privacy` module owns the process 
   - `account_deletions` + `deletion_steps`.
 - Archives in the bucket under `exports/<userId>/<exportId>/{parts/, archive.zip}`. Because everything sits under the user, erasing them is one prefix delete.
 
-Participants are listed **by name** in `bootstrap/container.ts`:
+Participants are what the modules **declare**: each returns `privacy: { exports, erases }` (from `privacyParticipation()` in `@kit/privacy-participant`) and the container reads those flags when it installs privacy, which is installed last:
 
 ```ts
-exportParticipants:   ['billing', 'identity', 'notification', 'profile'],
-deletionParticipants: ['billing', 'identity', 'notification', 'privacy', 'profile'],
+participants: { exports: participants('exports'), erases: participants('erases') }
+// today: exports ['billing','identity','notification','profile'], erases the same plus 'privacy' itself
 ```
 
 ## The request/answer contract
@@ -25,9 +25,9 @@ deletionParticipants: ['billing', 'identity', 'notification', 'privacy', 'profil
 | `privacy.data_export_requested.v1` | `<module>.data_exported.v1` | `exportId`, `key` of its JSON in S3, `size`, extra `files` |
 | `privacy.account_erasure_requested.v1` | `<module>.user_data_erased.v1` | `deletionId`, `erasedAt` |
 
-- `participantEvents(module)` in `privacy/contracts` builds the answer names by convention.
+- `participantEvents(module)` in `@kit/privacy-participant` builds the answer names by convention; `privacy/contracts` re-exports the protocol.
 - A request may carry `modules: [...]`: only the modules still owed. Empty or absent means everyone.
-- Participants do not write this plumbing themselves. They implement two ports and reuse two shared handlers from `shared/application/privacy.ts`:
+- Participants do not write this plumbing themselves. They implement two ports and reuse two handlers from `@kit/privacy-participant` (one call, `privacyParticipation()`, builds both):
   - `DataExporter.collect(userId)` → `ExportUserDataHandler`;
   - `DataEraser.erase(userId)` (must be idempotent) → `EraseUserDataHandler`.
 

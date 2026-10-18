@@ -65,11 +65,11 @@ profile.version += 1
 
 ## In this repo
 
-- `apps/api/src/shared/domain/aggregate-root.ts`
-- `apps/api/src/shared/application/errors.ts` (`VersionConflictError`)
-- `apps/api/src/modules/profile/infrastructure/persistence/drizzle-profile-repository.ts`
-- `apps/api/src/modules/profile/presentation/routes.ts` (`parseIfMatch`)
-- `apps/api/src/modules/identity/infrastructure/persistence/drizzle-security-repositories.ts` (passkey use)
+- `packages/kit-core/src/aggregate-root.ts`
+- `packages/kit-core/src/errors.ts` (`VersionConflictError`)
+- `modules/profile/src/infrastructure/persistence/drizzle-profile-repository.ts`
+- `modules/profile/src/presentation/routes.ts` (`parseIfMatch`)
+- `modules/identity/src/infrastructure/persistence/drizzle-security-repositories.ts` (passkey use)
 - `apps/web/src/features/profile/edit-profile-form.tsx`, commit `da39e05`
 
 ## Reuse checklist

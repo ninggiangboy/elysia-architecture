@@ -13,11 +13,14 @@ The architecture pays for itself in tests. Use cases depend on ports, so they ru
 | API e2e | `bun run test:e2e` (api) | The real app against real Postgres, S3 and Mailpit: full flows, outbox retry and dead-letter, mail throttling, SSE, Web Push (fake sender), privacy (a real zip from S3, erasure across modules, the jobs on the real tables), billing with a fake gateway |
 | Web unit | `bun test src` (web) | Outage detection, card validation, money formatting, catalog parity |
 | Web e2e | `bun run test:e2e` (web) | Playwright journeys: sign-in, passkeys, profile, realtime sign-out, notifications, i18n, billing, maintenance, offline |
-| Hygiene | `lint`, `quality:unused`, `quality:dup` | Biome, knip (dead code and dependencies), jscpd (duplication) |
+| Contracts | `bun run test` (kit-testing), `bun run --filter @app/api test:integration` | The same suites for each port (`@kit/testing/contracts`) on the fakes and on the real adapters (S3, Postgres inbox/outbox/rate limiter/locks, SMTP against Mailpit and a scripted server). A fake that drifts from the adapter turns one side red |
+| Starter | `@example/starter` `test:e2e` | The two-module starter boots, is ready and signs in with a link taken from the log, with no S3, SMTP, Stripe or VAPID |
+| Add-matrix | `bun run check:add-matrix` | Starting from the starter, `kit:add` notification, realtime, billing, privacy one at a time and in the reverse order, `kit:remove` each; every step typechecks, migrates and runs the starter's e2e, and the starter ends byte for byte as it was. Then a generated module typechecks, tests and migrates out of the box |
+| Hygiene | `lint`, `quality:unused`, `quality:dup`, `check:docs` | Biome, knip (dead code and dependencies), jscpd (duplication), the package READMEs (headings and generated config tables) |
 
 ## Unit tests and fakes
 
-Tests sit next to the code (`src/**/*.test.ts`). `apps/api/src/shared/testing/fakes.ts` provides:
+Tests sit next to the code (`src/**/*.test.ts`). `packages/kit-testing/src/fakes.ts` provides:
 
 | Fake | Behaviour |
 | --- | --- |
@@ -28,7 +31,7 @@ Tests sit next to the code (`src/**/*.test.ts`). `apps/api/src/shared/testing/fa
 | `FakeStorage` | Tracks metadata and bytes separately, plus a `deleted` log |
 | `InMemoryInbox` | Marks a key as processed only after `fn` succeeds, like a rolled-back transaction. `crashAfterNextSideEffect()` makes the next `afterSideEffect` "die" after the effect and before the record, so a test can see the redelivery repeat it |
 
-Repositories are faked inline per test file (for example `MemUsers` in `identity.use-cases.test.ts`), which keeps each fake as small as its test. `shared/testing` is the only part of `shared` allowed to import modules.
+Repositories are faked inline per test file (for example `MemUsers` in `identity.use-cases.test.ts`), which keeps each fake as small as its test. `@kit/testing` is test-only: it is a `devDependency` and imports no module.
 
 ## API e2e harness
 

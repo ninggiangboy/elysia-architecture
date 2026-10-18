@@ -72,10 +72,10 @@ expect(diffCatalogs(en, vi)).toEqual([])
 
 ## In this repo
 
-- `apps/api/src/modules/notification/application/in-app-notifications.ts` (`TEMPLATES`, `renderNotification`)
-- `apps/api/src/modules/notification/application/messages/` (mail)
+- `modules/identity/src/integrations/notification.ts` (`TEMPLATES`, `renderNotification`)
+- `modules/notification/src/application/messages/` (the module's own words, merged with each producer's `integrations/messages/`)
 - `apps/web/src/i18n/` (catalogs, typing, `catalogs.test.ts`), `apps/web/src/features/notifications/text.ts`
-- `packages/shared-types/src/i18n.ts`, `i18n-catalog.ts`
+- `packages/kit-i18n/src` (`defineLocales`, `diffCatalogs`, `mergeCatalogs`) and `packages/shared-types/src/locales.ts` (the product's languages)
 - Commits `d3b3d80` and `3b050f3`. Explained in [i18n](../architecture/11-i18n.md).
 
 ## Reuse checklist

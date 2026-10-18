@@ -80,9 +80,9 @@ Wiring (`ThrottledMailer`):
 
 ## In this repo
 
-- `apps/api/src/modules/notification/infrastructure/postgres-send-rate-limiter.ts`
-- `apps/api/src/modules/notification/application/throttled-mailer.ts`
-- `apps/api/src/shared/infrastructure/mail/classify-smtp-error.ts`
+- `modules/notification/src/infrastructure/postgres-send-rate-limiter.ts`
+- `modules/notification/src/application/throttled-mailer.ts`
+- `packages/kit-mail/src/classify-smtp-error.ts`
 - Config: `MAIL_RATE_PER_SECOND`, `MAIL_BURST`, `MAIL_DAILY_QUOTA`
 
 ## Reuse checklist

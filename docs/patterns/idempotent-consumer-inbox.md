@@ -83,10 +83,10 @@ await this.inbox.transactional(message.id, this.name, async () => {
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/outbox/drizzle-inbox-guard.ts`
+- `packages/kit-messaging/src/outbox/drizzle-inbox-guard.ts`
 - `transactional`: `CreateNotificationHandler`, `CreateProfileOnUserRegistered`, `RecordExportPart`, `RecordErasure`, `AssembleExport`, and the shared `ExportUserDataHandler` / `EraseUserDataHandler`
 - `afterSideEffect`: `MailEventHandler`, `WebPushHandler`, `GenerateAvatarThumbnails`, `DeleteOldAvatar`, `DeleteOldCover`
-- The fake `InMemoryInbox` (`shared/testing/fakes.ts`) simulates the crash window: `crashAfterNextSideEffect()` makes the next `afterSideEffect` run its side effect and then throw `SimulatedCrash` before recording, so the redelivery repeats the effect.
+- The fake `InMemoryInbox` (`packages/kit-testing/src/fakes.ts`; the contract suite `describeInboxGuard` runs on it and on the Postgres guard) simulates the crash window: `crashAfterNextSideEffect()` makes the next `afterSideEffect` run its side effect and then throw `SimulatedCrash` before recording, so the redelivery repeats the effect.
 
 ## Reuse checklist
 

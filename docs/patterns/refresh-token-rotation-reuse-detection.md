@@ -73,9 +73,9 @@ isRecentlyRotated(now: Date): boolean {
 
 ## In this repo
 
-- `apps/api/src/modules/identity/application/use-cases/refresh-session.ts`
-- `apps/api/src/modules/identity/domain/refresh-token.ts`
-- `apps/api/src/modules/identity/application/session-issuer.ts`
+- `modules/identity/src/application/use-cases/refresh-session.ts`
+- `modules/identity/src/domain/refresh-token.ts`
+- `modules/identity/src/application/session-issuer.ts`
 - Explained in [Identity and sessions](../architecture/04-identity-and-sessions.md#session-model).
 
 ## Reuse checklist

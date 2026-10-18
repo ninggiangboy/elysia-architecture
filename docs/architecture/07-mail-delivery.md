@@ -72,7 +72,7 @@ Negative tokens mean refill time has to pass before the next `acquire` succeeds.
 
 ## Classifying SMTP errors
 
-`classifySmtpError` (`shared/infrastructure/mail/classify-smtp-error.ts`) is checked in this order:
+`classifySmtpError` (`@kit/mail`) is checked in this order:
 
 | Order | Condition | Kind | What happens |
 | --- | --- | --- | --- |

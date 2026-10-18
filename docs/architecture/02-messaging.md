@@ -34,13 +34,13 @@ sequenceDiagram
 
 | Piece | File | Role |
 | --- | --- | --- |
-| `outboxTable(schema)` / `inboxTable(schema)` | `shared/infrastructure/outbox/tables.ts` | One `outbox_messages` and one `inbox` table **per module schema** |
-| `OutboxWriter` port, `DrizzleOutboxWriter` | `shared/application/ports`, `shared/infrastructure/outbox/drizzle-outbox-writer.ts` | Adds events inside the current transaction |
-| `OutboxRelay` | `shared/infrastructure/outbox/outbox-relay.ts` | Claims, publishes, retries, defers, dead-letters, cleans up |
-| `MessagePublisher` port, `InProcessMessageBus` | `shared/messaging/in-process-bus.ts` | Today's transport: calls the subscribed handlers in-process |
-| `InboxGuard` port, `DrizzleInboxGuard` | `shared/infrastructure/outbox/drizzle-inbox-guard.ts` | De-duplicates per `(message_id, handler)` |
-| `RetryLaterError` | `shared/messaging/errors.ts` | "Not now": defer without spending an attempt |
-| `Envelope` | `shared/messaging/envelope.ts` | Transport-independent wire format |
+| `outboxTable(schema)` / `inboxTable(schema)` | `@kit/messaging` | One `outbox_messages` and one `inbox` table **per module schema** |
+| `OutboxWriter` port, `DrizzleOutboxWriter` | `@kit/messaging` | Adds events inside the current transaction |
+| `OutboxRelay` | `@kit/messaging` | Claims, publishes, retries, defers, dead-letters, cleans up |
+| `MessagePublisher` port, `InProcessMessageBus` | `@kit/messaging` | Today's transport: calls the subscribed handlers in-process |
+| `InboxGuard` port, `DrizzleInboxGuard` | `@kit/messaging` | De-duplicates per `(message_id, handler)` |
+| `RetryLaterError` | `@kit/messaging` | "Not now": defer without spending an attempt |
+| `Envelope` | `@kit/messaging` | Transport-independent wire format |
 
 ### The outbox row
 

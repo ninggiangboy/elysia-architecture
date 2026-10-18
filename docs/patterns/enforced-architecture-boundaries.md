@@ -64,14 +64,14 @@ flowchart LR
 
 - **`tsPreCompilationDeps: true`**, so type-only imports count. Otherwise `import type { Drizzle… }` slips through.
 - **Frameworks are a deny-list of packages** for the inner layers. Decide deliberately what is allowed there. Here `@app/shared-types` is used by domain code on purpose (limits, locales, statuses), and `zod`, `@opentelemetry/*` and `bun` are simply not on the list. Keep the list in one constant.
-- **Exempt test helpers explicitly** (`shared/testing`), rather than loosening a rule.
+- **Exempt test helpers explicitly** (`@kit/testing` is a `devDependency`, never imported by production code), rather than loosening a rule.
 - **Contracts must not import `shared`**, or a service that imports a contract drags your shared kernel along.
 - **Composition root.** Only `app.ts`/`main.ts`/`bootstrap` may import concrete classes. That keeps wiring in one place, and makes `buildApp(container)` reusable by e2e tests.
 - **Scripts are not checked** (`depcruise src`). Keep business logic out of `scripts/`.
 
 ## In this repo
 
-- `apps/api/.dependency-cruiser.cjs`, run as `bun run check:arch` in CI
+- `.dependency-cruiser.packages.cjs`, `.dependency-cruiser.modules.cjs` and `apps/api/.dependency-cruiser.cjs` (the kit, the modules, the composition root), run as `bun run check:arch` in CI
 - Explained in [Modules and boundaries](../architecture/01-modules-and-boundaries.md)
 
 ## Reuse checklist

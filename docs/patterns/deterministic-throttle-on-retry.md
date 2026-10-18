@@ -53,7 +53,7 @@ private async isInQuietWindow(p: NotificationCreatedPayload): Promise<boolean> {
 
 ## In this repo
 
-- `apps/api/src/modules/notification/application/handlers/web-push-handler.ts`
+- `modules/notification/src/application/handlers/web-push-handler.ts`
 - `apps/web/src/features/realtime/use-live-session.ts` (toasts)
 - `PUSH_QUIET_WINDOW_SECONDS` (default 30, `0` = push all)
 

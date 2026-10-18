@@ -77,7 +77,7 @@ Solid arrows are synchronous contract calls (the arrow points from the provider 
 
 | # | Page | What you will find |
 | --- | --- | --- |
-| 1 | [Modules and boundaries](architecture/01-modules-and-boundaries.md) | Layers, the 7 dependency-cruiser rules, composition root, contracts and event versioning, schema per module, migrations, adding a module, extracting a service |
+| 1 | [Modules and boundaries](architecture/01-modules-and-boundaries.md) | Layers, the kit packages and the three dependency-cruiser configs, composition root and `install(host)`, producer-side integrations, contracts and event versioning, schema per module, migrations, adding a module, extracting a service |
 | 2 | [Messaging](architecture/02-messaging.md) | Outbox → relay → bus → inbox in depth: claim SQL, per-aggregate concurrency, backoff, deferral, dead letters, cleanup, pause |
 | 3 | [Runtime and operations](architecture/03-runtime-and-operations.md) | Stateless rules, roles, cluster supervisor, graceful shutdown, health, observability, maintenance mode, the deploy flow, nginx and Docker |
 | 4 | [Identity and sessions](architecture/04-identity-and-sessions.md) | Magic links, refresh families and reuse detection, ES256 + JWKS, passkeys, OAuth + PKCE, step-up |
@@ -90,6 +90,15 @@ Solid arrows are synchronous contract calls (the arrow points from the provider 
 | 11 | [i18n](architecture/11-i18n.md) | One locale list, typed catalogs, template + data notifications, mail language, parity tests |
 | 12 | [Testing and CI](architecture/12-testing-and-ci.md) | Fakes, the e2e harness, Playwright, quality gates, CI path gating |
 | 13 | [Trade-offs and known gaps](architecture/13-trade-offs-and-known-gaps.md) | Deliberate trade-offs, and gaps found in the code |
+
+### Using it in your own project: [`docs/guides/`](guides/)
+
+| Guide | What you will find |
+| --- | --- |
+| [Adopt in a new project](guides/adopt-in-new-project.md) | Start from the starter, `kit:add` a module, swap an adapter, reword a message, react to an event, eject |
+| [Use a kit package alone](guides/use-a-kit-package-alone.md) | `@kit/messaging` (outbox, inbox, relay) in an existing Elysia app |
+
+The decisions behind the split are in [`docs/adr/`](adr/); the plan and the baseline it was measured against are in [`docs/plans/`](plans/).
 
 ### Reusable techniques: [`docs/patterns/`](patterns/README.md)
 
@@ -134,8 +143,11 @@ sequenceDiagram
 | **Relay** | The worker loop that claims outbox rows and publishes them (`OutboxRelay`) |
 | **Inbox** | Per-module table of `(message_id, handler)` that makes handlers idempotent |
 | **Consumer group** | A handler's `name`; one per `(module, handler)`; becomes a broker subscription later |
-| **Contract** | `modules/<m>/contracts/`: event names and payloads, sync interfaces with plain DTOs |
-| **Composition root** | `bootstrap/container.ts` + `app.ts` + `main.ts`, the only code that knows concrete classes |
+| **Contract** | `modules/<m>/src/contracts/` (`@mod/<m>/contracts`): event names and payloads, sync interfaces with plain DTOs |
+| **Integration** | What a producer module tells an optional consumer (`notification`, `realtime`): `@mod/<m>/integrations/<consumer>`; the app installs the ones it wants |
+| **Manifest** | `@mod/<m>/manifest`: a module's folder, migrations, schema, outbox table and config slice, as static data for the host |
+| **Kit** | The infrastructure packages (`@kit/*`) and business modules (`@mod/*`), versioned and installable; see [adopt in a new project](guides/adopt-in-new-project.md) |
+| **Composition root** | `bootstrap/container.ts` + `module-catalog.ts` + `app.ts` + `main.ts`, the only code that knows concrete adapters and which modules are installed |
 | **Family** | One sign-in on one device: a chain of rotated refresh tokens; its id is the `sid` claim |
 | **Step-up** | Re-confirming identity (passkey or emailed code) before a sensitive action; `auth_time` in the token |
 | **Deferral** | A `RetryLaterError`: rescheduled without spending an attempt |

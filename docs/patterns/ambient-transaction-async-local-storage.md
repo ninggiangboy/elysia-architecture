@@ -78,8 +78,8 @@ export function isPgError(err: unknown, ...codes: string[]): boolean {
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/db/database.ts` (`Database`, `isPgError`, `isUniqueViolation`)
-- `apps/api/src/shared/application/ports/index.ts` (`UnitOfWork`)
+- `packages/kit-db/src/database.ts` (`Database`, `isPgError`, `isUniqueViolation`)
+- `packages/kit-core/src/ports.ts` (`UnitOfWork`)
 - Commit `07f7187` replaced per-module databases with this single ambient transaction.
 
 ## Reuse checklist

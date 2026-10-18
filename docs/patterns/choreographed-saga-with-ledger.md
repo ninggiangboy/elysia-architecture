@@ -96,10 +96,10 @@ await this.expireExports(now, report)          // slow object deletes outside th
 
 ## In this repo
 
-- `apps/api/src/shared/application/privacy.ts` (`ExportUserDataHandler`, `EraseUserDataHandler`, ports)
-- `apps/api/src/modules/privacy/application/handlers/record-export-part.ts`, `record-erasure.ts`, `assemble-export.ts`
-- `apps/api/src/modules/privacy/application/privacy-jobs.ts`
-- `apps/api/src/modules/privacy/domain/account-deletion.ts`, `data-export.ts`
+- `packages/kit-privacy-participant/src/handlers.ts` (`ExportUserDataHandler`, `EraseUserDataHandler`, ports)
+- `modules/privacy/src/application/handlers/record-export-part.ts`, `record-erasure.ts`, `assemble-export.ts`
+- `modules/privacy/src/application/privacy-jobs.ts`
+- `modules/privacy/src/domain/account-deletion.ts`, `data-export.ts`
 - `apps/api/scripts/privacy.ts` (`list`, `resume`)
 - Commit `18329d3`. Explained in [Privacy](../architecture/08-privacy.md).
 

@@ -61,10 +61,10 @@ await ex.update(stepUpCodes).set({ attempts: sql`${stepUpCodes.attempts} + 1` })
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/crypto.ts` (tokens, `sha256Hex`, numeric codes)
-- `apps/api/src/modules/identity/infrastructure/persistence/drizzle-repositories.ts` (magic links, email change, refresh tokens)
-- `apps/api/src/modules/identity/infrastructure/persistence/drizzle-security-repositories.ts` (challenges, OAuth states, step-up codes, prune-on-insert)
-- `apps/api/src/modules/identity/domain/auth-challenge.ts` (purposes and TTLs)
+- `packages/kit-auth/src/crypto.ts` (tokens, `sha256Hex`, numeric codes)
+- `modules/identity/src/infrastructure/persistence/drizzle-repositories.ts` (magic links, email change, refresh tokens)
+- `modules/identity/src/infrastructure/persistence/drizzle-security-repositories.ts` (challenges, OAuth states, step-up codes, prune-on-insert)
+- `modules/identity/src/domain/auth-challenge.ts` (purposes and TTLs)
 
 ## Reuse checklist
 

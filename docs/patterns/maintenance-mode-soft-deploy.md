@@ -91,9 +91,9 @@ maintenance.onChange((active) => {
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/maintenance/maintenance-mode.ts` (`MaintenanceStore`, `MaintenanceMode`)
-- `apps/api/src/shared/http/maintenance.plugin.ts`
-- `apps/api/src/bootstrap/container.ts` (`startWorker`), `apps/api/src/main.ts`
+- `packages/kit-runtime/src/maintenance-mode.ts` (`MaintenanceStore`, `MaintenanceMode`)
+- `packages/kit-http/src/maintenance.plugin.ts`
+- `packages/kit-runtime/src/runtime.ts` (`startWorker`), `apps/api/src/main.ts`
 - `apps/api/scripts/deploy.ts`
 - Commit `acbfc5a`. Explained in [Runtime and operations](../architecture/03-runtime-and-operations.md#maintenance-mode).
 

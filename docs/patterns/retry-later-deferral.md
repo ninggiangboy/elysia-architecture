@@ -75,7 +75,7 @@ Where the hint comes from:
 
 ## In this repo
 
-- `apps/api/src/shared/messaging/errors.ts` (`RetryLaterError`)
+- `packages/kit-messaging/src/errors.ts` (`RetryLaterError`)
 - `OutboxRelay.recordFailure` / `OutboxRelay.defer` (`shared/infrastructure/outbox/outbox-relay.ts`)
 - `shared/application/mail-errors.ts` (`MailRateLimitedError`), `ThrottledMailer`
 - `OUTBOX_DEFER_BUDGET_HOURS` (default 24)

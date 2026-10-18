@@ -14,27 +14,34 @@ rate-limited mail and GDPR export/erasure across modules are all there to exerci
 races, N instances).
 
 ```
-apps/api              backend  (identity · profile · notification · privacy · billing · realtime)
-apps/web              React SPA
-packages/shared-types constants shared by web ↔ api
+apps/api              the composition root: installs the modules, mounts their routes, runs them
+apps/web              React SPA (a feature registry on @kit/ui and @kit/web-core)
+packages/kit-*        infrastructure packages (@kit/*): core, config, db, messaging, http, auth, mail, storage, runtime, testing, i18n, ui, web-core…
+modules/*             business modules (@mod/*): identity · profile · notification · privacy · billing · realtime
+examples/starter      a minimal API (identity + profile) that needs only Postgres: the template for a new project
+templates/module      what `bun run gen:module` copies
+packages/shared-types the product's languages and a few constants shared by web ↔ api
 docs/architecture.md  the map: goals, modules, big picture, reading guide
 docs/architecture/    how the system works, topic by topic (messaging, auth, realtime, privacy, billing…)
+docs/guides/          adopt the kit in a new project · use one package alone
+docs/adr/             why it is split this way
 docs/patterns/        reusable techniques as standalone recipes
 ```
 
 ## What makes it interesting
 
 ### 1. Architecture rules are enforced, not suggested
-Four layers per module (`presentation → application → domain`, `infrastructure` implements ports). The rules live in
-[`.dependency-cruiser.cjs`](apps/api/.dependency-cruiser.cjs) and fail CI when broken:
-domain is framework-free, application never imports infrastructure, module A may only import `modules/B/contracts`,
-`shared` knows no module, and only the composition root wires concrete adapters. No DI container — the wiring in
-`bootstrap/container.ts` is plain, readable code.
+Four layers per module (`presentation → application → domain`, `infrastructure` implements ports). The rules live in three
+dependency-cruiser configs ([kit](.dependency-cruiser.packages.cjs), [modules](.dependency-cruiser.modules.cjs),
+[app](apps/api/.dependency-cruiser.cjs)) and fail CI when broken: domain is framework-free, application never imports
+infrastructure, module A may only import what module B exports, a kit package imports only the packages its graph allows, and
+only the composition root wires concrete adapters. No DI container — the wiring in `bootstrap/container.ts` is plain,
+readable code: build the host, `install` each module in order, hand them to `createRuntime`.
 
 ### 2. Every module is a future microservice
 Own Postgres schema, own migrations (history in schema `drizzle_<module>`), own outbox/inbox, **no cross-module FKs or JOINs**.
 Modules talk only through `contracts/`: plain-DTO interfaces for sync calls and versioned events (`identity.user_registered.v1`)
-for async. Splitting a service is a checklist, not a rewrite ([see it](docs/architecture/01-modules-and-boundaries.md#extracting-a-module-into-a-service)).
+for async, and each module is a package whose `exports` map makes anything else unreachable. Splitting a service is a checklist, not a rewrite ([see it](docs/architecture/01-modules-and-boundaries.md#extracting-a-module-into-a-service)).
 
 ### 3. Transactional Outbox + idempotent Inbox
 "Write to the DB *and* emit an event" is atomic. The relay claims rows with `FOR UPDATE SKIP LOCKED` + a lease, so any number of
@@ -89,7 +96,7 @@ financial records instead of deleting them.
 
 ### 11. End-to-end types, zero codegen
 The web client is [Eden Treaty](https://elysiajs.com/eden/overview): types are inferred straight from the backend `App` type
-(the web app aliases `#/*` to `../api/src/*`). Change a route's schema and the frontend stops compiling.
+(`import type { App } from '@app/api'`). Change a route's schema and the frontend stops compiling.
 
 ### 12. Observable and shippable
 `x-request-id`/`x-correlation-id` ride AsyncLocalStorage into every pino log line **and** the outbox message headers, so an async
@@ -97,6 +104,14 @@ handler's logs trace back to the request that caused them. Set `OTEL_EXPORTER_OT
 OpenTelemetry trace in Jaeger — HTTP request → outbox relay → every handler, and onward through events a handler emits. Env-only config, `/health/live` + `/health/ready`, graceful shutdown
 (HTTP → relay → pool), PgBouncer-friendly (`DB_PREPARE=false`), OpenAPI/Scalar docs, multi-stage Dockerfiles.
 CI runs typecheck, Biome, architecture check, unit + e2e (Postgres/S3/Mailpit, then Playwright), knip, jscpd, gitleaks, Trivy and CodeQL.
+
+### 13. A kit, not just an app
+The infrastructure (`@kit/*`) and the business modules (`@mod/*`) are versioned packages with tests, an exports map, a README and
+(for modules) a manifest and an `install(host)`. A new project starts from [`examples/starter`](examples/starter) (identity and profile,
+no S3, SMTP, Stripe or VAPID), adds what it needs with `bun run kit:add billing`, and customises through a closed list of extension
+points (adapters, config, integrations, wording, event handlers) — anything else is an explicit eject. `bun run gen:module <name>`
+creates a module that works out of the box; a CI job adds and removes modules in every order to prove the wiring holds.
+See [Adopt the kit in a new project](docs/guides/adopt-in-new-project.md) and the [ADRs](docs/adr/README.md).
 
 ## Quick start
 
@@ -145,13 +160,30 @@ Things worth trying:
 
 The full endpoint list is in the OpenAPI/Scalar docs (see the URLs above).
 
+## Start a new project
+
+```bash
+cp -r examples/starter my-app && cd my-app      # identity + profile; needs only Postgres
+cp .env.example .env && bun run keys:generate
+docker compose up -d postgres && bun run db:migrate && bun run dev
+
+bun run kit:add notification billing            # wire more modules in (from the repo root: bun run kit:add billing --app my-app)
+bun run gen:module orders                       # or write your own, from templates/module
+```
+
+The [adoption guide](docs/guides/adopt-in-new-project.md) covers swapping an adapter, rewording a mail, reacting to an event and ejecting a module;
+[use a kit package alone](docs/guides/use-a-kit-package-alone.md) shows the outbox in an existing Elysia app.
+
 ## Testing
 
 ```bash
 bun run test                 # unit: domain + use cases against in-memory fakes (no I/O)
 bun run check:arch           # architecture boundary rules (dependency-cruiser)
 bun run typecheck && bun run lint
-bun run test:e2e             # needs infra: real buildApp + Postgres/S3/Mailpit, then Playwright
+bun run test:e2e             # needs infra: contract suites on the real adapters, the real buildApp + Postgres/S3/Mailpit, then Playwright
+bun run check:add-matrix     # the starter with modules added and removed in every order (needs Postgres)
+bun run check:docs           # every package README has its sections and its generated config table
+bun run build:packages       # dist/ (JavaScript + declarations) of every package, what a registry would serve
 bun run quality:unused       # knip — dead code and unused dependencies
 bun run quality:dup          # jscpd — copy/paste detection
 ```
@@ -163,6 +195,9 @@ the e2e suite then proves the real adapters (including outbox retries, mail thro
 
 | Command | What it does |
 | --- | --- |
+| `bun run kit:add <module…>` / `kit:remove` | Wire an installed `@mod/*` package into an app (catalog, container, routes, integrations) / take it out (`--app <dir>`, default `apps/api`) |
+| `bun run gen:module <name>` / `gen:feature <name>` | Create a module from `templates/module` and wire it / a web feature (folder, route, i18n, registry line) |
+| `bun run changeset` | Describe a change to a package; `version-packages` applies the changesets |
 | `bun run --filter @app/api db:generate` | Generate migrations per module (after editing `schema.ts`) |
 | `bun run --filter @app/api db:migrate` | Run migrations per module (each keeps its history in schema `drizzle_<module>`) |
 | `bun run deploy` | Release with a soft stop: maintenance on → drain → migrate → restart → health check → maintenance off ([Operations](docs/architecture/03-runtime-and-operations.md#deploys-bun-run-deploy)) |

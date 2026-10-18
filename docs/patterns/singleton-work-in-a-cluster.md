@@ -79,11 +79,11 @@ stopJobs = async () => { clearInterval(timer); await running }   // wait for the
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/db/advisory-lock.ts` (`withAdvisoryXactLock`)
+- `packages/kit-db/src/advisory-lock.ts` (`withAdvisoryXactLock`)
 - `OutboxRelay.maybeCleanup`
 - `apps/api/scripts/deploy.ts` (`deploy()`)
 - `PgRealtimeHub.publish`
-- `privacy.module.ts` and `billing.module.ts` (`running ??=`)
+- `packages/kit-runtime/src/interval-jobs.ts` (`running ??=`: a slow pass is not overlapped by the next tick; used by privacy, billing, notification and realtime)
 - `main.ts` (slot 0)
 
 ## Reuse checklist

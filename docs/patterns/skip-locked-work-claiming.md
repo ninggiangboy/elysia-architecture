@@ -73,9 +73,9 @@ const now = sql`now()`   // one clock: the database's
 
 ## In this repo
 
-- `OutboxRelay.drain` (`shared/infrastructure/outbox/outbox-relay.ts`): lease claim
-- `DrizzleTopUpRepository.claimForReconciliation` (`billing/infrastructure/persistence/drizzle-billing-repositories.ts`): stamp claim
-- `PrivacyJobs.runOnce` with `claimDue`/`claimStalled`/`claimExpired` (`privacy/application/privacy-jobs.ts`, `privacy/infrastructure/persistence/*`): claim and work in one transaction
+- `OutboxRelay.drain` (`packages/kit-messaging/src/outbox/outbox-relay.ts`): lease claim
+- `DrizzleTopUpRepository.claimForReconciliation` (`modules/billing/src/infrastructure/persistence/drizzle-billing-repositories.ts`): stamp claim
+- `PrivacyJobs.runOnce` with `claimDue`/`claimStalled`/`claimExpired` (`modules/privacy/src/application/privacy-jobs.ts`, `modules/privacy/src/infrastructure/persistence/*`): claim and work in one transaction
 - `DrizzleNotificationRepository` fold: pick one target
 
 ## Reuse checklist

@@ -66,9 +66,9 @@ export class StepUpPolicy {
 
 ## In this repo
 
-- `apps/api/src/shared/application/step-up-policy.ts`
-- `apps/api/src/modules/identity/application/use-cases/step-up.ts`
-- `apps/api/src/modules/identity/domain/step-up-code.ts`
+- `packages/kit-auth/src/step-up-policy.ts`
+- `modules/identity/src/application/use-cases/step-up.ts`
+- `modules/identity/src/domain/step-up-code.ts`
 - `apps/web/src/features/auth/step-up.ts`
 - Commits `67625bd` and `8aec273`. Window: `STEP_UP_TTL`.
 

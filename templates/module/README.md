@@ -29,8 +29,8 @@ bun run db:migrate
 ## Extension points
 
 Adapters (ports passed to the factory), the config slice, integrations other modules ship for it, and app-level handlers on
-the events in `src/contracts`. Changing rules inside a use case is not an extension point: eject the module instead
-(`bun run gen:module <name> --from @mod/__name__`).
+the events in `src/contracts`. Changing rules inside a use case is not an extension point: eject the module instead (copy the package into `modules/__name__`,
+rename it `@app/__name__`, keep the schema name and `migrations/`).
 
 ## Guarantees and limits
 

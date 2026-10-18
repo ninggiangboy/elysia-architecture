@@ -25,7 +25,7 @@ flowchart LR
 
 ## Delivery: `PgRealtimeHub`
 
-`apps/api/src/modules/realtime/infrastructure/pg-realtime-hub.ts`.
+`modules/realtime/src/infrastructure/pg-realtime-hub.ts`.
 
 - **Lazy LISTEN.** The dedicated `LISTEN` connection opens on the first registered client. A worker-only process never opens one. If opening fails, the promise is reset, so the next client retries.
 - **Payload cap.** Postgres rejects `NOTIFY` payloads of 8,000 bytes or more. `encode` refuses anything over 7,500 bytes and throws, so the relay retries and logs instead of silently dropping it. Events therefore carry ids and small data, never documents.

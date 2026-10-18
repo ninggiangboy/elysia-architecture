@@ -89,10 +89,10 @@ for (const message of subscriber.queue.splice(0)) {
 
 ## In this repo
 
-- `apps/api/src/modules/realtime/infrastructure/pg-realtime-hub.ts`
-- `apps/api/src/modules/realtime/presentation/routes.ts`
-- `apps/api/src/modules/realtime/realtime.module.ts` (search `replay: true`)
-- `apps/web/src/lib/realtime.ts` (client)
+- `modules/realtime/src/infrastructure/pg-realtime-hub.ts`
+- `modules/realtime/src/presentation/routes.ts`
+- `modules/*/src/integrations/realtime.ts` (search `replay: true`: each producer says which of its events replay)
+- `packages/kit-web-core/src/realtime-client.ts` (client)
 - Commits `034ece3` and `5bba78c`
 
 ## Reuse checklist

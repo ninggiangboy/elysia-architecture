@@ -75,3 +75,22 @@ export function renderEnvExample(
     .map((slice) => renderSlice(slice, listed, set))
     .join('\n\n')}\n`
 }
+
+export interface VariableDoc {
+  name: string
+  description: string
+  /** The value used when unset; `undefined` when there is none. */
+  default: string | undefined
+  required: boolean
+}
+
+/** The variables of a slice, for documentation (a README table). */
+export function describeSlice(slice: ConfigSlice): VariableDoc[] {
+  const shape = (slice.schema as unknown as { shape: Record<string, z.ZodType> }).shape
+  return Object.entries(shape).map(([name, field]) => ({
+    name,
+    description: field.description ?? '',
+    default: defaultOf(field),
+    required: defaultOf(field) === undefined && !isOptional(field),
+  }))
+}

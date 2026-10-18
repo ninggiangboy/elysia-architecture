@@ -25,7 +25,7 @@ It consumes only the two privacy requests.
 
 ## Tokens are stored as hashes
 
-`shared/infrastructure/crypto.ts` creates 32-byte base64url tokens and stores `sha256Hex(token)`. Only the hash reaches a table.
+`@kit/auth` (`crypto.ts`) creates 32-byte base64url tokens and stores `sha256Hex(token)`. Only the hash reaches a table.
 - The raw magic-link token exists in exactly one place: the payload of `identity.magic_link_requested.v1`, which the mail handler needs.
 - That payload lives in the outbox until the 7-day cleanup (see [trade-offs](13-trade-offs-and-known-gaps.md)).
 - Numeric codes come from `randomInt`, which is uniform.
@@ -131,10 +131,10 @@ The access token itself stays valid until it expires (≤ 15 min). Making it ins
 - **Verifies** with the algorithm pinned to `ES256`, plus issuer and audience checks.
 - **Publishes** the public key as a JWK at `GET /api/.well-known/jwks.json`. Another service verifies with `createRemoteJWKSet` and no shared secret, and keys can be rotated by `kid`.
 
-`authPlugin` (`shared/http/auth.plugin.ts`) offers two macros, `auth` and `authOptional`.
+`authPlugin` (`@kit/auth`) offers two macros, `auth` and `authOptional`.
 - `authOptional` gives `null` for a missing token, but still answers 401 for a bad one.
 - It reads the header from `request.headers`, because a route that declares a `headers` schema strips undeclared headers.
-- `TokenVerifier` is defined in `shared`, so `shared` does not import identity.
+- `TokenVerifier` is defined in `@kit/auth`, so no kit package imports identity.
 
 `bun run keys:generate` writes the ES256 pair (regenerated on every run) a VAPID pair and `STEP_UP_CODE_SECRET` (both only if missing) into the root `.env`.
 
@@ -208,7 +208,7 @@ sequenceDiagram
 
 ## Step-up: confirm again before sensitive actions
 
-Access tokens carry `auth_time` (seconds) only when the user just authenticated: magic link, passkey, OAuth, or a step-up. A plain refresh drops it. `StepUpPolicy.assertFresh(authTime)` (`shared/application/step-up-policy.ts`) throws `403 step_up_required` when it is missing or older than `STEP_UP_TTL` (5 min).
+Access tokens carry `auth_time` (seconds) only when the user just authenticated: magic link, passkey, OAuth, or a step-up. A plain refresh drops it. `StepUpPolicy.assertFresh(authTime)` (`@kit/auth`) throws `403 step_up_required` when it is missing or older than `STEP_UP_TTL` (5 min).
 
 The check is **inside the use case**, not in the route, so no new route can forget it. It guards:
 - changing the email;

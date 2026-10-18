@@ -36,7 +36,7 @@ export const billingConfig = defineSlice({
       SELLER_TAX_ID: blank.describe('VAT number, MST or the like.'),
       SELLER_EMAIL: blank.describe('Seller contact email.'),
       TOPUP_CURRENCIES: list(TOPUP_CURRENCY_CODES, TOPUP_CURRENCY_CODES.join(',')).describe(
-        'Currencies a wallet can be topped up in, comma separated (the ranges are in `packages/shared-types/src/billing.ts`).',
+        'Currencies a wallet can be topped up in, comma separated (the ranges are in `@mod/billing/public`).',
       ),
     })
     .superRefine((env, ctx) => {

@@ -79,9 +79,9 @@ return res
 
 ## In this repo
 
-- `apps/web/src/lib/session.ts` (`refreshSession`, `ensureSession`)
-- `apps/web/src/lib/api.ts` (`authFetch`)
-- `apps/web/src/lib/realtime.ts`
+- `packages/kit-web-core/src/session.ts` (`createSession`: `refreshSession`, `ensureSession`)
+- `packages/kit-web-core/src/auth-fetch.ts` (`createAuthFetch`), wired in `apps/web/src/lib/api.ts`
+- `packages/kit-web-core/src/realtime-client.ts` (`createRealtimeClient`)
 
 ## Reuse checklist
 

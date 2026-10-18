@@ -58,9 +58,9 @@ withSpan(`handle ${h.name}`, { kind: SpanKind.CONSUMER,
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/telemetry/tracing.ts` (`initTracing`, `withSpan`, `currentTraceparent`, `contextFromTraceparent`, `activeContext`)
-- `apps/api/src/shared/http/tracing.plugin.ts`, `request-context.plugin.ts`
-- `apps/api/src/shared/infrastructure/logger.ts` (the `mixin`)
+- `packages/kit-telemetry/src/tracing.ts` (`initTracing`, `withSpan`, `currentTraceparent`, `contextFromTraceparent`, `activeContext`)
+- `packages/kit-http/src/tracing.plugin.ts`, `request-context.plugin.ts`
+- `packages/kit-telemetry/src/logger.ts` (the `mixin`)
 - Commit `6fb17ed`. Jaeger runs in compose: UI on `:16686`, OTLP on `:4318`.
 
 ## Reuse checklist

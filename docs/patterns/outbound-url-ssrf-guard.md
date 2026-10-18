@@ -49,8 +49,8 @@ The keys are checked separately: base64url, at most 256 characters.
 
 ## In this repo
 
-- `apps/api/src/modules/notification/domain/push-subscription.ts`
-- `apps/api/src/modules/notification/application/use-cases/push-subscriptions.ts` (the per-user cap)
+- `modules/notification/src/domain/push-subscription.ts`
+- `modules/notification/src/application/use-cases/push-subscriptions.ts` (the per-user cap)
 
 ## Reuse checklist
 

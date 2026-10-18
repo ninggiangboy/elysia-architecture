@@ -102,7 +102,7 @@ The offline page is self-contained (inline styles, both languages, theme from `l
 
 ## In this repo
 
-- `apps/web/src/lib/maintenance.ts`, `lib/maintenance.test.ts`
+- `packages/kit-web-core/src/outage.ts`, `outage.test.ts` (`@kit/web-core`, wired in `apps/web/src/lib/maintenance.ts`)
 - `apps/web/src/components/layout/maintenance-dialog.tsx`
 - `apps/web/public/sw.js`, `public/offline.html`
 - `apps/web/e2e/maintenance.spec.ts`, `e2e/offline.spec.ts`

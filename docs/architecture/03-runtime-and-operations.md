@@ -89,7 +89,7 @@ The tracing plugin skips `/health/*`, so probes do not flood the traces.
 
 ## Configuration
 
-Everything comes from the environment, validated with zod in `shared/infrastructure/config.ts` (`loadConfig`). Feature groups are all-or-nothing, and the app refuses to start with half of a group:
+Everything comes from the environment, validated with zod. The configuration is made of **slices**: the kit packages own `core`, `db`, `storage`, `mail`, `outbox`, `maintenance` and `telemetry`; each module owns its own (`identity`, `notification`, `realtime`, `privacy`, `billing`), listed through its manifest. `loadAppConfig` (`bootstrap/config.ts`) parses every slice against the same environment and fails once with every problem; a module receives exactly its slice (`config.billing`) and converts units itself. Every variable has a description, and `.env.example` is generated from the slices (`bun run --filter @app/api config:example`, checked by a test). Feature groups are all-or-nothing, and the app refuses to start with half of a group:
 - Stripe: `STRIPE_*`;
 - Web Push: `VAPID_*`;
 - OAuth: `*_CLIENT_ID` + `*_CLIENT_SECRET`.
@@ -114,7 +114,7 @@ sequenceDiagram
   H->>W: follow-up event inherits the active trace
 ```
 
-- **Request context.** `requestContextPlugin` stores `{ requestId, correlationId, userId }` in an AsyncLocalStorage (`shared/infrastructure/request-context.ts`).
+- **Request context.** `requestContextPlugin` stores `{ requestId, correlationId, userId }` in an AsyncLocalStorage (`@kit/context`).
   - Incoming `x-request-id`/`x-correlation-id` are accepted only if they match `^[\w.-]{1,64}$`, which closes log and header injection.
   - `x-request-id` is echoed in the response.
 - **Logs.** pino JSON. A `mixin` adds `requestId` and `correlationId` from the ALS to every line. Error bodies carry `requestId` too, so a user's screenshot leads to the logs.

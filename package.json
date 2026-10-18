@@ -33,7 +33,8 @@
     "gen:feature": "bun scripts/kit.ts gen-feature",
     "build:packages": "bun run --filter './packages/*' --filter './modules/*' build",
     "changeset": "changeset",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "check:docs": "bun scripts/package-docs.ts --check"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",

@@ -68,10 +68,10 @@ if (stat.size > AVATAR_MAX_BYTES || !(stat.contentType in AVATAR_CONTENT_TYPES))
 
 ## In this repo
 
-- `apps/api/src/modules/profile/application/use-cases/request-avatar-upload.ts`, `set-avatar.ts`, `set-cover.ts`
-- `apps/api/src/modules/profile/application/cover-keys.ts`, `avatar-thumbnails.ts`
-- `apps/api/src/modules/profile/infrastructure/sharp-image-resizer.ts`
-- `apps/api/src/shared/infrastructure/storage/s3-object-storage.ts`
+- `modules/profile/src/application/use-cases/request-avatar-upload.ts`, `set-avatar.ts`, `set-cover.ts`
+- `modules/profile/src/application/cover-keys.ts`, `avatar-thumbnails.ts`
+- `modules/profile/src/infrastructure/sharp-image-resizer.ts`
+- `packages/kit-storage/src/s3-object-storage.ts`
 - Commits `fed4e1c` (cover keys) and `1d9081a` (thumbnails on a worker)
 
 ## Reuse checklist

@@ -99,9 +99,9 @@ await this.uow.run(async () => {
 
 ## In this repo
 
-- `apps/api/src/shared/infrastructure/outbox/tables.ts` (`outboxTable`)
-- `apps/api/src/shared/infrastructure/outbox/drizzle-outbox-writer.ts`
-- `apps/api/src/shared/infrastructure/outbox/outbox-relay.ts`
+- `packages/kit-messaging/src/outbox/tables.ts` (`outboxTable`)
+- `packages/kit-messaging/src/outbox/drizzle-outbox-writer.ts`
+- `packages/kit-messaging/src/outbox/outbox-relay.ts`
 - `apps/api/scripts/outbox.ts` (dead-letter list and requeue)
 - Introduced in `7733d30`; per-aggregate concurrency in `daff342`; trace propagation in `6fb17ed`.
 - Explained in [Messaging](../architecture/02-messaging.md).

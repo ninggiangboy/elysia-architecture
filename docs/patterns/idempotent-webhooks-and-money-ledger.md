@@ -95,10 +95,10 @@ if (event.adjustment === 'chargeback_reversal' && !(await ledger.hasReference('c
 
 ## In this repo
 
-- `apps/api/src/modules/billing/application/use-cases/create-top-up.ts`, `handle-payment-event.ts`, `reconcile-top-ups.ts`
-- `apps/api/src/modules/billing/domain/top-up.ts` (`SETTLEABLE_FROM`)
-- `apps/api/src/modules/billing/infrastructure/persistence/drizzle-billing-repositories.ts`
-- `apps/api/src/modules/billing/infrastructure/stripe-payment-gateway.ts`
+- `modules/billing/src/application/use-cases/create-top-up.ts`, `handle-payment-event.ts`, `reconcile-top-ups.ts`
+- `modules/billing/src/domain/top-up.ts` (`SETTLEABLE_FROM`)
+- `modules/billing/src/infrastructure/persistence/drizzle-billing-repositories.ts`
+- `modules/billing/src/infrastructure/stripe-payment-gateway.ts`
 - Commits `ee344d6` and `5d3c77c`. Explained in [Billing](../architecture/09-billing.md).
 
 ## Reuse checklist

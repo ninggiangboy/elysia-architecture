@@ -62,9 +62,9 @@ async nextSequence(kind: DocumentKind, year: number): Promise<number> {
 
 ## In this repo
 
-- `apps/api/src/modules/billing/infrastructure/persistence/drizzle-billing-repositories.ts` (`DrizzleDocumentRepository.nextSequence`)
-- `apps/api/src/modules/billing/application/document-issuer.ts`
-- `apps/api/src/modules/billing/domain/document.ts`
+- `modules/billing/src/infrastructure/persistence/drizzle-billing-repositories.ts` (`DrizzleDocumentRepository.nextSequence`)
+- `modules/billing/src/application/document-issuer.ts`
+- `modules/billing/src/domain/document.ts`
 - Commit `d5a7228`
 
 ## Reuse checklist

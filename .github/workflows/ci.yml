@@ -46,6 +46,7 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run check:arch
+      - run: bun run check:docs
       - run: bun run test
       - run: bun run build
       - run: bun run build:packages
