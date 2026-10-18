@@ -1,4 +1,4 @@
-import { RetryLaterError } from '#/shared/messaging'
+import { RetryLaterError } from '@kit/messaging'
 
 /** The mail provider (or our own limiter) refused because of rate/quota — retrying later is fine. */
 export class MailRateLimitedError extends RetryLaterError {}

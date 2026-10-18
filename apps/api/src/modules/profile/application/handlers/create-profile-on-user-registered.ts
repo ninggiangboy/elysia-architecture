@@ -1,6 +1,6 @@
 import type { Clock } from '@kit/core'
+import type { Envelope, InboxGuard, IntegrationEventHandler } from '@kit/messaging'
 import { IdentityEvents, type UserRegisteredPayload } from '#/modules/identity/contracts'
-import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
 import { Profile } from '../../domain/profile'
 import type { ProfileRepository } from '../../domain/profile-repository'
 

@@ -1,7 +1,7 @@
 import type { StepUpPolicy } from '@kit/auth'
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { ConflictError, DomainError, NotFoundError } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'
 import type { EmailChangeRequestRepository, UserRepository } from '../../domain/repositories'

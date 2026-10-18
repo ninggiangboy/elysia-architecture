@@ -1,5 +1,5 @@
 import type { Log } from '@kit/core'
-import type { Envelope, InboxGuard, IntegrationEventHandler } from '#/shared/messaging'
+import type { Envelope, InboxGuard, IntegrationEventHandler } from '@kit/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import { type AvatarChangedPayload, ProfileEvents } from '../../contracts/events'
 import { AVATAR_THUMBNAIL_SIZES, avatarThumbnailKey } from '../avatar-thumbnails'

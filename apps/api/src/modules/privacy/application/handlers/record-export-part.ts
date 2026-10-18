@@ -1,10 +1,5 @@
 import type { Clock } from '@kit/core'
-import type {
-  Envelope,
-  InboxGuard,
-  IntegrationEventHandler,
-  OutboxWriter,
-} from '#/shared/messaging'
+import type { Envelope, InboxGuard, IntegrationEventHandler, OutboxWriter } from '@kit/messaging'
 import type { ModuleDataExportedPayload } from '../../contracts'
 import { participantEvents } from '../../contracts'
 import type { DataExportRepository } from '../../domain/repositories'

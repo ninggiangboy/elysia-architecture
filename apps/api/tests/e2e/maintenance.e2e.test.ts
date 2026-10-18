@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { OutboxRelay } from '@kit/messaging'
 import { eq } from 'drizzle-orm'
 import { outbox } from '#/modules/identity/infrastructure/persistence/schema'
-import { OutboxRelay } from '#/shared/messaging'
 import type { MaintenanceState } from '#/shared/runtime'
 import { client, createTestApp, eventually, sleep, type TestApp } from './helpers'
 

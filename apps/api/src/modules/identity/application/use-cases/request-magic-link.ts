@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, type Locale } from '@app/shared-types/locales'
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { TooManyRequestsError } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import { Email } from '../../domain/email'
 import { MagicLink } from '../../domain/magic-link'
 import type { MagicLinkRepository } from '../../domain/repositories'

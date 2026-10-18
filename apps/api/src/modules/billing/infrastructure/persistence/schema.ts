@@ -1,3 +1,4 @@
+import { inboxTable, outboxTable } from '@kit/messaging'
 import { sql } from 'drizzle-orm'
 import {
   bigint,
@@ -12,7 +13,6 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { inboxTable, outboxTable } from '#/shared/messaging'
 import type { DocumentLine, Party } from '../../domain/document'
 
 export const billingSchema = pgSchema('billing')

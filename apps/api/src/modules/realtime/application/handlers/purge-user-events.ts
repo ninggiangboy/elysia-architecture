@@ -1,4 +1,4 @@
-import type { Envelope, IntegrationEventHandler } from '#/shared/messaging'
+import type { Envelope, IntegrationEventHandler } from '@kit/messaging'
 import type { ReplayBuffer } from '../ports'
 
 /**

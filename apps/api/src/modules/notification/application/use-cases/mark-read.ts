@@ -1,6 +1,6 @@
 import type { Clock, UnitOfWork } from '@kit/core'
 import { NotFoundError } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import type { NotificationRepository } from '../../domain/notification-repository'
 import { notificationRead, notificationsSeen } from '../notification-events'
 

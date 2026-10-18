@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
-import type { Envelope, InboxGuard } from '#/shared/messaging'
+import type { Envelope, InboxGuard } from '@kit/messaging'
 import { FakeClock, InMemoryOutbox, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
 import { type NotificationDraft, NotificationEvents } from '../contracts'
 import { InvalidNotificationError, Notification } from '../domain/notification'

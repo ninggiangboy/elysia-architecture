@@ -1,5 +1,5 @@
 import type { Clock } from '@kit/core'
-import type { InboxGuard, IntegrationEventHandler, OutboxWriter } from '#/shared/messaging'
+import type { InboxGuard, IntegrationEventHandler, OutboxWriter } from '@kit/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import {
   type DataEraser,

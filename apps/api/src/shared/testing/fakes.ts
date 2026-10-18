@@ -1,5 +1,5 @@
 import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '@kit/core'
-import type { InboxGuard, OutboxWriter } from '#/shared/messaging'
+import type { InboxGuard, OutboxWriter } from '@kit/messaging'
 import type { ObjectStat, ObjectStorage } from '#/shared/storage'
 
 export class FakeClock implements Clock {

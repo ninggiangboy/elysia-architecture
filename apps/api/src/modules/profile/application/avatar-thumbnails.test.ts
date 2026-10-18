@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import type { Envelope, InboxGuard } from '@kit/messaging'
 import sharp from 'sharp'
-import type { Envelope, InboxGuard } from '#/shared/messaging'
 import { FakeStorage } from '#/shared/testing'
 import { ProfileEvents } from '../contracts/events'
 import { SharpImageResizer } from '../infrastructure/sharp-image-resizer'

@@ -1,10 +1,5 @@
 import type { Clock } from '@kit/core'
-import type {
-  Envelope,
-  InboxGuard,
-  IntegrationEventHandler,
-  OutboxWriter,
-} from '#/shared/messaging'
+import type { Envelope, InboxGuard, IntegrationEventHandler, OutboxWriter } from '@kit/messaging'
 import { type ModuleUserDataErasedPayload, participantEvents } from '../../contracts'
 import type { AccountDeletionRepository } from '../../domain/repositories'
 import { accountDeleted, accountErasureProgressed } from '../privacy-events'

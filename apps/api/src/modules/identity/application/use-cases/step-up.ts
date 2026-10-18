@@ -1,6 +1,6 @@
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { NotFoundError, TooManyRequestsError, ValidationError } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import { WEBAUTHN_CHALLENGE_TTL_MS } from '../../domain/auth-challenge'
 import type {
   PasskeyRepository,

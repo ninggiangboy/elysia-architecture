@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { DrizzleInboxGuard, DrizzleOutboxWriter } from '@kit/messaging'
 import { eq } from 'drizzle-orm'
 import { CreateNotificationHandler } from '#/modules/notification/application/handlers/create-notification-handler'
 import type { NotificationDraft } from '#/modules/notification/contracts'
@@ -9,7 +10,6 @@ import {
   notifications,
   outbox,
 } from '#/modules/notification/infrastructure/persistence/schema'
-import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
 import { createTestApp, type TestApp } from './helpers'
 
 let t: TestApp

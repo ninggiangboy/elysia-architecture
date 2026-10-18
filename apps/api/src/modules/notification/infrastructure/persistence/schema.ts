@@ -1,3 +1,4 @@
+import { inboxTable, outboxTable } from '@kit/messaging'
 import { sql } from 'drizzle-orm'
 import {
   date,
@@ -12,7 +13,6 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { inboxTable, outboxTable } from '#/shared/messaging'
 
 export const notificationSchema = pgSchema('notification')
 

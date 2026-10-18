@@ -1,11 +1,6 @@
 import type { Clock, Log } from '@kit/core'
+import type { Envelope, InboxGuard, IntegrationEventHandler, OutboxWriter } from '@kit/messaging'
 import type { IdentityApi } from '#/modules/identity/contracts'
-import type {
-  Envelope,
-  InboxGuard,
-  IntegrationEventHandler,
-  OutboxWriter,
-} from '#/shared/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import type { DataExport, ExportPart } from '../../domain/data-export'
 import type { DataExportRepository } from '../../domain/repositories'

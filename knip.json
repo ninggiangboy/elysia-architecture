@@ -42,6 +42,10 @@
     "packages/kit-auth": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-messaging": {
+      "entry": [],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

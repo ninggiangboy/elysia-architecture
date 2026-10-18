@@ -1,7 +1,7 @@
 import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES } from '@app/shared-types/profile'
 import type { Clock, UnitOfWork } from '@kit/core'
 import { ValidationError } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import type { ProfileRepository } from '../../domain/profile-repository'
 import { isCoverKey } from '../cover-keys'

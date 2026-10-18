@@ -1,5 +1,5 @@
 import type { Clock, IdGenerator, Log, UnitOfWork } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import type {
   AnomalyKind,
   LedgerEntryType,

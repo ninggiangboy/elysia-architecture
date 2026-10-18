@@ -1,5 +1,5 @@
 import type { Clock, UnitOfWork } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import type { RefreshTokenRepository } from '../../domain/repositories'
 import { sessionRevoked } from '../session-events'
 

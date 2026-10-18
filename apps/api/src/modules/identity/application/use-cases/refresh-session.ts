@@ -1,6 +1,6 @@
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { UnauthorizedError } from '@kit/core'
-import type { OutboxWriter } from '#/shared/messaging'
+import type { OutboxWriter } from '@kit/messaging'
 import type { RefreshTokenRepository, UserRepository } from '../../domain/repositories'
 import type { TokenService } from '../ports'
 import { sessionRevoked } from '../session-events'

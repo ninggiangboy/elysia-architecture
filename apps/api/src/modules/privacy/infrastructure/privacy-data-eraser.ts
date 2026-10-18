@@ -1,6 +1,6 @@
 import type { Database } from '@kit/db'
+import { erasePublishedOutbox } from '@kit/messaging'
 import { and, eq, inArray } from 'drizzle-orm'
-import { erasePublishedOutbox } from '#/shared/messaging'
 import type { DataEraser } from '#/shared/privacy-participant'
 import type { ObjectStorage } from '#/shared/storage'
 import { exportsPrefix } from '../application/keys'

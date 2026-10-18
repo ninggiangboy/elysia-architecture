@@ -1,5 +1,5 @@
+import { inboxTable, outboxTable } from '@kit/messaging'
 import { integer, pgSchema, text, timestamp, uuid } from 'drizzle-orm/pg-core'
-import { inboxTable, outboxTable } from '#/shared/messaging'
 
 export const profileSchema = pgSchema('profile')
 

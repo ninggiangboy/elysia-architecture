@@ -1,10 +1,5 @@
 import type { Clock, IdGenerator } from '@kit/core'
-import type {
-  Envelope,
-  InboxGuard,
-  IntegrationEventHandler,
-  OutboxWriter,
-} from '#/shared/messaging'
+import type { Envelope, InboxGuard, IntegrationEventHandler, OutboxWriter } from '@kit/messaging'
 import type { NotificationDraft } from '../../contracts'
 import { Notification } from '../../domain/notification'
 import type { NotificationRepository } from '../../domain/notification-repository'

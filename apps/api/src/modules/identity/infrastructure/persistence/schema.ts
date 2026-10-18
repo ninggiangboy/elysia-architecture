@@ -1,3 +1,4 @@
+import { inboxTable, outboxTable } from '@kit/messaging'
 import {
   bigint,
   boolean,
@@ -10,7 +11,6 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core'
-import { inboxTable, outboxTable } from '#/shared/messaging'
 
 export const identitySchema = pgSchema('identity')
 

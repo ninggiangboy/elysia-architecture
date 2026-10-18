@@ -1,4 +1,4 @@
-import type { Envelope, IntegrationEventHandler } from '#/shared/messaging'
+import type { Envelope, IntegrationEventHandler } from '@kit/messaging'
 import type { DropPushOn } from '../../contracts'
 import type { PushSubscriptionRepository } from '../../domain/push-subscription-repository'
 
