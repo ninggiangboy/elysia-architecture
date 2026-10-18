@@ -7,6 +7,7 @@
       "devDependencies": {
         "@biomejs/biome": "^2.2.0",
         "dependency-cruiser": "^18.6.0",
+        "drizzle-kit": "^0.31.0",
         "jscpd": "^5.4.1",
         "knip": "^6.41.0",
         "typescript": "^5.9.0",
@@ -30,6 +31,7 @@
         "@kit/runtime": "workspace:*",
         "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
+        "@mod/realtime": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/sdk-trace-node": "^2.12.0",
         "@simplewebauthn/server": "^14.0.3",
@@ -48,7 +50,6 @@
         "@kit/testing": "workspace:*",
         "@types/bun": "latest",
         "@types/web-push": "^3.6.4",
-        "drizzle-kit": "^0.31.0",
       },
     },
     "apps/web": {
@@ -87,6 +88,32 @@
         "tailwindcss": "^4.3.3",
         "typescript": "^5.9.0",
         "vite": "^8.3.4",
+      },
+    },
+    "modules/realtime": {
+      "name": "@mod/realtime",
+      "dependencies": {
+        "@app/shared-types": "workspace:*",
+        "@kit/auth": "workspace:*",
+        "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
+        "@kit/db": "workspace:*",
+        "@kit/http": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/runtime": "workspace:*",
+      },
+      "devDependencies": {
+        "@kit/testing": "workspace:*",
+        "@types/bun": "latest",
+        "drizzle-kit": "^0.31.0",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
       },
     },
     "packages/kit-auth": {
@@ -590,6 +617,8 @@
     "@lezer/yaml": ["@lezer/yaml@1.0.4", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.4.0" } }, "sha512-2lrrHqxalACEbxIbsjhqGpSW8kWpUKuY6RHgnSAFZa6qK62wvnPxA8hGOwOoDbwHcOFs5M4o27mjGu+P7TvBmw=="],
 
     "@marijn/find-cluster-break": ["@marijn/find-cluster-break@1.0.4", "", {}, "sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ=="],
+
+    "@mod/realtime": ["@mod/realtime@workspace:modules/realtime"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.2.5", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1 || ^2.0.0-alpha.4", "@emnapi/runtime": "^1.7.1 || ^2.0.0-alpha.4" } }, "sha512-HshSvXzmBxNzqejd3k/KemgQ3hdREUYFRRrgxOZ+gPljDIsO2SDZrVZMd4Z/HsxudQbE62OVyVFE8z9BCurfjA=="],
 

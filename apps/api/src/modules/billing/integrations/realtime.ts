@@ -1,4 +1,4 @@
-import type { RealtimeIntegration } from '#/modules/realtime/contracts'
+import type { RealtimeIntegration } from '@mod/realtime/contracts'
 import { BillingEvents, type TopUpFailedPayload, type TopUpSucceededPayload } from '../contracts'
 
 // "Your money moved": the wallet and the history of the user's other open tabs refetch.

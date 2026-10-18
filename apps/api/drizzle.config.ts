@@ -9,8 +9,8 @@ const module = moduleEntry(name)
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: `./${module.schemaFile}`,
-  out: `./${module.migrations}`,
+  schema: module.schemaFile,
+  out: module.migrations,
   schemaFilter: [module.name],
   migrations: { schema: `drizzle_${module.name}`, table: '__migrations' },
   dbCredentials: {

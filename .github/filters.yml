@@ -4,6 +4,7 @@
 code:
   - apps/**
   - packages/**
+  - modules/**
   - docker/**
   - docker-compose.yml
   - .env.example
@@ -16,11 +17,13 @@ deps:
   - package.json
   - apps/*/package.json
   - packages/*/package.json
+  - modules/*/package.json
   - bun.lock
 
 e2e:
   - apps/**
   - packages/**
+  - modules/**
   - docker/**
   - docker-compose.yml
   - .env.example
@@ -33,6 +36,7 @@ e2e:
 image_api:
   - apps/api/**
   - packages/**
+  - modules/**
   - package.json
   - tsconfig.base.json
   - bun.lock
@@ -44,6 +48,7 @@ image_web:
   - apps/web/**
   - apps/api/**
   - packages/**
+  - modules/**
   - docker/nginx/**
   - package.json
   - tsconfig.base.json

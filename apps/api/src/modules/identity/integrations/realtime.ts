@@ -1,4 +1,4 @@
-import type { RealtimeIntegration } from '#/modules/realtime/contracts'
+import type { RealtimeIntegration } from '@mod/realtime/contracts'
 import { IdentityEvents, type SessionRevokedPayload } from '../contracts'
 
 export const identityRealtime = {

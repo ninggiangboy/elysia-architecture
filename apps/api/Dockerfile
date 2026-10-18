@@ -5,6 +5,7 @@ COPY package.json bun.lock ./
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 COPY packages packages
+COPY modules modules
 RUN bun install --frozen-lockfile --production --filter @app/api
 
 FROM oven/bun:1-slim
@@ -14,8 +15,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY tsconfig.base.json ./
 COPY packages ./packages
+COPY modules ./modules
 # Each kit package gets its own node_modules (the links to the packages it depends on).
 COPY --from=deps /app/packages ./packages
+COPY --from=deps /app/modules ./modules
 COPY apps/api/package.json apps/api/tsconfig.json ./apps/api/
 COPY apps/api/src ./apps/api/src
 COPY apps/api/scripts ./apps/api/scripts

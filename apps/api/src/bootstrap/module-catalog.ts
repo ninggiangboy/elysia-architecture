@@ -1,5 +1,8 @@
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { ConfigSlice } from '@kit/config'
 import type { OutboxTable } from '@kit/messaging'
+import { realtimeManifest } from '@mod/realtime/manifest'
 import { billingConfig } from '#/modules/billing/config'
 import { outbox as billingOutbox } from '#/modules/billing/infrastructure/persistence/schema'
 import { identityConfig } from '#/modules/identity/config'
@@ -9,7 +12,6 @@ import { outbox as notificationOutbox } from '#/modules/notification/infrastruct
 import { privacyConfig } from '#/modules/privacy/config'
 import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'
-import { realtimeConfig } from '#/modules/realtime/config'
 
 /**
  * The modules, as static data: it builds nothing, so the CLI scripts and drizzle-kit can read it without pulling in the
@@ -17,15 +19,19 @@ import { realtimeConfig } from '#/modules/realtime/config'
  */
 export interface ModuleEntry {
   readonly name: string
-  /** The Drizzle schema file drizzle-kit reads. */
+  /** Absolute path of the Drizzle schema file drizzle-kit reads. */
   readonly schemaFile: string
-  /** Where the module's generated migrations live. */
+  /** Absolute path of the folder with the module's generated migrations. */
   readonly migrations: string
+  /** The folder holding the module's own `drizzle.config.ts`; absent for a module that still uses the app's. */
+  readonly dir?: string
   /** The module's outbox table, or `null` when it emits no events (realtime). */
   readonly outbox: OutboxTable | null
   /** The module's configuration slice, read under `config.<name>`; absent when it has no variables of its own. */
   readonly config: ConfigSlice | undefined
 }
+
+const API_ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
 const entry = <const Name extends string, const Slice extends ConfigSlice | undefined>(
   name: Name,
@@ -33,8 +39,9 @@ const entry = <const Name extends string, const Slice extends ConfigSlice | unde
   config?: Slice,
 ) => ({
   name,
-  schemaFile: `src/modules/${name}/infrastructure/persistence/schema.ts`,
-  migrations: `src/modules/${name}/migrations`,
+  schemaFile: join(API_ROOT, `src/modules/${name}/infrastructure/persistence/schema.ts`),
+  migrations: join(API_ROOT, `src/modules/${name}/migrations`),
+  dir: undefined,
   outbox,
   config: config as Slice,
 })
@@ -46,7 +53,7 @@ export const MODULE_CATALOG = [
   entry('notification', notificationOutbox, notificationConfig),
   entry('privacy', privacyOutbox, privacyConfig),
   entry('billing', billingOutbox, billingConfig),
-  entry('realtime', null, realtimeConfig),
+  realtimeManifest,
 ] as const satisfies readonly ModuleEntry[]
 
 export const MODULE_NAMES: string[] = MODULE_CATALOG.map((m) => m.name)

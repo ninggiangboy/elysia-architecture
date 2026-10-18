@@ -8,11 +8,12 @@ const root = join(import.meta.dir, '..')
 const command = process.argv[2]
 
 if (command === 'generate') {
-  for (const { name } of MODULE_CATALOG) {
+  for (const { name, dir } of MODULE_CATALOG) {
     console.log(`\n▶ generate ${name}`)
+    // A module that is a package carries its own drizzle config; the others still use the app's, selected by MODULE.
     const proc = Bun.spawn(['bunx', '--bun', 'drizzle-kit', 'generate'], {
-      cwd: root,
-      env: { ...process.env, MODULE: name },
+      cwd: dir ?? root,
+      env: dir ? process.env : { ...process.env, MODULE: name },
       stdout: 'inherit',
       stderr: 'inherit',
     })
@@ -24,7 +25,7 @@ if (command === 'generate') {
   const database = new Database({ url: env.DATABASE_URL, poolMax: 1, prepare: false })
   try {
     for (const { name, migrations } of MODULE_CATALOG) {
-      const folder = join(root, migrations)
+      const folder = migrations
       if (!existsSync(join(folder, 'meta'))) {
         console.warn(`- ${name}: no migrations found, skipping (run db:generate first)`)
         continue

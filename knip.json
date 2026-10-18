@@ -70,6 +70,10 @@
     "packages/kit-testing": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "modules/realtime": {
+      "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

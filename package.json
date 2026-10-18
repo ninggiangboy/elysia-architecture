@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "modules/*"
   ],
   "scripts": {
     "dev": "bun scripts/dev.ts",
@@ -12,10 +13,10 @@
     "stripe:secret": "bun scripts/stripe.ts secret",
     "test:stripe": "bun run --filter @app/api test:stripe",
     "build": "bun run --filter './apps/*' build",
-    "typecheck": "bun run --filter './apps/*' --filter './packages/*' typecheck",
+    "typecheck": "bun run --filter './apps/*' --filter './packages/*' --filter './modules/*' typecheck",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "test": "bun run --filter './apps/*' --filter './packages/*' test",
+    "test": "bun run --filter './apps/*' --filter './packages/*' --filter './modules/*' test",
     "test:coverage": "bun run --filter @app/api test:coverage",
     "quality:unused": "knip",
     "quality:dup": "jscpd",
@@ -23,11 +24,12 @@
     "infra:down": "docker compose --profile app down",
     "setup": "cp -n .env.example .env; bun install && bun run --filter @app/api keys:generate && bun run infra:up && bun run --filter @app/api db:migrate",
     "test:e2e": "bun run --filter @app/api test:integration && bun run --filter @app/api test:e2e && bun run --filter @app/web test:e2e",
-    "check:arch": "bun run --filter @app/api check:arch && depcruise packages --config .dependency-cruiser.packages.cjs"
+    "check:arch": "bun run --filter @app/api check:arch && depcruise packages --config .dependency-cruiser.packages.cjs && depcruise modules --config .dependency-cruiser.modules.cjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",
     "dependency-cruiser": "^18.6.0",
+    "drizzle-kit": "^0.31.0",
     "jscpd": "^5.4.1",
     "knip": "^6.41.0",
     "typescript": "^5.9.0"

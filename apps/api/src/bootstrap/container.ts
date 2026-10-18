@@ -7,6 +7,7 @@ import type { AppModule } from '@kit/runtime'
 import { MaintenanceMode, MaintenanceStore } from '@kit/runtime'
 import { createObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
+import { createRealtimeModule } from '@mod/realtime'
 import type { Config } from '#/bootstrap/config'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
 import { createBillingModule } from '#/modules/billing/billing.module'
@@ -28,7 +29,6 @@ import { privacyNotifications } from '#/modules/privacy/integrations/notificatio
 import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
-import { createRealtimeModule } from '#/modules/realtime/realtime.module'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.

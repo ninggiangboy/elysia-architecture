@@ -109,10 +109,14 @@ describe('container', () => {
       const root = join(import.meta.dir, '../..')
       const names: string[] = MODULE_CATALOG.map((m) => m.name)
       expect(names.slice().sort()).toEqual(Object.keys(container.modules).sort())
-      expect(names.slice().sort()).toEqual(readdirSync(join(root, 'src/modules')).sort())
+      // A module is a folder under modules/ (a package) or, until it is lifted, under src/modules.
+      const folders = [join(root, 'src/modules'), join(root, '../../modules')].flatMap((dir) =>
+        existsSync(dir) ? readdirSync(dir) : [],
+      )
+      expect(names.slice().sort()).toEqual(folders.sort())
       for (const m of MODULE_CATALOG) {
-        expect(existsSync(join(root, m.schemaFile))).toBe(true)
-        expect(existsSync(join(root, m.migrations, 'meta'))).toBe(true)
+        expect(existsSync(m.schemaFile)).toBe(true)
+        expect(existsSync(join(m.migrations, 'meta'))).toBe(true)
         // The relay reads exactly the outbox tables the catalog knows (realtime has none).
         const module: AppModule = container.modules[m.name as keyof typeof container.modules]
         expect(module.outbox?.table ?? null).toBe(m.outbox)
