@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
 import { connectedAccountsQuery } from '@/features/account/queries'
+import { pendingFrom, pendingSignIn } from '@/features/auth/pending'
 import { providerName } from '@/features/auth/provider-icons'
 import { completeOAuth } from '@/features/auth/queries'
 import { errorMessage } from '@/lib/api'
@@ -47,7 +48,9 @@ function OAuthCallbackPage() {
     })
       .then(async (result) => {
         if (result.purpose === 'login') {
-          await navigate({ to: '/', replace: true })
+          const pending = pendingFrom(result)
+          if (pending) pendingSignIn.set(pending)
+          await navigate({ to: pending ? '/login' : '/', replace: true })
           return
         }
         toast.success(t('callback.connected', { provider: providerName(result.provider) }))

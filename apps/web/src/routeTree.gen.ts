@@ -12,11 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedRealtimeRouteImport } from './routes/_authed/realtime'
 import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AccountConfirmEmailRouteImport } from './routes/account.confirm-email'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as PasswordForgotRouteImport } from './routes/password.forgot'
+import { Route as PasswordResetRouteImport } from './routes/password.reset'
+import { Route as RegisterVerifyRouteImport } from './routes/register_.verify'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsAccountRouteImport } from './routes/_authed/settings/account'
 import { Route as AuthedSettingsNotificationsRouteImport } from './routes/_authed/settings/notifications'
@@ -43,6 +47,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -66,6 +75,21 @@ const AccountConfirmEmailRoute = AccountConfirmEmailRouteImport.update({
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PasswordForgotRoute = PasswordForgotRouteImport.update({
+  id: '/password/forgot',
+  path: '/password/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PasswordResetRoute = PasswordResetRouteImport.update({
+  id: '/password/reset',
+  path: '/password/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterVerifyRoute = RegisterVerifyRouteImport.update({
+  id: '/register_/verify',
+  path: '/register/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
@@ -134,10 +158,14 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/settings': typeof AuthedSettingsRouteWithChildren
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/password/forgot': typeof PasswordForgotRoute
+  '/password/reset': typeof PasswordResetRoute
+  '/register/verify': typeof RegisterVerifyRoute
   '/settings/account': typeof AuthedSettingsAccountRoute
   '/settings/notifications': typeof AuthedSettingsNotificationsRoute
   '/settings/profile': typeof AuthedSettingsProfileRoute
@@ -153,9 +181,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/realtime': typeof AuthedRealtimeRoute
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/password/forgot': typeof PasswordForgotRoute
+  '/password/reset': typeof PasswordResetRoute
+  '/register/verify': typeof RegisterVerifyRoute
   '/': typeof AuthedIndexRoute
   '/settings/account': typeof AuthedSettingsAccountRoute
   '/settings/notifications': typeof AuthedSettingsNotificationsRoute
@@ -174,10 +206,14 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/docs': typeof DocsRoute
   '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/_authed/realtime': typeof AuthedRealtimeRoute
   '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/account/confirm-email': typeof AccountConfirmEmailRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/password/forgot': typeof PasswordForgotRoute
+  '/password/reset': typeof PasswordResetRoute
+  '/register_/verify': typeof RegisterVerifyRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/settings/account': typeof AuthedSettingsAccountRoute
   '/_authed/settings/notifications': typeof AuthedSettingsNotificationsRoute
@@ -197,10 +233,14 @@ export interface FileRouteTypes {
     | '/'
     | '/docs'
     | '/login'
+    | '/register'
     | '/realtime'
     | '/settings'
     | '/account/confirm-email'
     | '/auth/callback'
+    | '/password/forgot'
+    | '/password/reset'
+    | '/register/verify'
     | '/settings/account'
     | '/settings/notifications'
     | '/settings/profile'
@@ -216,9 +256,13 @@ export interface FileRouteTypes {
   to:
     | '/docs'
     | '/login'
+    | '/register'
     | '/realtime'
     | '/account/confirm-email'
     | '/auth/callback'
+    | '/password/forgot'
+    | '/password/reset'
+    | '/register/verify'
     | '/'
     | '/settings/account'
     | '/settings/notifications'
@@ -236,10 +280,14 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/docs'
     | '/login'
+    | '/register'
     | '/_authed/realtime'
     | '/_authed/settings'
     | '/account/confirm-email'
     | '/auth/callback'
+    | '/password/forgot'
+    | '/password/reset'
+    | '/register_/verify'
     | '/_authed/'
     | '/_authed/settings/account'
     | '/_authed/settings/notifications'
@@ -258,8 +306,12 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   DocsRoute: typeof DocsRoute
   LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
   AccountConfirmEmailRoute: typeof AccountConfirmEmailRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  PasswordForgotRoute: typeof PasswordForgotRoute
+  PasswordResetRoute: typeof PasswordResetRoute
+  RegisterVerifyRoute: typeof RegisterVerifyRoute
   AuthOauthCallbackRoute: typeof AuthOauthCallbackRoute
 }
 
@@ -284,6 +336,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/': {
@@ -319,6 +378,27 @@ declare module '@tanstack/react-router' {
       path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/password/forgot': {
+      id: '/password/forgot'
+      path: '/password/forgot'
+      fullPath: '/password/forgot'
+      preLoaderRoute: typeof PasswordForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/password/reset': {
+      id: '/password/reset'
+      path: '/password/reset'
+      fullPath: '/password/reset'
+      preLoaderRoute: typeof PasswordResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register_/verify': {
+      id: '/register_/verify'
+      path: '/register/verify'
+      fullPath: '/register/verify'
+      preLoaderRoute: typeof RegisterVerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/settings/': {
@@ -451,8 +531,12 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   DocsRoute: DocsRoute,
   LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
   AccountConfirmEmailRoute: AccountConfirmEmailRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  PasswordForgotRoute: PasswordForgotRoute,
+  PasswordResetRoute: PasswordResetRoute,
+  RegisterVerifyRoute: RegisterVerifyRoute,
   AuthOauthCallbackRoute: AuthOauthCallbackRoute,
 }
 export const routeTree = rootRouteImport

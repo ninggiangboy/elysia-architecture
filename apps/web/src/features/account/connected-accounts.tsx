@@ -12,7 +12,8 @@ import { connectedAccountsQuery, disconnectAccount, startConnect } from './queri
 export function ConnectedAccounts() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { data: providers } = useSuspenseQuery(oauthProvidersQuery)
+  const { data: available } = useSuspenseQuery(oauthProvidersQuery)
+  const { providers, names } = available
   const { data: accounts } = useSuspenseQuery(connectedAccountsQuery)
 
   const connect = useMutation({
@@ -26,7 +27,7 @@ export function ConnectedAccounts() {
   const disconnect = useMutation({
     mutationFn: disconnectAccount,
     onSuccess: (_, provider) => {
-      toast.success(t('accounts.disconnected', { provider: providerName(provider) }))
+      toast.success(t('accounts.disconnected', { provider: providerName(provider, names) }))
       void queryClient.invalidateQueries({ queryKey: connectedAccountsQuery.queryKey })
     },
     onError: (err) => {
@@ -51,7 +52,7 @@ export function ConnectedAccounts() {
                 <ProviderIcon provider={provider} className="size-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{providerName(provider)}</p>
+                <p className="text-sm font-medium">{providerName(provider, names)}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {account
                     ? (account.email ?? t('accounts.connected'))

@@ -1,7 +1,14 @@
 import type { SVGProps } from 'react'
 
-const PROVIDER_NAMES: Record<string, string> = { google: 'Google', github: 'GitHub' }
-export const providerName = (id: string) => PROVIDER_NAMES[id] ?? id
+const PROVIDER_NAMES: Record<string, string> = {
+  google: 'Google',
+  github: 'GitHub',
+  microsoft: 'Microsoft',
+  discord: 'Discord',
+}
+/** `names` are the display names the server reports (a configured OIDC provider has its own). */
+export const providerName = (id: string, names?: Record<string, string>) =>
+  names?.[id] ?? PROVIDER_NAMES[id] ?? id
 
 function Google(props: SVGProps<SVGSVGElement>) {
   return (
@@ -34,15 +41,55 @@ function GitHub(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+function Microsoft(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden {...props}>
+      <path fill="#F25022" d="M1 1h10.5v10.5H1z" />
+      <path fill="#7FBA00" d="M12.5 1H23v10.5H12.5z" />
+      <path fill="#00A4EF" d="M1 12.5h10.5V23H1z" />
+      <path fill="#FFB900" d="M12.5 12.5H23V23H12.5z" />
+    </svg>
+  )
+}
+
+function Discord(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden fill="#5865F2" {...props}>
+      <path d="M20.32 4.37a19.8 19.8 0 0 0-4.9-1.52.07.07 0 0 0-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 0 0-5.5 0c-.17-.4-.41-.88-.62-1.26a.08.08 0 0 0-.08-.04c-1.7.3-3.35.82-4.9 1.52a.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06c0 .02.01.04.03.05a19.9 19.9 0 0 0 6 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 0 0-.04-.1c-.65-.25-1.27-.55-1.86-.9a.08.08 0 0 1 0-.13l.37-.29a.07.07 0 0 1 .08-.01c3.9 1.78 8.1 1.78 11.95 0a.07.07 0 0 1 .08.01l.37.3a.08.08 0 0 1 0 .13c-.6.35-1.22.65-1.86.9a.08.08 0 0 0-.04.1c.36.7.77 1.37 1.23 2a.08.08 0 0 0 .08.03 19.8 19.8 0 0 0 6.01-3.03.08.08 0 0 0 .03-.05c.5-5.18-.84-9.67-3.55-13.66a.06.06 0 0 0-.03-.03ZM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42s.96-2.42 2.16-2.42c1.2 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42Zm7.97 0c-1.18 0-2.16-1.09-2.16-2.42s.96-2.42 2.16-2.42c1.2 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42Z" />
+    </svg>
+  )
+}
+
+/** Any other provider (a configured OIDC one) gets a generic key. */
+function Generic(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <circle cx="8" cy="15" r="4" />
+      <path d="m10.85 12.15 8.65-8.65M18 5l3 3M15 8l2 2" />
+    </svg>
+  )
+}
+
 const ICONS: Record<string, (props: SVGProps<SVGSVGElement>) => React.ReactElement> = {
   google: Google,
   github: GitHub,
+  microsoft: Microsoft,
+  discord: Discord,
 }
 
 export function ProviderIcon({
   provider,
   ...props
 }: { provider: string } & SVGProps<SVGSVGElement>) {
-  const Icon = ICONS[provider]
-  return Icon ? <Icon {...props} /> : null
+  const Icon = ICONS[provider] ?? Generic
+  return <Icon {...props} />
 }

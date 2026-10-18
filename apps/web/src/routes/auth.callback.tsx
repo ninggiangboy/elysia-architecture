@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthShell } from '@/components/layout/auth-shell'
 import { StatusPanel } from '@/components/layout/status-panel'
+import { pendingFrom, pendingSignIn } from '@/features/auth/pending'
 import { verifyMagicLink } from '@/features/auth/queries'
 import { errorMessage } from '@/lib/api'
 
@@ -25,7 +26,12 @@ function CallbackPage() {
     if (!token) return
     // A magic link is one-time: `once` prevents a double call when StrictMode remounts the effect.
     once(`magic:${token}`, () => verifyMagicLink(token))
-      .then(() => navigate({ to: '/', replace: true }))
+      .then((outcome) => {
+        // A second factor or a sign-up form may still be due: the sign-in page continues from here.
+        const pending = pendingFrom(outcome)
+        if (pending) pendingSignIn.set(pending)
+        return navigate({ to: pending ? '/login' : '/', replace: true })
+      })
       .catch((err) => setError(errorMessage(err)))
   }, [token, navigate])
 

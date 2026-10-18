@@ -59,3 +59,39 @@ export const startConnect = (provider: string) =>
 
 export const disconnectAccount = (provider: string) =>
   withStepUp(async () => unwrap(await http.api.account.oauth({ provider }).delete()))
+
+/** What the security page needs beyond the lists: password, email sign-in, two-factor, invitations. */
+export const securityQuery = queryOptions({
+  queryKey: ['security'],
+  queryFn: async () => unwrap(await http.api.account.security.get()),
+})
+
+export const setPassword = (newPassword: string) =>
+  withStepUp(async () => unwrap(await http.api.account.password.put({ newPassword })))
+
+export const removePassword = () =>
+  withStepUp(async () => unwrap(await http.api.account.password.delete()))
+
+/** A fresh authenticator secret (and its QR URI). Nothing is on until `enableTwoFactor` gets a correct code. */
+export const beginTwoFactor = () =>
+  withStepUp(async () => unwrap(await http.api.account['two-factor'].setup.post()))
+
+export const enableTwoFactor = async (code: string) =>
+  unwrap(await http.api.account['two-factor'].enable.post({ code }))
+
+export const newRecoveryCodes = () =>
+  withStepUp(async () => unwrap(await http.api.account['two-factor']['recovery-codes'].post()))
+
+export const disableTwoFactor = () =>
+  withStepUp(async () => unwrap(await http.api.account['two-factor'].delete()))
+
+export const invitationsQuery = queryOptions({
+  queryKey: ['invitations'],
+  queryFn: async () => unwrap(await http.api.account.invitations.get()).invitations,
+})
+
+export const sendInvitation = async (email: string) =>
+  unwrap(await http.api.account.invitations.post({ email }))
+
+export const revokeInvitation = async (id: string) =>
+  unwrap(await http.api.account.invitations({ id }).delete())

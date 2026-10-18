@@ -83,3 +83,14 @@ export async function confirmWithCode(code: string) {
   const next = unwrap(await http.api.account['step-up']['email-code'].verify.post({ code }))
   applyAccessToken(next.accessToken)
 }
+
+/** Confirms with a code from the authenticator app. */
+export async function confirmWithTotp(code: string) {
+  const next = unwrap(await http.api.account['step-up'].totp.post({ code }))
+  applyAccessToken(next.accessToken)
+}
+
+export async function confirmWithPassword(password: string) {
+  const next = unwrap(await http.api.account['step-up'].password.post({ password }))
+  applyAccessToken(next.accessToken)
+}

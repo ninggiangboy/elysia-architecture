@@ -50,3 +50,15 @@ export async function codeFromMail(address: string, skip = 0): Promise<string> {
   }
   throw new Error(`confirmation code for ${address} not received`)
 }
+
+/** The 6-digit code in the subject of the NEW mail whose subject contains `subject` (after the `skip` that already existed). */
+export async function codeFromSubject(address: string, subject: string, skip = 0): Promise<string> {
+  const deadline = Date.now() + 15_000
+  while (Date.now() < deadline) {
+    const matches = (await search(address)).filter((m) => m.Subject.includes(subject))
+    const code = matches.length > skip ? matches[0]?.Subject.match(/\d{6}/)?.[0] : undefined
+    if (code) return code
+    await new Promise((r) => setTimeout(r, 250))
+  }
+  throw new Error(`mail "${subject}" with a code to ${address} not received`)
+}
