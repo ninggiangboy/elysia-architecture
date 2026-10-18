@@ -163,12 +163,13 @@ The full endpoint list is in the OpenAPI/Scalar docs (see the URLs above).
 ## Start a new project
 
 ```bash
-cp -r examples/starter my-app && cd my-app      # identity + profile; needs only Postgres
+cd examples/starter                             # identity + profile; needs only Postgres
 cp .env.example .env && bun run keys:generate
 docker compose up -d postgres && bun run db:migrate && bun run dev
 
-bun run kit:add notification billing            # wire more modules in (from the repo root: bun run kit:add billing --app my-app)
-bun run gen:module orders                       # or write your own, from templates/module
+# from the repo root:
+bun run kit:add notification billing --app examples/starter   # wire more modules in
+bun run gen:module orders --app examples/starter              # or write your own, from templates/module
 ```
 
 The [adoption guide](docs/guides/adopt-in-new-project.md) covers swapping an adapter, rewording a mail, reacting to an event and ejecting a module;
