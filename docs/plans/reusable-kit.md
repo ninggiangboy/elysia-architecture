@@ -1,6 +1,6 @@
 # Plan: turn the reference app into a reusable module kit
 
-> Status: **decided**. Drafted 2026-10-18; decisions settled 2026-10-18 in [§2](#2-decisions). The repo is a sample with no production users, so every decision takes the architecturally best option, not the cheapest one; rewrites are acceptable.
+> Status: **implemented** (P0–P10) on 2026-10-18; see [§7](#7-progress-tracking) for what was done, the tags and the deviations. Drafted 2026-10-18; decisions settled 2026-10-18 in [§2](#2-decisions). The repo is a sample with no production users, so every decision takes the architecturally best option, not the cheapest one; rewrites are acceptable.
 
 ## 0. Goal and definition of done
 
@@ -899,14 +899,27 @@ bun run quality:unused && bun run quality:dup
 
 | Phase | Status | Tag | Notes |
 |---|---|---|---|
-| P0 | ☐ | | |
-| P1 | ☐ | | |
-| P2 | ☐ | | |
-| P3 | ☐ | | |
-| P4 | ☐ | | |
-| P5 | ☐ | | |
-| P6 | ☐ | | |
-| P7 | ☐ | | |
-| P8 | ☐ | | |
-| P9 | ☐ | | |
-| P10 | ☐ | | |
+| P0 | ☑ | `pre-kit` (rollback point), baseline in [`reusable-kit-baseline.md`](reusable-kit-baseline.md) | The nine redirect routes are gone. `scripts/check-removal.ts` is static analysis (it lists the files outside a module that mention it) instead of a worktree experiment; the add-matrix (P9) is the executable check. |
+| P1 | ☑ | `kit-p1` | `AppModule`, the container loops over the list, `bootstrap/module-catalog.ts`, `app.test.ts` guards the static `.use()` chain. P1.5 deviates slightly: modules declare `privacy: { exports, erases }` flags and `privacyParticipation()` builds the two handlers inside the module (the handlers write to the module's own outbox and inbox, which the container does not have). |
+| P2 | ☑ | `kit-p2` | `integrations/` in identity, privacy, billing, notification; notification and realtime are leaves. The handler-name snapshot is `bootstrap/container.test.ts`. Added: `AppModule.docs` (API doc sections per module) so `shared/http/openapi.ts` no longer lists modules. The deletion-scheduled mail now links to `/settings/account` (it pointed at a removed redirect). |
+| P3 | ☑ | `kit-p3` | Slices in the packages and modules, `.env.example` generated and tested. Empty slices render nothing; a variable two slices read is listed once. |
+| P4 | ☑ | `kit-p4` | One folder per future package with a barrel, enforced; `@kit/i18n` extracted early (the web uses it too), `shared-types` split into subpaths and its billing/profile constants later moved into the modules (`./public`). |
+| P5 | ☑ | `kit-p5` | 14 packages. Deviations: `ApiErrorBody` stayed in `shared-types/api-error` (the web needs it without `@kit/http`); the locale plugin moved into identity (its only user, and it needs the product's languages). The package graph is checked by `.dependency-cruiser.packages.cjs`; the api's config treats the kit as a black box. |
+| P6 | ☑ | `kit-p6` | Contract suites (`@kit/testing/contracts`) run on the fakes and, in `apps/api/tests/integration`, on S3, the Postgres inbox/outbox/rate limiter/advisory lock and SMTP (Mailpit and a scripted server for 550/454). They found one real difference (S3 adds `;charset=utf-8`). `LocalFsObjectStorage` + `localStoragePlugin` (`@kit/storage/http`), `ConsoleMailer`, `STORAGE_DRIVER`, `MAIL_DRIVER`; a module left out of the catalog but migrated is a warning. |
+| P7 | ☑ | `kit-p7` | Six module packages with exports maps, manifests, `./testing`, `./public` (billing, profile). Lift order was identity first (the plan's order would have made a lifted module reach back into the app). Added beyond the plan: `ModuleManifest`, `install(host)`, `kit.json`. The `#/` alias is gone from the api and the web (relative imports in the api). Not done: the "scratch app outside the workspace installs `@mod/billing` without `@mod/notification`" check, replaced by the add-matrix, which installs billing alone in the starter. |
+| P8 | ☑ | `kit-p8` | `@kit/ui` (+ `@source`), `@kit/web-core` (auth store, session refresh, auth fetch, outage detector, SSE client, unwrap/ApiError, query client, runtime config, `once`), feature registry, per-feature catalogs with typed keys kept. Stayed in the app: push, webauthn, theme, format, device, card, money, stripe, crop, the maintenance dialog and status panel (they use the app's translations or its typed API client). Feature catalogs are static objects, not lazy imports (the catalogs are bundled and typed). |
+| P9 | ☑ | `kit-p9` | `scripts/kit.ts` (`add`, `remove`, `gen`, `gen-feature`), `templates/module`, `examples/starter` (API only: no web app), `scripts/add-matrix.ts`, CI jobs `starter` and `add-matrix`. `gen:module --from` (eject) is documented as manual steps, not automated. |
+| P10 | ☑ | `kit-p10` | Changesets (packages stay `"private": true`; a manual release workflow is in place), dual export conditions (`bun` → src, `default` → dist) with `bun run build:packages`, READMEs with generated config tables (`check:docs`), guides, six ADRs, architecture/pattern pages updated. No registry was chosen, so nothing is published. |
+
+### Definition of done, as measured
+
+| # | Result |
+|---|---|
+| T1 | Removing billing edits `apps/api/package.json`, `app.ts`, `bootstrap/container.ts` and `bootstrap/module-catalog.ts` (`bun scripts/check-removal.ts billing`), plus the web feature; `bun run kit:remove` does the api part. |
+| T2, T2b | Rules `generic-modules-are-leaves` and `participants-do-not-know-privacy` in `.dependency-cruiser.modules.cjs`. |
+| T3 | `apps/api/src/shared` does not exist. |
+| T4 | The starter boots, is ready and signs in with a link taken from the log with only Postgres (`examples/starter` e2e; CI job `starter`). |
+| T5 | Every package has a README with the required headings (`check:docs`), tests where it has behaviour, and an exports map; `knip` warns about unused exports as before. |
+| T6 | `bun run gen:module <name>` creates a module that typechecks, passes its tests, generates its first migration and runs in the starter (`add-matrix`). |
+| T7 | Lint, typecheck, `check:arch`, unit, e2e and builds were run at the end of each phase. The web-push e2e (api) and one Playwright spec (offline, or passkey on the baseline) are flaky when the whole suite runs, on the baseline too; they pass alone. |
+
