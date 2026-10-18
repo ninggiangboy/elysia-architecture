@@ -23,6 +23,8 @@ import {
 import type { Clock, IntegrationEventHandler, Log } from '#/shared/application/ports'
 import type { TokenVerifier } from '#/shared/http/auth.plugin'
 import type { Database } from '#/shared/infrastructure/db/database'
+import type { AppModule } from '#/shared/module/app-module'
+import { intervalJobs } from '#/shared/module/interval-jobs'
 import { PurgeUserEvents } from './application/handlers/purge-user-events'
 import { RealtimePushHandler } from './application/handlers/realtime-push-handler'
 import { SendTestEvent } from './application/use-cases/send-test-event'
@@ -38,14 +40,13 @@ export interface RealtimeModuleDeps {
   replayWindowMs: number
 }
 
-export interface RealtimeModule {
-  name: 'realtime'
+export interface RealtimeModule extends AppModule<'realtime', ReturnType<typeof realtimeRoutes>> {
   routes: ReturnType<typeof realtimeRoutes>
   handlers: IntegrationEventHandler[]
-  /** Deletes replay-buffer events older than `olderThan`; returns how many. Runs on a timer, exposed for tests. */
+  /** Deletes replay-buffer events older than `olderThan`; returns how many. Runs on a timer (`jobs`), exposed for tests. */
   prune(olderThan: Date): Promise<number>
-  /** Closes every live connection, stops listening and stops pruning. Call before stopping the HTTP server. */
-  stop(): Promise<void>
+  /** Closes every live connection and stops listening. Called before the HTTP server is stopped. */
+  close(): Promise<void>
 }
 
 const PRUNE_INTERVAL_MS = 60_000
@@ -55,12 +56,12 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
   const { database, clock, log, verifier, replayWindowMs } = deps
   const hub = new PgRealtimeHub(database, clock, log)
 
-  const prune = () =>
-    hub
-      .prune(new Date(clock.now().getTime() - replayWindowMs))
-      .catch((err) => log.warn({ err }, 'pruning the realtime replay buffer failed'))
-  const pruneTimer = setInterval(prune, PRUNE_INTERVAL_MS)
-  pruneTimer.unref()
+  // Pruning is the worker's job: a process with only the api role does not run it.
+  const jobs = intervalJobs({
+    intervalMs: PRUNE_INTERVAL_MS,
+    run: () => hub.prune(new Date(clock.now().getTime() - replayWindowMs)),
+    onError: (err) => log.warn({ err }, 'pruning the realtime replay buffer failed'),
+  })
 
   return {
     name: 'realtime',
@@ -247,10 +248,8 @@ export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
         clock,
       ),
     ],
+    jobs,
     prune: (olderThan) => hub.prune(olderThan),
-    async stop() {
-      clearInterval(pruneTimer)
-      await hub.stop()
-    },
+    close: () => hub.stop(),
   }
 }

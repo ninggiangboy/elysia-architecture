@@ -16,6 +16,7 @@ import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import type { AppModule } from '#/shared/module/app-module'
 import { IdentityDataExporter } from './application/identity-data-exporter'
 import { PasskeyAssertions } from './application/passkey-assertions'
 import type { OAuthGateway, WebAuthnService } from './application/ports'
@@ -89,8 +90,7 @@ export interface IdentityModuleDeps {
   oauth?: OAuthGateway
 }
 
-export interface IdentityModule {
-  name: 'identity'
+export interface IdentityModule extends AppModule<'identity', ReturnType<typeof identityRoutes>> {
   routes: ReturnType<typeof identityRoutes>
   api: IdentityApi
   verifier: AccessTokenVerifier

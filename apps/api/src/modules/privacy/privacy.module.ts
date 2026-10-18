@@ -13,6 +13,8 @@ import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import type { AppModule } from '#/shared/module/app-module'
+import { intervalJobs } from '#/shared/module/interval-jobs'
 import { AssembleExport } from './application/handlers/assemble-export'
 import { RecordErasure } from './application/handlers/record-erasure'
 import { RecordExportPart } from './application/handlers/record-export-part'
@@ -57,17 +59,14 @@ export interface PrivacyModuleDeps {
   jobsIntervalMs: number
 }
 
-export interface PrivacyModule {
-  name: 'privacy'
+export interface PrivacyModule extends AppModule<'privacy', ReturnType<typeof privacyRoutes>> {
   routes: ReturnType<typeof privacyRoutes>
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
-  /** One pass over everything that is due. Runs on a timer (`startJobs`); exposed for tests and operators. */
+  /** One pass over everything that is due. Runs on a timer (`jobs`); exposed for tests and operators. */
   runJobs(): Promise<JobsReport>
   /** Operator: gives a stalled deletion another round (after fixing why a module did not answer). */
   resumeDeletion(deletionId: string): Promise<void>
-  startJobs(): void
-  stopJobs(): Promise<void>
 }
 
 export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
@@ -77,7 +76,7 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
   const deletions = new DrizzleAccountDeletionRepository(database)
   const outboxWriter = new DrizzleOutboxWriter(database, outbox, () => ids.next())
   const inboxGuard = new DrizzleInboxGuard(database, inbox)
-  const jobs = new PrivacyJobs(
+  const privacyJobs = new PrivacyJobs(
     exports,
     deletions,
     storage,
@@ -89,17 +88,12 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
   )
   const resume = new ResumeStalledDeletion(deletions, database, outboxWriter, clock)
 
-  let timer: ReturnType<typeof setInterval> | undefined
-  let running: Promise<unknown> | undefined
-  const tick = () => {
-    // A slow pass is not overlapped by the next one; two instances may still tick together, the row claims keep them apart.
-    running ??= jobs
-      .runOnce()
-      .catch((err) => log.error({ err }, 'privacy jobs failed'))
-      .finally(() => {
-        running = undefined
-      })
-  }
+  // Row claims keep two instances that tick together apart.
+  const jobs = intervalJobs({
+    intervalMs: deps.jobsIntervalMs,
+    run: () => privacyJobs.runOnce(),
+    onError: (err) => log.error({ err }, 'privacy jobs failed'),
+  })
 
   return {
     name: 'privacy',
@@ -168,17 +162,8 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
       ),
     ],
     outbox: { name: 'privacy', table: outbox },
-    runJobs: () => jobs.runOnce(),
+    jobs,
+    runJobs: () => privacyJobs.runOnce(),
     resumeDeletion: (deletionId) => resume.execute({ deletionId }),
-    startJobs() {
-      if (timer) return
-      timer = setInterval(tick, deps.jobsIntervalMs)
-      timer.unref()
-    },
-    async stopJobs() {
-      if (timer) clearInterval(timer)
-      timer = undefined
-      await running
-    },
   }
 }

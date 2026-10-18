@@ -18,6 +18,8 @@ import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import type { AppModule } from '#/shared/module/app-module'
+import { intervalJobs, noJobs } from '#/shared/module/interval-jobs'
 import { BillingDataExporter } from './application/billing-data-exporter'
 import { CurrencyPolicy, type CurrencyRule } from './application/currency-policy'
 import { DocumentIssuer } from './application/document-issuer'
@@ -61,15 +63,12 @@ export interface BillingModuleDeps {
   reconcile: ReconcilePolicy
 }
 
-export interface BillingModule {
-  name: 'billing'
+export interface BillingModule extends AppModule<'billing', ReturnType<typeof billingRoutes>> {
   routes: ReturnType<typeof billingRoutes>
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
   /** One reconciliation pass (the timer calls this; tests and operators can too). */
   reconcile: () => Promise<number>
-  startJobs: () => void
-  stopJobs: () => Promise<void>
 }
 
 export function createBillingModule(deps: BillingModuleDeps): BillingModule {
@@ -103,17 +102,14 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
     ? new ReconcileTopUps(topUps, payments.gateway, handlePaymentEvent, deps.reconcile, clock, log)
     : undefined
 
-  let timer: ReturnType<typeof setInterval> | undefined
-  let running: Promise<unknown> | undefined
-  const tick = () => {
-    // A slow pass is not overlapped by the next one; two instances may still tick together, the row claims keep them apart.
-    running ??= reconciler
-      ?.runOnce()
-      .catch((err) => log.error({ err }, 'top-up reconciliation failed'))
-      .finally(() => {
-        running = undefined
+  // Row claims keep two instances that tick together apart.
+  const jobs = reconciler
+    ? intervalJobs({
+        intervalMs: deps.reconcileIntervalMs,
+        run: () => reconciler.runOnce(),
+        onError: (err) => log.error({ err }, 'top-up reconciliation failed'),
       })
-  }
+    : noJobs
 
   return {
     name: 'billing',
@@ -167,16 +163,7 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
       ),
     ],
     outbox: { name: 'billing', table: outbox },
+    jobs,
     reconcile: async () => reconciler?.runOnce() ?? 0,
-    startJobs() {
-      if (timer || !reconciler) return
-      timer = setInterval(tick, deps.reconcileIntervalMs)
-      timer.unref()
-    },
-    async stopJobs() {
-      if (timer) clearInterval(timer)
-      timer = undefined
-      await running
-    },
   }
 }

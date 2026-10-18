@@ -38,6 +38,8 @@ import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
 import type { OutboxSource } from '#/shared/infrastructure/outbox/outbox-relay'
+import type { AppModule } from '#/shared/module/app-module'
+import { intervalJobs } from '#/shared/module/interval-jobs'
 import { CreateNotificationHandler } from './application/handlers/create-notification-handler'
 import { DropPushSubscriptionsHandler } from './application/handlers/drop-push-subscriptions-handler'
 import { MailEventHandler } from './application/handlers/mail-event-handler'
@@ -110,20 +112,18 @@ export interface NotificationModuleDeps {
   /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
   webPush?: { sender: WebPushSender; publicKey: string; quietWindowMs?: number }
   retention: RetentionPolicy & {
-    /** How often the timer behind `startJobs` looks for notifications past the retention. */
+    /** How often the timer behind `jobs` looks for notifications past the retention. */
     intervalMs: number
   }
 }
 
-export interface NotificationModule {
-  name: 'notification'
+export interface NotificationModule
+  extends AppModule<'notification', ReturnType<typeof notificationRoutes>> {
   routes: ReturnType<typeof notificationRoutes>
   handlers: IntegrationEventHandler[]
   outbox: OutboxSource
-  /** One retention pass. Runs on a timer (`startJobs`); exposed for tests and operators. */
+  /** One retention pass. Runs on a timer (`jobs`); exposed for tests and operators. */
   prune(): Promise<number>
-  startJobs(): void
-  stopJobs(): Promise<void>
 }
 
 const minutesUntil = (iso: string) =>
@@ -172,17 +172,12 @@ export function createNotificationModule({
       clock,
     )
   const pruner = new PruneOldNotifications(notifications, retention, clock, log)
-  let timer: ReturnType<typeof setInterval> | undefined
-  let running: Promise<unknown> | undefined
-  const tick = () => {
-    // A slow pass is not overlapped by the next one; two instances may still tick together, SKIP LOCKED keeps them apart.
-    running ??= pruner
-      .runOnce()
-      .catch((err) => log.error({ err }, 'notification retention failed'))
-      .finally(() => {
-        running = undefined
-      })
-  }
+  // SKIP LOCKED keeps two instances that tick together apart.
+  const jobs = intervalJobs({
+    intervalMs: retention.intervalMs,
+    run: () => pruner.runOnce(),
+    onError: (err) => log.error({ err }, 'notification retention failed'),
+  })
   const link = (path: string, token: string) =>
     `${webAppUrl.replace(/\/$/, '')}${path}?token=${encodeURIComponent(token)}`
 
@@ -203,17 +198,8 @@ export function createNotificationModule({
       webPushPublicKey: webPush?.publicKey ?? null,
     }),
     outbox: { name: 'notification', table: outbox },
+    jobs,
     prune: () => pruner.runOnce(),
-    startJobs() {
-      if (timer) return
-      timer = setInterval(tick, retention.intervalMs)
-      timer.unref()
-    },
-    async stopJobs() {
-      if (timer) clearInterval(timer)
-      timer = undefined
-      await running
-    },
     handlers: [
       ...(webPush
         ? [

@@ -59,7 +59,7 @@ async function shutdown(signal: string) {
   logger.info({ signal }, 'shutting down')
   // Order: close live SSE streams (else `stop` waits on them) → stop accepting requests (in-flight ones finish) →
   // stop the relay and the jobs (wait for the running batch) → close the DB pool.
-  await container.modules.realtime.stop()
+  await container.closeLive()
   await app?.stop()
   await container.close()
   // Last, so the spans of the final relay batch and of in-flight requests are flushed too.

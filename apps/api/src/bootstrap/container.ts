@@ -10,7 +10,7 @@ import { createNotificationModule } from '#/modules/notification/notification.mo
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import { createRealtimeModule } from '#/modules/realtime/realtime.module'
-import type { IntegrationEventHandler, Mailer } from '#/shared/application/ports'
+import type { Mailer } from '#/shared/application/ports'
 import { StepUpPolicy } from '#/shared/application/step-up-policy'
 import type { Config } from '#/shared/infrastructure/config'
 import { Database } from '#/shared/infrastructure/db/database'
@@ -24,6 +24,7 @@ import { OutboxRelay } from '#/shared/infrastructure/outbox/outbox-relay'
 import { S3ObjectStorage } from '#/shared/infrastructure/storage/s3-object-storage'
 import { SystemClock, UuidV7Generator } from '#/shared/infrastructure/system'
 import { InProcessMessageBus } from '#/shared/messaging/in-process-bus'
+import type { AppModule } from '#/shared/module/app-module'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.
@@ -205,20 +206,17 @@ export async function createContainer(
     replayWindowMs: config.REALTIME_REPLAY_WINDOW_SECONDS * 1000,
   })
 
+  // Every place that used to name the modules one by one loops over this list instead.
+  const modules = { identity, profile, notification, privacy, billing, realtime } as const
+  const list: readonly AppModule[] = Object.values(modules)
+  const jobs = list.flatMap((m) => (m.jobs ? [m.jobs] : []))
+
   const bus = new InProcessMessageBus(logger)
-  const handlers: IntegrationEventHandler[] = [
-    ...identity.handlers,
-    ...profile.handlers,
-    ...privacy.handlers,
-    ...notification.handlers,
-    ...billing.handlers,
-    ...realtime.handlers,
-  ]
-  for (const handler of handlers) bus.subscribe(handler)
+  for (const handler of list.flatMap((m) => m.handlers ?? [])) bus.subscribe(handler)
 
   const relay = new OutboxRelay(
     database,
-    [identity.outbox, profile.outbox, notification.outbox, privacy.outbox, billing.outbox],
+    list.flatMap((m) => (m.outbox ? [m.outbox] : [])),
     bus,
     logger,
     {
@@ -240,15 +238,15 @@ export async function createContainer(
   /** Maintenance mode stops everything that starts work on its own: the relay and the timers behind the jobs. */
   const pauseWorker = async () => {
     await relay.pause()
-    await privacy.stopJobs()
-    await billing.stopJobs()
-    await notification.stopJobs()
+    for (const job of jobs) await job.stop()
   }
   const resumeWorker = () => {
     relay.resume()
-    privacy.startJobs()
-    billing.startJobs()
-    notification.startJobs()
+    for (const job of jobs) job.start()
+  }
+  /** Closes what holds the HTTP server open (SSE streams). Idempotent; call it before stopping the server. */
+  const closeLive = async () => {
+    for (const m of list) await m.close?.()
   }
 
   return {
@@ -257,23 +255,19 @@ export async function createContainer(
     clock,
     ids,
     storage,
-    modules: { identity, profile, notification, privacy, billing, realtime },
+    modules,
     database,
     bus,
     relay,
     maintenance,
     /**
-     * Starts what a worker-role process runs: the outbox relay, and the timers behind the privacy, billing and notification jobs.
+     * Starts what a worker-role process runs: the outbox relay, and the timers behind the modules' jobs.
      * Follows maintenance mode from then on: paused while it is on (right away if it already is), running again when it ends.
      */
     startWorker() {
       if (maintenance.active)
         void relay.pause() // before `start`, so the first batch is not claimed
-      else {
-        privacy.startJobs()
-        billing.startJobs()
-        notification.startJobs()
-      }
+      else for (const job of jobs) job.start()
       relay.start()
       // One transition at a time: on → off → on in quick succession must not interleave.
       let transition: Promise<unknown> = Promise.resolve()
@@ -285,13 +279,12 @@ export async function createContainer(
           )
       })
     },
+    closeLive,
     async close() {
       maintenance.stop()
-      await notification.stopJobs()
-      await billing.stopJobs()
-      await privacy.stopJobs()
+      for (const job of [...jobs].reverse()) await job.stop()
       await relay.stop()
-      await realtime.stop()
+      await closeLive()
       await database.close()
     },
   }
