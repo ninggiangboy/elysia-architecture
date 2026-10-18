@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { sha256Hex } from '@kit/auth'
 import { sql } from 'drizzle-orm'
 import { createLocalJWKSet, decodeJwt, jwtVerify } from 'jose'
 import { IdentityEvents } from '#/modules/identity/contracts'
-import { sha256Hex } from '#/shared/auth'
 import {
   client,
   createTestApp,

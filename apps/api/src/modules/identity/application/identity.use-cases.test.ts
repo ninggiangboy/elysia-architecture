@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
+import { sha256Hex } from '@kit/auth'
 import { ConflictError, UnauthorizedError, ValidationError } from '@kit/core'
-import { sha256Hex } from '#/shared/auth'
 import { FakeClock, InMemoryOutbox, PassthroughUnitOfWork, SequentialIds } from '#/shared/testing'
 import { IdentityEvents } from '../contracts/events'
 import type { Email } from '../domain/email'

@@ -1,3 +1,4 @@
+import { hmacSha256Hex, randomDigits, randomToken, sha256Hex } from '@kit/auth'
 import type { IdGenerator } from '@kit/core'
 import {
   type CryptoKey,
@@ -8,7 +9,6 @@ import {
   jwtVerify,
   SignJWT,
 } from 'jose'
-import { hmacSha256Hex, randomDigits, randomToken, sha256Hex } from '#/shared/auth'
 import type { TokenService } from '../application/ports'
 import type { AccessTokenClaims, AccessTokenVerifier } from '../contracts/access-token-verifier'
 

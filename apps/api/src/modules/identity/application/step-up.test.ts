@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
+import { StepUpPolicy } from '@kit/auth'
 import { ForbiddenError } from '@kit/core'
-import { StepUpPolicy } from '#/shared/auth'
 import { FakeClock } from '#/shared/testing'
 import { Passkey } from '../domain/passkey'
 

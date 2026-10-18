@@ -1,6 +1,6 @@
+import type { StepUpPolicy } from '@kit/auth'
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { ConflictError, DomainError, NotFoundError } from '@kit/core'
-import type { StepUpPolicy } from '#/shared/auth'
 import type { OutboxWriter } from '#/shared/messaging'
 import { Email } from '../../domain/email'
 import { EmailChangeRequest } from '../../domain/email-change-request'

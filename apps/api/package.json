@@ -30,6 +30,7 @@
     "@app/shared-types": "workspace:*",
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/openapi": "^1.4.0",
+    "@kit/auth": "workspace:*",
     "@kit/config": "workspace:*",
     "@kit/context": "workspace:*",
     "@kit/core": "workspace:*",

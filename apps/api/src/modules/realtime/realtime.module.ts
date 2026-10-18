@@ -1,6 +1,6 @@
+import type { TokenVerifier } from '@kit/auth'
 import type { Clock, Log } from '@kit/core'
 import type { Database } from '@kit/db'
-import type { TokenVerifier } from '#/shared/auth'
 import type { IntegrationEventHandler } from '#/shared/messaging'
 import type { AppModule } from '#/shared/runtime'
 import { intervalJobs } from '#/shared/runtime'

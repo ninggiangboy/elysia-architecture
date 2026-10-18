@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, type Locale } from '@app/shared-types/locales'
+import type { StepUpPolicy } from '@kit/auth'
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '@kit/core'
-import type { StepUpPolicy } from '#/shared/auth'
 import type { OutboxWriter } from '#/shared/messaging'
 import { OAUTH_STATE_TTL_MS, type OAuthPurpose } from '../../domain/auth-challenge'
 import { Email } from '../../domain/email'

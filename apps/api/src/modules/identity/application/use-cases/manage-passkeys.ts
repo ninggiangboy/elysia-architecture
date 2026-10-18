@@ -1,6 +1,6 @@
+import type { StepUpPolicy } from '@kit/auth'
 import type { Clock, UnitOfWork } from '@kit/core'
 import { NotFoundError } from '@kit/core'
-import type { StepUpPolicy } from '#/shared/auth'
 import type { OutboxWriter } from '#/shared/messaging'
 import type { PasskeyRepository } from '../../domain/repositories'
 import { passkeyRemoved } from '../security-events'

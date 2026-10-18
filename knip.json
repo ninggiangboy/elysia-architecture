@@ -38,6 +38,10 @@
     "packages/kit-http": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-auth": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

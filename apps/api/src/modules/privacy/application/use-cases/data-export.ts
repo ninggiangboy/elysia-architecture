@@ -1,7 +1,7 @@
+import type { StepUpPolicy } from '@kit/auth'
 import type { Clock, IdGenerator, UnitOfWork } from '@kit/core'
 import { ConflictError, NotFoundError } from '@kit/core'
 import type { IdentityApi } from '#/modules/identity/contracts'
-import type { StepUpPolicy } from '#/shared/auth'
 import type { OutboxWriter } from '#/shared/messaging'
 import type { ObjectStorage } from '#/shared/storage'
 import { DataExport } from '../../domain/data-export'

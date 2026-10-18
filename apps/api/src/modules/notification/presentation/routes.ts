@@ -1,7 +1,7 @@
+import { authPlugin, type TokenVerifier } from '@kit/auth'
 import { NotFoundError } from '@kit/core'
 import { errorResponse, userAgent, validationError } from '@kit/http'
 import { Elysia, t } from 'elysia'
-import { authPlugin, type TokenVerifier } from '#/shared/auth'
 import type {
   MarkAllNotificationsRead,
   MarkNotificationRead,

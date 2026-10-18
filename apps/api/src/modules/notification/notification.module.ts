@@ -1,6 +1,6 @@
+import type { TokenVerifier } from '@kit/auth'
 import type { Clock, IdGenerator, Log } from '@kit/core'
 import type { Database } from '@kit/db'
-import type { TokenVerifier } from '#/shared/auth'
 import type { Mailer } from '#/shared/mail'
 import type { IntegrationEventHandler, OutboxSource } from '#/shared/messaging'
 import { DrizzleInboxGuard, DrizzleOutboxWriter } from '#/shared/messaging'
