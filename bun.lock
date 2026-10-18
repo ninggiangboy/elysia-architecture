@@ -175,6 +175,7 @@
       "name": "@kit/mail",
       "dependencies": {
         "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
         "@kit/messaging": "workspace:*",
         "nodemailer": "^10.1.1",
       },
@@ -241,12 +242,16 @@
       "name": "@kit/storage",
       "dependencies": {
         "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
       },
       "devDependencies": {
+        "@kit/http": "workspace:*",
         "@types/bun": "latest",
+        "elysia": "^1.4.0",
         "zod": "^4.1.0",
       },
       "peerDependencies": {
+        "elysia": "^1.4.0",
         "zod": "^4.1.0",
       },
     },

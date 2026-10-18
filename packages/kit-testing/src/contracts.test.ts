@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { LocalFsObjectStorage } from '@kit/storage'
 import {
   describeAdvisoryLock,
   describeInboxGuard,
@@ -19,6 +23,18 @@ import {
 // The same suites run on the real adapters (apps/api/tests/integration): a fake that drifts from them turns one side red.
 
 describeObjectStorage('FakeStorage', () => ({ storage: new FakeStorage() }))
+
+describeObjectStorage('LocalFsObjectStorage', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'kit-testing-storage-'))
+  return {
+    storage: new LocalFsObjectStorage({
+      dir,
+      publicUrl: 'http://api.test/api',
+      secret: 'x'.repeat(40),
+    }),
+    cleanup: () => rm(dir, { recursive: true, force: true }),
+  }
+})
 
 describeInboxGuard('InMemoryInbox', () => {
   const inbox = new InMemoryInbox()

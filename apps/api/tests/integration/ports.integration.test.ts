@@ -2,7 +2,7 @@ import { afterAll, beforeAll } from 'bun:test'
 import { withAdvisoryXactLock } from '@kit/db'
 import { SmtpMailer } from '@kit/mail'
 import { DrizzleInboxGuard, DrizzleOutboxWriter, inboxTable, outboxTable } from '@kit/messaging'
-import { S3ObjectStorage } from '@kit/storage'
+import { createObjectStorage } from '@kit/storage'
 import {
   describeAdvisoryLock,
   describeInboxGuard,
@@ -28,16 +28,8 @@ const contractSchema = pgSchema('contract_test')
 const inbox = inboxTable(contractSchema)
 const outbox = outboxTable(contractSchema)
 
-const { storage: s3 } = config
 describeObjectStorage('S3ObjectStorage (SeaweedFS)', () => ({
-  storage: new S3ObjectStorage({
-    endpoint: s3.S3_ENDPOINT,
-    publicEndpoint: s3.S3_PUBLIC_ENDPOINT ?? s3.S3_ENDPOINT,
-    region: s3.S3_REGION,
-    bucket: s3.S3_BUCKET,
-    accessKeyId: s3.S3_ACCESS_KEY_ID,
-    secretAccessKey: s3.S3_SECRET_ACCESS_KEY,
-  }),
+  storage: createObjectStorage({ ...config.storage, STORAGE_DRIVER: 's3' }),
 }))
 
 describeInboxGuard('DrizzleInboxGuard (Postgres)', () => ({

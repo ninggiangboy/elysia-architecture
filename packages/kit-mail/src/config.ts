@@ -2,7 +2,7 @@ import { bool, defineSlice } from '@kit/config'
 import { z } from 'zod'
 
 export const mailConfig = defineSlice({
-  title: 'Mail (SMTP: Mailpit in dev) and send throttling',
+  title: 'Mail (SMTP: Mailpit in dev, or just the log) and send throttling',
   notes:
     'Amazon SES SMTP: host email-smtp.<region>.amazonaws.com, port 587, SMTP_REQUIRE_TLS=true. The rate limits are shared across instances (stored in Postgres).',
   example: {
@@ -12,6 +12,15 @@ export const mailConfig = defineSlice({
     MAIL_RATE_PER_SECOND: '10',
   },
   schema: z.object({
+    MAIL_DRIVER: z
+      .enum(['smtp', 'console'])
+      .default('smtp')
+      .describe(
+        '`smtp` sends through SMTP_HOST; `console` sends nothing and prints each mail to the log (for trying the app without a mail server).',
+      ),
+    MAIL_CONSOLE_PRINT_LINKS: bool('true').describe(
+      'console: also print the links found in each mail (sign-in links!). Turn off anywhere the log is shared.',
+    ),
     SMTP_HOST: z.string().default('localhost').describe('SMTP server.'),
     SMTP_PORT: z.coerce.number().int().default(1025).describe('SMTP port.'),
     SMTP_USER: z.string().optional().describe('SMTP user, when the server needs auth.'),
@@ -43,3 +52,5 @@ export const mailConfig = defineSlice({
       .describe('Quota per day (UTC); 0 = unlimited. SES: the "24-hour sending quota".'),
   }),
 })
+
+export type MailConfig = z.infer<typeof mailConfig.schema>

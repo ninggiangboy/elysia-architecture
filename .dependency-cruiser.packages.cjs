@@ -14,17 +14,17 @@ const KIT_GRAPH = {
   http: ['core', 'context', 'telemetry'],
   auth: ['core', 'context', 'http'],
   messaging: ['core', 'config', 'context', 'db', 'telemetry'],
-  mail: ['config', 'messaging'],
-  storage: ['config'],
+  mail: ['core', 'config', 'messaging'],
+  storage: ['core', 'config'],
   'privacy-participant': ['core', 'messaging', 'storage'],
   runtime: ['config', 'db', 'messaging', 'privacy-participant', 'telemetry'],
   // Fakes for tests: may use whatever a test wants to fake.
-  testing: ['core', 'messaging', 'storage'],
+  testing: ['core', 'mail', 'messaging', 'storage'],
 }
 
 /** npm packages that only some kit packages may import: the frameworks and drivers a package is an adapter for. */
 const ADAPTERS = {
-  'elysia|@elysiajs/[^/]+': ['http', 'auth', 'runtime'],
+  'elysia|@elysiajs/[^/]+': ['http', 'auth', 'runtime', 'storage'],
   nodemailer: ['mail'],
   'drizzle-orm|postgres': ['db', 'messaging', 'runtime'],
   pino: ['telemetry'],

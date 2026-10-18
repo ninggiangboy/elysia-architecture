@@ -1,12 +1,11 @@
 import { SystemClock, UuidV7Generator } from '@kit/core'
 import { Database } from '@kit/db'
-import type { Mailer } from '@kit/mail'
-import { SmtpMailer } from '@kit/mail'
+import { createMailer, type Mailer } from '@kit/mail'
 import { InProcessMessageBus, OutboxRelay } from '@kit/messaging'
 import type { PrivacyParticipation } from '@kit/privacy-participant'
 import type { AppModule } from '@kit/runtime'
 import { MaintenanceMode, MaintenanceStore } from '@kit/runtime'
-import { S3ObjectStorage } from '@kit/storage'
+import { createObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
 import type { Config } from '#/bootstrap/config'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
@@ -66,28 +65,9 @@ export async function createContainer(
     prepare: config.db.DB_PREPARE,
   })
 
-  const { storage: s3, mail: smtp } = config
-  const storage = new S3ObjectStorage({
-    endpoint: s3.S3_ENDPOINT,
-    publicEndpoint: s3.S3_PUBLIC_ENDPOINT ?? s3.S3_ENDPOINT,
-    region: s3.S3_REGION,
-    bucket: s3.S3_BUCKET,
-    accessKeyId: s3.S3_ACCESS_KEY_ID,
-    secretAccessKey: s3.S3_SECRET_ACCESS_KEY,
-  })
-  const mailer =
-    overrides.mailer ??
-    new SmtpMailer(
-      {
-        host: smtp.SMTP_HOST,
-        port: smtp.SMTP_PORT,
-        secure: smtp.SMTP_SECURE,
-        requireTls: smtp.SMTP_REQUIRE_TLS,
-        user: smtp.SMTP_USER,
-        password: smtp.SMTP_PASSWORD,
-      },
-      smtp.MAIL_FROM,
-    )
+  const smtp = config.mail
+  const storage = createObjectStorage(config.storage)
+  const mailer = overrides.mailer ?? createMailer(smtp, logger)
 
   const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = config.notification
   const webPush =

@@ -9,6 +9,7 @@ import {
   tracingPlugin,
 } from '@kit/http'
 import { healthRoutes } from '@kit/runtime'
+import { localStoragePlugin } from '@kit/storage/http'
 import { Elysia } from 'elysia'
 import type { Container } from '#/bootstrap/container'
 
@@ -30,6 +31,8 @@ export function buildApp(container: Container) {
           documentation: openapiDocumentation(container.docs),
         }),
       )
+      // Serves the links of STORAGE_DRIVER=local (answers 404 with any other storage).
+      .use(localStoragePlugin(container.storage))
       .use(
         healthRoutes({
           database: container.database,

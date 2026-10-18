@@ -1,5 +1,7 @@
 export * from './classify-smtp-error'
 export * from './config'
+export * from './console-mailer'
 export * from './errors'
+export * from './factory'
 export * from './ports'
 export * from './smtp-mailer'

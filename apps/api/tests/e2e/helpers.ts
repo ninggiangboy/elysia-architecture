@@ -7,7 +7,7 @@ const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 
 export async function createTestApp(
   overrides: ContainerOverrides = {},
-  env: Record<string, string> = {},
+  env: Record<string, string | undefined> = {},
 ) {
   const config = loadAppConfig({
     ...process.env,

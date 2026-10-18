@@ -1,3 +1,5 @@
 export * from './config'
+export * from './factory'
+export * from './local-fs-object-storage'
 export * from './ports'
 export * from './s3-object-storage'

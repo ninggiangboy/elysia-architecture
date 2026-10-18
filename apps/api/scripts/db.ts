@@ -1,8 +1,8 @@
 // Per-module migration management:  bun scripts/db.ts generate | migrate
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { Database, migrateModule } from '@kit/db'
-import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
+import { Database, leftOutModules, migrateModule } from '@kit/db'
+import { MODULE_CATALOG, MODULE_NAMES } from '#/bootstrap/module-catalog'
 
 const root = join(import.meta.dir, '..')
 const command = process.argv[2]
@@ -32,6 +32,11 @@ if (command === 'generate') {
       await migrateModule(database, name, folder)
       console.log(`✔ ${name} migrated`)
     }
+    const leftOut = await leftOutModules(database, MODULE_NAMES)
+    if (leftOut.length > 0)
+      console.warn(
+        `! ${leftOut.join(', ')}: migrated here before, not in the module catalog now (their tables stay as they are)`,
+      )
   } finally {
     await database.close()
   }

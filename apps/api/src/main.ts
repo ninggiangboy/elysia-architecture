@@ -1,9 +1,11 @@
 import cluster from 'node:cluster'
+import { leftOutModules } from '@kit/db'
 import { superviseProcesses } from '@kit/runtime'
 import { createLogger, initTracing } from '@kit/telemetry'
 import { buildApp } from '#/app'
 import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
+import { MODULE_NAMES } from '#/bootstrap/module-catalog'
 
 const config = loadAppConfig()
 const { core } = config
@@ -23,6 +25,14 @@ const tracing = config.telemetry.OTEL_EXPORTER_OTLP_ENDPOINT
 
 const clustered = core.PROCESS_SLOT !== undefined
 const container = await createContainer(config, logger)
+
+// A module left out of the catalog that still has tables here is allowed, but is usually a wiring mistake.
+const leftOut = await leftOutModules(container.database, MODULE_NAMES).catch(() => [])
+if (leftOut.length > 0)
+  logger.warn(
+    { modules: leftOut },
+    'modules with a migration history here are not installed in this app',
+  )
 
 // Before anything is served or pulled: a process started in the middle of a deploy comes up already in maintenance mode.
 await container.maintenance.refresh()
