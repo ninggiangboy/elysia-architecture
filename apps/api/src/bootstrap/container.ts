@@ -2,11 +2,15 @@ import { TOPUP_CURRENCIES } from '@app/shared-types'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
 import { createBillingModule } from '#/modules/billing/billing.module'
 import { StripePaymentGateway } from '#/modules/billing/infrastructure/stripe-payment-gateway'
+import { billingRealtime } from '#/modules/billing/integrations/realtime'
 import type { OAuthGateway, WebAuthnService } from '#/modules/identity/application/ports'
 import { createIdentityModule } from '#/modules/identity/identity.module'
+import { identityRealtime } from '#/modules/identity/integrations/realtime'
 import type { WebPushSender } from '#/modules/notification/application/ports'
 import { WebPushLibrarySender } from '#/modules/notification/infrastructure/web-push-sender'
+import { notificationRealtime } from '#/modules/notification/integrations/realtime'
 import { createNotificationModule } from '#/modules/notification/notification.module'
+import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import { createRealtimeModule } from '#/modules/realtime/realtime.module'
@@ -211,6 +215,8 @@ export async function createContainer(
     log: logger,
     verifier: identity.verifier,
     replayWindowMs: config.REALTIME_REPLAY_WINDOW_SECONDS * 1000,
+    // What reaches the open tabs: one integration per producer. Leave one out and its events simply stop being pushed.
+    integrations: [identityRealtime, privacyRealtime, billingRealtime, notificationRealtime], // <kit:realtime-integrations>
   })
 
   // Every place that used to name the modules one by one loops over this list instead.

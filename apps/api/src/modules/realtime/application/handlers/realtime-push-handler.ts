@@ -1,12 +1,7 @@
 import type { Clock, IntegrationEventHandler } from '#/shared/application/ports'
 import type { Envelope } from '#/shared/messaging/envelope'
-import type { RealtimeEvent, RealtimeGateway } from '../ports'
-
-export interface RealtimePush {
-  userId: string
-  event: RealtimeEvent
-  closeSessionId?: string
-}
+import type { RealtimePush } from '../../contracts'
+import type { RealtimeGateway } from '../ports'
 
 /** Events older than this are worthless as a live notification (the relay was down or backlogged): skip them. */
 export const MAX_PUSH_AGE_MS = 60_000
@@ -20,14 +15,16 @@ export class RealtimePushHandler<TPayload> implements IntegrationEventHandler {
   constructor(
     readonly name: string,
     readonly eventType: string,
-    private build: (payload: TPayload) => RealtimePush,
+    private build: (payload: TPayload) => RealtimePush | null,
     private gateway: RealtimeGateway,
     private clock: Clock,
   ) {}
 
   async handle(message: Envelope): Promise<void> {
     if (this.clock.now().getTime() - Date.parse(message.occurredAt) > MAX_PUSH_AGE_MS) return
-    const { userId, event, closeSessionId } = this.build(message.payload as unknown as TPayload)
+    const push = this.build(message.payload as unknown as TPayload)
+    if (!push) return
+    const { userId, event, closeSessionId } = push
     await this.gateway.publish({ userId, closeSessionId }, event)
   }
 }

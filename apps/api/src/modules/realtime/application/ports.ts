@@ -1,3 +1,7 @@
+import type { RealtimeEvent } from '../contracts'
+
+export type { RealtimeEvent }
+
 /** What a client receives — the JSON in each SSE `data:` line. */
 export interface RealtimeMessage {
   /** Only on `replay` events (it is the SSE `id:` and what `Last-Event-ID` points to). */
@@ -5,17 +9,6 @@ export interface RealtimeMessage {
   type: string
   data: Record<string, unknown>
   at: string
-}
-
-export interface RealtimeEvent {
-  type: string
-  data: Record<string, unknown>
-  /**
-   * Opt in to replay, default `false`. Set it only for an event whose loss the client cannot repair by refetching its state
-   * (a chat message, a step of a long job…): it is then stored briefly and re-sent to a client that reconnects with `Last-Event-ID`.
-   * "Something changed, refetch" events should leave it off — they cost no storage.
-   */
-  replay?: boolean
 }
 
 /** One open SSE stream. */
