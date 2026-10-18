@@ -1,9 +1,9 @@
 import {
   type ButtonHTMLAttributes,
-  type HTMLAttributes,
-  type Ref,
-  type ReactNode,
   createContext,
+  type HTMLAttributes,
+  type ReactNode,
+  type Ref,
   useCallback,
   useContext,
   useEffect,
@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 interface DropdownContext {
   open: boolean

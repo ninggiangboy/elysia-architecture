@@ -1,13 +1,10 @@
+import { Button, Card, CardContent, CardFooter, cn, Input, Label } from '@kit/ui'
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Lock } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/lib/api'
 import {
   cardDigits,
@@ -21,7 +18,6 @@ import {
 import { formatMoney } from '@/lib/format'
 import { currencyDigits, parseMoney } from '@/lib/money'
 import { confirmCardPayment } from '@/lib/stripe'
-import { cn } from '@/lib/utils'
 import { billingConfigQuery, createTopUp } from './queries'
 
 interface Started {

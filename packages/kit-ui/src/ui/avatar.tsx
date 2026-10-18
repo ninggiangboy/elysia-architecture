@@ -1,9 +1,11 @@
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 /** "Ada Lovelace" → "AL", "ada.lovelace" → "AL", "ada" → "AD". */
 function initials(name: string) {
-  const words = name.trim().split(/[\s._-]+/).filter(Boolean)
+  const words = name
+    .trim()
+    .split(/[\s._-]+/)
+    .filter(Boolean)
   const letters = words.length > 1 ? words[0]![0]! + words[1]![0]! : (words[0] ?? '').slice(0, 2)
   return letters.toUpperCase() || '?'
 }
@@ -11,16 +13,18 @@ function initials(name: string) {
 export function Avatar({
   src,
   name,
+  alt,
   className,
   decorative,
 }: {
   src: string | null
   name: string
+  /** Description of the picture for assistive tech; the name when omitted. */
+  alt?: string
   className?: string
   /** Hide from assistive tech when the name is already next to it. */
   decorative?: boolean
 }) {
-  const { t } = useTranslation()
   return (
     <span
       aria-hidden={decorative || undefined}
@@ -30,11 +34,7 @@ export function Avatar({
       )}
     >
       {src ? (
-        <img
-          src={src}
-          alt={decorative ? '' : t('profile.pictureOf', { name })}
-          className="size-full object-cover"
-        />
+        <img src={src} alt={decorative ? '' : (alt ?? name)} className="size-full object-cover" />
       ) : (
         initials(name)
       )}

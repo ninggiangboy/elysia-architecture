@@ -1,11 +1,10 @@
+import { Button, Card } from '@kit/ui'
 import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Link, Outlet } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Toaster } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { useTheme } from '@/lib/theme'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({

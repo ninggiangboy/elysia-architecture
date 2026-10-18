@@ -1,8 +1,8 @@
 import { Slot } from '@radix-ui/react-slot'
-import { type VariantProps, cva } from 'class-variance-authority'
+import { cva, type VariantProps } from 'class-variance-authority'
 import { LoaderCircle } from 'lucide-react'
 import type { ButtonHTMLAttributes } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 const variants = cva(
   "inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity] outline-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -29,13 +29,24 @@ const variants = cva(
   },
 )
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof variants> {
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof variants> {
   asChild?: boolean
   /** Shows a spinner in front of the label and disables the button. */
   loading?: boolean
 }
 
-export function Button({ className, variant, size, asChild, loading, disabled, children, ...props }: ButtonProps) {
+export function Button({
+  className,
+  variant,
+  size,
+  asChild,
+  loading,
+  disabled,
+  children,
+  ...props
+}: ButtonProps) {
   const classes = cn(variants({ variant, size }), className)
   if (asChild)
     return (

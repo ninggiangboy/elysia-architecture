@@ -1,3 +1,4 @@
+import { Button, Card, CardContent, Input, Label } from '@kit/ui'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, Fingerprint, MailCheck } from 'lucide-react'
@@ -5,10 +6,6 @@ import { type FormEvent, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { AuthShell } from '@/components/layout/auth-shell'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ProviderIcon, providerName } from '@/features/auth/provider-icons'
 import {
   loginWithPasskey,

@@ -1,9 +1,8 @@
 import { LOCALE_NAMES, LOCALES } from '@app/shared-types/locales'
+import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@kit/ui'
 import { Check, Languages } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown'
 import { chooseLocale } from '@/features/account/locale'
-import { cn } from '@/lib/utils'
 
 /** A menu to pick the app's language; names are shown in their own language so anyone can find theirs. */
 export function LanguageSwitcher({ className }: { className?: string }) {

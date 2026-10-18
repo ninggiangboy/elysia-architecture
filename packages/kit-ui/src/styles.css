@@ -1,0 +1,133 @@
+/* The design tokens, theme switch and base styles of @kit/ui. The app imports tailwindcss first, then this file, and adds an
+   `@source` for this package so its classes are not purged (see apps/web/src/index.css). */
+/* The theme is the data-theme attribute on <html> (set before first paint by index.html, then by src/lib/theme.ts), so `dark:` follows it instead of the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --font-sans:
+    "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: light;
+  --background: #f8f8fa;
+  --foreground: #0c0c12;
+  --muted: #f0f0f4;
+  --muted-foreground: #63636f;
+  --card: #ffffff;
+  --border: #e6e6ec;
+  --input: #dcdce4;
+  --primary: #6d4aff;
+  --primary-foreground: #ffffff;
+  --accent: #f1edff;
+  --accent-foreground: #5532e6;
+  --success: #15a34a;
+  --warning: #d97706;
+  --destructive: #dc2626;
+  --ring: #6d4aff;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #09090c;
+  --foreground: #f4f4f6;
+  --muted: #17171c;
+  --muted-foreground: #9d9daa;
+  --card: #101014;
+  --border: #24242b;
+  --input: #2e2e37;
+  --primary: #7f63ff;
+  --primary-foreground: #ffffff;
+  --accent: #1d1833;
+  --accent-foreground: #b7a8ff;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --destructive: #f87171;
+  --ring: #8f76ff;
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    /* Reserve the scrollbar's space so pages don't shift sideways when it appears or disappears. */
+    scrollbar-gutter: stable;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 25%, transparent);
+  }
+}
+
+/* Unlayered on purpose, so no third-party layer can override the page colours. */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Faint grid that fades out from the top — the backdrop of the auth screens. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 40%, transparent 100%);
+}
+
+/* Theme switch (src/lib/theme.ts): the new theme is revealed by a growing, blurred circle with a soft edge, so neither snapshot cross-fades on its own. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}

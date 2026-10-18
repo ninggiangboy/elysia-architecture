@@ -1,7 +1,6 @@
+import { Card, cn } from '@kit/ui'
 import { CircleAlert, CircleCheck, LoaderCircle } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 
 const TONES = {
   pending: { icon: LoaderCircle, className: 'bg-muted text-muted-foreground [&_svg]:animate-spin' },

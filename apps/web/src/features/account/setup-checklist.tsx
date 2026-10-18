@@ -1,11 +1,10 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, cn } from '@kit/ui'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Check, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { pushStateQuery } from '@/features/notifications/push-toggle'
 import { meQuery } from '@/features/profile/queries'
-import { cn } from '@/lib/utils'
 import { passkeysQuery } from './queries'
 
 /** A few optional steps that make the account safer, each a link to the setting that does it. Gone once all are done. */

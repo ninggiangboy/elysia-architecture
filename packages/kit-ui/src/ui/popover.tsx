@@ -1,8 +1,8 @@
 import {
   type ButtonHTMLAttributes,
+  createContext,
   type HTMLAttributes,
   type ReactNode,
-  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 interface PopoverContext {
   open: boolean
@@ -77,10 +77,7 @@ export function Popover({
   )
 }
 
-export function PopoverTrigger({
-  onClick,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+export function PopoverTrigger({ onClick, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   const { open, setOpen, panelId, triggerRef } = usePopover()
   return (
     <button

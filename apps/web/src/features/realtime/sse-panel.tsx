@@ -1,11 +1,9 @@
+import { Button, Card, CardDescription, CardTitle, cn } from '@kit/ui'
 import { Plug, Trash2, Unplug } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
-import { Card, CardDescription, CardTitle } from '@/components/ui/card'
 import { currentLocale } from '@/i18n'
 import { connectSse, type RealtimeMessage, type RealtimeStatus } from '@/lib/realtime'
-import { cn } from '@/lib/utils'
 
 interface LogEntry {
   key: number

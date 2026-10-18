@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 /**
  * A modal on the native `<dialog>`: focus trap, Esc and the backdrop come from the browser. Mount it to open it,

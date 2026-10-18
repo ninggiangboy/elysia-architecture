@@ -1,14 +1,10 @@
+import { Button, Card, CardContent, CardFooter, cn, Input, Label, Textarea } from '@kit/ui'
 import { BIO_MAX, DISPLAY_NAME_MAX } from '@mod/profile/public'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { type FormEvent, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { Input, Textarea } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ApiError, errorMessage } from '@/lib/api'
-import { cn } from '@/lib/utils'
 import { meQuery, updateProfile } from './queries'
 
 interface Me {

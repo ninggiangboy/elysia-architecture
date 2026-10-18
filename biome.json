@@ -12,7 +12,7 @@
       "!**/dist",
       "!**/migrations/meta",
       "!**/routeTree.gen.ts",
-      "!**/components/ui"
+      "!**/packages/kit-ui/src/ui"
     ]
   },
   "formatter": {

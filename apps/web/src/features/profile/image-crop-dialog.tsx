@@ -1,9 +1,8 @@
+import { Button, cn, Dialog } from '@kit/ui'
 import { Minus, Plus } from 'lucide-react'
 import { type KeyboardEvent, type PointerEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
 import { i18n } from '@/i18n'
 import { errorMessage } from '@/lib/api'
 import {
@@ -15,7 +14,6 @@ import {
   renderCrop,
   visibleSize,
 } from '@/lib/crop'
-import { cn } from '@/lib/utils'
 
 interface Loaded {
   url: string

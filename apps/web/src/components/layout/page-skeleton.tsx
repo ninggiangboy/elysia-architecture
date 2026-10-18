@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { Skeleton } from '@kit/ui'
 
 /** What a settings-style page (a header, then `sections` blocks like `Section`) looks like while it loads. */
 export function PageSkeleton({ label, sections = 2 }: { label: string; sections?: number }) {

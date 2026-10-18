@@ -1,12 +1,10 @@
+import { Button, Card, cn } from '@kit/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BellOff, BellRing } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { errorMessage } from '@/lib/api'
 import { disablePush, enablePush, type PushState, pushState } from '@/lib/push'
-import { cn } from '@/lib/utils'
 
 export const pushStateQuery = { queryKey: ['notifications', 'push-state'], queryFn: pushState }
 

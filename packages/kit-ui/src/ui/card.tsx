@@ -1,9 +1,12 @@
 import type { HTMLAttributes } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 export const Card = ({ className, ...props }: HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn('overflow-hidden rounded-xl border border-border bg-card shadow-xs shadow-black/[0.03]', className)}
+    className={cn(
+      'overflow-hidden rounded-xl border border-border bg-card shadow-xs shadow-black/[0.03]',
+      className,
+    )}
     {...props}
   />
 )

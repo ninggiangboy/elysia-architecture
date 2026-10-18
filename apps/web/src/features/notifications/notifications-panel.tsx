@@ -1,3 +1,4 @@
+import { Badge, Button, cn, Skeleton, usePopoverClose } from '@kit/ui'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useRouter } from '@tanstack/react-router'
 import {
@@ -13,13 +14,8 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { usePopoverClose } from '@/components/ui/popover'
-import { Skeleton } from '@/components/ui/skeleton'
 import { errorMessage } from '@/lib/api'
 import { formatDate, formatRelative } from '@/lib/format'
-import { cn } from '@/lib/utils'
 import { readOptimistically } from './live-cache'
 import {
   markAllNotificationsRead,

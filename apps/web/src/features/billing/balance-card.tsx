@@ -1,8 +1,8 @@
+import { Card } from '@kit/ui'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { Wallet } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card } from '@/components/ui/card'
 import { formatMoney } from '@/lib/format'
 import { walletQuery } from './queries'
 

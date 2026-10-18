@@ -1,9 +1,9 @@
+import { Avatar } from '@kit/ui'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Camera } from 'lucide-react'
 import { type ChangeEvent, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Avatar } from '@/components/ui/avatar'
 import { i18n } from '@/i18n'
 import { errorMessage } from '@/lib/api'
 import { sourceError } from '@/lib/crop'
@@ -48,6 +48,7 @@ export function AvatarUploader({ name, avatarUrl }: { name: string; avatarUrl: s
       <Avatar
         src={avatarUrl}
         name={name}
+        alt={t('profile.pictureOf', { name })}
         className="size-20 border-4 border-card text-2xl shadow-sm sm:size-24"
       />
       <button

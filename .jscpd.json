@@ -7,7 +7,7 @@
   "ignore": [
     "**/node_modules/**",
     "**/dist/**",
-    "**/components/ui/**",
+    "**/packages/kit-ui/**",
     "**/migrations/**",
     "**/*.test.ts",
     "**/routeTree.gen.ts"

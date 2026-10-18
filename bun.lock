@@ -61,6 +61,7 @@
         "@app/shared-types": "workspace:*",
         "@elysiajs/eden": "^1.4.9",
         "@kit/i18n": "workspace:*",
+        "@kit/ui": "workspace:*",
         "@mod/billing": "workspace:*",
         "@mod/profile": "workspace:*",
         "@radix-ui/react-label": "^2.1.17",
@@ -499,6 +500,32 @@
         "@types/bun": "latest",
       },
     },
+    "packages/kit-ui": {
+      "name": "@kit/ui",
+      "devDependencies": {
+        "@radix-ui/react-label": "^2.1.17",
+        "@radix-ui/react-slot": "^1.5.0",
+        "@types/bun": "latest",
+        "@types/react": "^19.3.0",
+        "@types/react-dom": "^19.3.0",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "lucide-react": "^1.57.0",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1",
+        "tailwind-merge": "^3.7.0",
+      },
+      "peerDependencies": {
+        "@radix-ui/react-label": "^2.1.17",
+        "@radix-ui/react-slot": "^1.5.0",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "lucide-react": "^1.57.0",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1",
+        "tailwind-merge": "^3.7.0",
+      },
+    },
     "packages/shared-types": {
       "name": "@app/shared-types",
       "dependencies": {
@@ -780,6 +807,8 @@
     "@kit/telemetry": ["@kit/telemetry@workspace:packages/kit-telemetry"],
 
     "@kit/testing": ["@kit/testing@workspace:packages/kit-testing"],
+
+    "@kit/ui": ["@kit/ui@workspace:packages/kit-ui"],
 
     "@levischuck/tiny-cbor": ["@levischuck/tiny-cbor@0.2.11", "", {}, "sha512-llBRm4dT4Z89aRsm6u2oEZ8tfwL/2l6BwpZ7JcyieouniDECM5AqNgr/y08zalEIvW3RSK4upYyybDcmjXqAow=="],
 

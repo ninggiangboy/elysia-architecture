@@ -95,6 +95,10 @@
     "modules/billing": {
       "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-ui": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.{ts,tsx}"]
     }
   },
   "rules": {

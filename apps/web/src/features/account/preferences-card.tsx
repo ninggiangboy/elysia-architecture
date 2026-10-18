@@ -1,10 +1,9 @@
 import { LOCALE_NAMES, LOCALES } from '@app/shared-types/locales'
+import { Card, CardContent, cn } from '@kit/ui'
 import { Monitor, Moon, Sun } from 'lucide-react'
 import { type ReactNode, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent } from '@/components/ui/card'
 import { type ThemePreference, themeStore, useTheme } from '@/lib/theme'
-import { cn } from '@/lib/utils'
 import { chooseLocale } from './locale'
 
 const THEMES = [

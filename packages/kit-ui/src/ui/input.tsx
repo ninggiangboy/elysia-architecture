@@ -1,5 +1,5 @@
 import type { InputHTMLAttributes, TextareaHTMLAttributes } from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '../utils'
 
 const field =
   'w-full min-w-0 rounded-md border border-input bg-card px-3 text-base shadow-xs sm:text-sm outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 hover:border-muted-foreground/40 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive dark:bg-muted/30'

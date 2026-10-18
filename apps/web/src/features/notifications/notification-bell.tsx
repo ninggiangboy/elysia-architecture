@@ -1,8 +1,8 @@
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { NotificationsPanel } from './notifications-panel'
 import { markNotificationsSeen, unseenCountQuery } from './queries'
 

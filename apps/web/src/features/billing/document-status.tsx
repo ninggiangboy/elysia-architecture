@@ -1,5 +1,5 @@
+import { Badge } from '@kit/ui'
 import { useTranslation } from 'react-i18next'
-import { Badge } from '@/components/ui/badge'
 import type { BillingDocument } from './queries'
 
 const VARIANT = {

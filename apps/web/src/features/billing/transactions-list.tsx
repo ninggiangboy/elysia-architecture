@@ -1,9 +1,7 @@
+import { Badge, Button, Card, CardFooter } from '@kit/ui'
 import { useSuspenseInfiniteQuery } from '@tanstack/react-query'
 import { ArrowDownLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardFooter } from '@/components/ui/card'
 import { formatDate, formatMoney } from '@/lib/format'
 import { type Transaction, transactionsQuery } from './queries'
 

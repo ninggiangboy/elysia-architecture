@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@kit/ui'
 
 /** The app mark: a gradient tile with a stylised "E". */
 export function Logo({ className }: { className?: string }) {

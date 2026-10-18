@@ -1,9 +1,8 @@
+import { cn, Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@kit/ui'
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Dropdown, DropdownContent, DropdownItem, DropdownTrigger } from '@/components/ui/dropdown'
 import { type ThemePreference, themeStore, useTheme } from '@/lib/theme'
-import { cn } from '@/lib/utils'
 
 const OPTIONS = [
   { value: 'light', label: 'theme.light', icon: Sun },
