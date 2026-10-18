@@ -1,4 +1,4 @@
-import type { DataExporter, ExportedPart } from '#/shared/privacy-participant'
+import type { DataExporter, ExportedPart } from '@kit/privacy-participant'
 import type { Notification } from '../domain/notification'
 import type { NotificationRepository } from '../domain/notification-repository'
 import type { PushSubscriptionRepository } from '../domain/push-subscription-repository'

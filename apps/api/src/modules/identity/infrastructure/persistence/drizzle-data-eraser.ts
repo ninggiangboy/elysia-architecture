@@ -1,7 +1,7 @@
 import type { Database } from '@kit/db'
 import { erasePublishedOutbox } from '@kit/messaging'
+import type { DataEraser } from '@kit/privacy-participant'
 import { eq, sql } from 'drizzle-orm'
-import type { DataEraser } from '#/shared/privacy-participant'
 import {
   emailChangeRequests,
   magicLinks,

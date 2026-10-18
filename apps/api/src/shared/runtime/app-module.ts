@@ -1,5 +1,5 @@
 import type { IntegrationEventHandler, OutboxSource } from '@kit/messaging'
-import type { PrivacyParticipation } from '#/shared/privacy-participant'
+import type { PrivacyParticipation } from '@kit/privacy-participant'
 
 /** A section of the API docs: the `tags` of the module's routes, described once. */
 export interface ApiDocTag {

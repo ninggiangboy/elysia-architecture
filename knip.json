@@ -54,6 +54,10 @@
     "packages/kit-storage": {
       "entry": [],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-privacy-participant": {
+      "entry": [],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

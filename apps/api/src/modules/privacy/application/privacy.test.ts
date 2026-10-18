@@ -3,14 +3,14 @@ import { StepUpPolicy } from '@kit/auth'
 import type { DomainEvent } from '@kit/core'
 import { ConflictError } from '@kit/core'
 import type { Envelope, IntegrationEventHandler } from '@kit/messaging'
-import { unzipSync } from 'fflate'
-import type { IdentityApi } from '#/modules/identity/contracts'
 import {
   type DataEraser,
   type DataExporter,
   EraseUserDataHandler,
   ExportUserDataHandler,
-} from '#/shared/privacy-participant'
+} from '@kit/privacy-participant'
+import { unzipSync } from 'fflate'
+import type { IdentityApi } from '#/modules/identity/contracts'
 import {
   FakeClock,
   FakeStorage,

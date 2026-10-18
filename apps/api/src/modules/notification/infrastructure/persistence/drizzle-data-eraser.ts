@@ -1,7 +1,7 @@
 import type { Database } from '@kit/db'
 import { erasePublishedOutbox } from '@kit/messaging'
+import type { DataEraser } from '@kit/privacy-participant'
 import { eq } from 'drizzle-orm'
-import type { DataEraser } from '#/shared/privacy-participant'
 import { inboxState, notifications, outbox, pushSubscriptions } from './schema'
 
 /** Removes the user's notifications, their read marker and their push subscriptions (a subscription is a way to reach the person). */

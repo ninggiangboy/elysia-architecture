@@ -39,6 +39,7 @@
     "@kit/i18n": "workspace:*",
     "@kit/mail": "workspace:*",
     "@kit/messaging": "workspace:*",
+    "@kit/privacy-participant": "workspace:*",
     "@kit/storage": "workspace:*",
     "@kit/telemetry": "workspace:*",
     "@opentelemetry/api": "^1.9.1",

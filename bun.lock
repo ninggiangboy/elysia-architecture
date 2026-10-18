@@ -27,6 +27,7 @@
         "@kit/i18n": "workspace:*",
         "@kit/mail": "workspace:*",
         "@kit/messaging": "workspace:*",
+        "@kit/privacy-participant": "workspace:*",
         "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
@@ -205,6 +206,17 @@
       "peerDependencies": {
         "drizzle-orm": "^0.45.4",
         "zod": "^4.1.0",
+      },
+    },
+    "packages/kit-privacy-participant": {
+      "name": "@kit/privacy-participant",
+      "dependencies": {
+        "@kit/core": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/storage": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
       },
     },
     "packages/kit-storage": {
@@ -511,6 +523,8 @@
     "@kit/mail": ["@kit/mail@workspace:packages/kit-mail"],
 
     "@kit/messaging": ["@kit/messaging@workspace:packages/kit-messaging"],
+
+    "@kit/privacy-participant": ["@kit/privacy-participant@workspace:packages/kit-privacy-participant"],
 
     "@kit/storage": ["@kit/storage@workspace:packages/kit-storage"],
 

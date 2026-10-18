@@ -1,4 +1,4 @@
-import { PrivacyProtocol } from '#/shared/privacy-participant'
+import { PrivacyProtocol } from '@kit/privacy-participant'
 
 // The participation protocol lives in shared/privacy-participant: a participant depends on it, not on this module.
 // Re-exported here so privacy's own code and its consumers keep one place to import from.
@@ -7,8 +7,8 @@ export type {
   DataExportRequestedPayload,
   ModuleDataExportedPayload,
   ModuleUserDataErasedPayload,
-} from '#/shared/privacy-participant'
-export { participantEvents } from '#/shared/privacy-participant'
+} from '@kit/privacy-participant'
+export { participantEvents } from '@kit/privacy-participant'
 
 /**
  * Integration events of the privacy module. The payload is a public contract: only add fields (backward compatible);
