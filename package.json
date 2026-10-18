@@ -30,10 +30,14 @@
     "kit:remove": "bun scripts/kit.ts remove",
     "gen:module": "bun scripts/kit.ts gen",
     "check:add-matrix": "bun scripts/add-matrix.ts",
-    "gen:feature": "bun scripts/kit.ts gen-feature"
+    "gen:feature": "bun scripts/kit.ts gen-feature",
+    "build:packages": "bun run --filter './packages/*' --filter './modules/*' build",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",
+    "@changesets/cli": "^2.29.0",
     "dependency-cruiser": "^18.6.0",
     "drizzle-kit": "^0.31.0",
     "jscpd": "^5.4.1",

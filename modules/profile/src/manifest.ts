@@ -7,7 +7,9 @@ export const profileManifest = {
   name: 'profile',
   dir: fileURLToPath(new URL('..', import.meta.url)),
   migrations: fileURLToPath(new URL('../migrations', import.meta.url)),
-  schemaFile: fileURLToPath(new URL('./infrastructure/persistence/schema.ts', import.meta.url)),
+  schemaFile: fileURLToPath(
+    new URL('../src/infrastructure/persistence/schema.ts', import.meta.url),
+  ),
   outbox: outbox,
   config: undefined,
 } as const satisfies ModuleManifest

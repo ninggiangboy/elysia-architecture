@@ -43,7 +43,7 @@ module.exports = {
     enhancedResolveOptions: {
       extensions: ['.ts', '.js'],
       mainFields: ['module', 'main'],
-      conditionNames: ['import', 'require', 'node', 'default'],
+      conditionNames: ['bun', 'import', 'require', 'node', 'default'],
       exportsFields: ['exports'],
     },
   },

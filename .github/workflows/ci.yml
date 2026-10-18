@@ -48,6 +48,7 @@ jobs:
       - run: bun run check:arch
       - run: bun run test
       - run: bun run build
+      - run: bun run build:packages
 
   e2e:
     name: E2E tests

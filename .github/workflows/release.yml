@@ -1,0 +1,32 @@
+name: Release
+
+# Not wired to a registry yet: the packages are "private": true. To publish, flip that in each package.json, pick a registry
+# (GitHub Packages or npm), add its token as a secret and change the trigger to `push: branches: [main]`; the action then keeps
+# a "Version packages" pull request open and publishes when it is merged.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency: release
+
+jobs:
+  release:
+    name: Version or publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run build:packages
+      - uses: changesets/action@v1
+        with:
+          version: bun run version-packages
+          publish: bunx changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

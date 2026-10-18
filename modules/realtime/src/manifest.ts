@@ -7,7 +7,9 @@ export const realtimeManifest = {
   name: 'realtime',
   dir: fileURLToPath(new URL('..', import.meta.url)),
   migrations: fileURLToPath(new URL('../migrations', import.meta.url)),
-  schemaFile: fileURLToPath(new URL('./infrastructure/persistence/schema.ts', import.meta.url)),
+  schemaFile: fileURLToPath(
+    new URL('../src/infrastructure/persistence/schema.ts', import.meta.url),
+  ),
   outbox: null,
   config: realtimeConfig,
 } as const satisfies ModuleManifest

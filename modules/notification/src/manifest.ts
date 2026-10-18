@@ -8,7 +8,9 @@ export const notificationManifest = {
   name: 'notification',
   dir: fileURLToPath(new URL('..', import.meta.url)),
   migrations: fileURLToPath(new URL('../migrations', import.meta.url)),
-  schemaFile: fileURLToPath(new URL('./infrastructure/persistence/schema.ts', import.meta.url)),
+  schemaFile: fileURLToPath(
+    new URL('../src/infrastructure/persistence/schema.ts', import.meta.url),
+  ),
   outbox: outbox,
   config: notificationConfig,
 } as const satisfies ModuleManifest

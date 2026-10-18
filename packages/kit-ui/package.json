@@ -1,13 +1,23 @@
 {
   "name": "@kit/ui",
   "private": true,
+  "version": "0.1.0",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./styles.css": "./src/styles.css"
   },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "bun ../../scripts/build-package.ts"
   },
   "peerDependencies": {
     "@radix-ui/react-label": "^2.1.17",
