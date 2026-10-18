@@ -1,5 +1,5 @@
+import { allOrNone, blank, defineSlice, duration, posInt } from '@kit/config'
 import { z } from 'zod'
-import { allOrNone, blank, defineSlice, duration, posInt } from '#/shared/config'
 
 export const notificationConfig = defineSlice({
   title: 'Notifications: Web Push and retention',

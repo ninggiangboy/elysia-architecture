@@ -1,10 +1,4 @@
-import {
-  type ConfigSlice,
-  coreConfig,
-  type Env,
-  type LoadedConfig,
-  loadConfig,
-} from '#/shared/config'
+import { type ConfigSlice, coreConfig, type Env, type LoadedConfig, loadConfig } from '@kit/config'
 import { dbConfig } from '#/shared/db'
 import { mailConfig } from '#/shared/mail'
 import { outboxConfig } from '#/shared/messaging'

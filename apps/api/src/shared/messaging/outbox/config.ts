@@ -1,5 +1,5 @@
+import { defineSlice, posInt } from '@kit/config'
 import { z } from 'zod'
-import { defineSlice, posInt } from '#/shared/config'
 
 export const outboxConfig = defineSlice({
   title: 'Outbox relay (events between modules)',

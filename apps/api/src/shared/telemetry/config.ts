@@ -1,5 +1,5 @@
+import { blank, defineSlice } from '@kit/config'
 import { z } from 'zod'
-import { blank, defineSlice } from '#/shared/config'
 
 export const telemetryConfig = defineSlice({
   title:

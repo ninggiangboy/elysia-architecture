@@ -1,5 +1,5 @@
+import { defineSlice, duration, posInt } from '@kit/config'
 import { z } from 'zod'
-import { defineSlice, duration, posInt } from '#/shared/config'
 
 export const privacyConfig = defineSlice({
   title: 'Privacy: data export and account deletion',

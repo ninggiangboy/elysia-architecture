@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { availableParallelism } from 'node:os'
-import { renderEnvExample } from '#/shared/config'
+import { renderEnvExample } from '@kit/config'
 import { CONFIG_SLICES, loadAppConfig } from './config'
 
 const base = {

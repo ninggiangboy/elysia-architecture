@@ -1,3 +1,4 @@
+import type { ConfigSlice } from '@kit/config'
 import { billingConfig } from '#/modules/billing/config'
 import { outbox as billingOutbox } from '#/modules/billing/infrastructure/persistence/schema'
 import { identityConfig } from '#/modules/identity/config'
@@ -8,7 +9,6 @@ import { privacyConfig } from '#/modules/privacy/config'
 import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'
 import { realtimeConfig } from '#/modules/realtime/config'
-import type { ConfigSlice } from '#/shared/config'
 import type { OutboxTable } from '#/shared/messaging'
 
 /**

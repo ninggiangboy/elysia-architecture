@@ -1,5 +1,5 @@
+import { bool, defineSlice, posInt } from '@kit/config'
 import { z } from 'zod'
-import { bool, defineSlice, posInt } from '#/shared/config'
 
 export const dbConfig = defineSlice({
   title: 'Postgres (one shared pool; modules are separated by schema)',

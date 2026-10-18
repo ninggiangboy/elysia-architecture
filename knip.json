@@ -22,6 +22,10 @@
     "packages/kit-context": {
       "entry": [],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-config": {
+      "entry": [],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

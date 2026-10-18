@@ -1,5 +1,5 @@
+import { allOrNone, blank, csv, defineSlice, duration, pem, posInt } from '@kit/config'
 import { z } from 'zod'
-import { allOrNone, blank, csv, defineSlice, duration, pem, posInt } from '#/shared/config'
 
 export const identityConfig = defineSlice({
   title: 'Identity: tokens, passkeys, OAuth, magic links',

@@ -1,5 +1,5 @@
+import { bool, defineSlice } from '@kit/config'
 import { z } from 'zod'
-import { bool, defineSlice } from '#/shared/config'
 
 export const mailConfig = defineSlice({
   title: 'Mail (SMTP: Mailpit in dev) and send throttling',

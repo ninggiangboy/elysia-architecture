@@ -1,5 +1,5 @@
+import { defineSlice } from '@kit/config'
 import { z } from 'zod'
-import { defineSlice } from '#/shared/config'
 
 export const storageConfig = defineSlice({
   title: 'Object storage (S3-compatible: SeaweedFS in dev)',
