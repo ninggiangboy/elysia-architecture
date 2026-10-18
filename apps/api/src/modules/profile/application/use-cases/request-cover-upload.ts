@@ -5,7 +5,7 @@ import {
 } from '@app/shared-types/profile'
 import type { IdGenerator } from '@kit/core'
 import { ValidationError } from '@kit/core'
-import type { ObjectStorage } from '#/shared/storage'
+import type { ObjectStorage } from '@kit/storage'
 import { coverKeyPrefix } from '../cover-keys'
 
 const UPLOAD_URL_TTL_SECONDS = 300

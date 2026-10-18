@@ -1,6 +1,6 @@
 import type { Clock, Log, UnitOfWork } from '@kit/core'
 import type { OutboxWriter } from '@kit/messaging'
-import type { ObjectStorage } from '#/shared/storage'
+import type { ObjectStorage } from '@kit/storage'
 import type { AccountDeletionRepository, DataExportRepository } from '../domain/repositories'
 import { exportFolder, exportPartsPrefix } from './keys'
 import type { PrivacyPolicy } from './ports'

@@ -2,7 +2,7 @@ import { AVATAR_CONTENT_TYPES, AVATAR_MAX_BYTES } from '@app/shared-types/profil
 import type { Clock, UnitOfWork } from '@kit/core'
 import { ValidationError } from '@kit/core'
 import type { OutboxWriter } from '@kit/messaging'
-import type { ObjectStorage } from '#/shared/storage'
+import type { ObjectStorage } from '@kit/storage'
 import type { ProfileRepository } from '../../domain/profile-repository'
 import { isCoverKey } from '../cover-keys'
 import { type MeView, toMeView } from '../me-view'

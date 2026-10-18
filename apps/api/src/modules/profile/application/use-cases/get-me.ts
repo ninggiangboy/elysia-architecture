@@ -1,4 +1,4 @@
-import type { ObjectStorage } from '#/shared/storage'
+import type { ObjectStorage } from '@kit/storage'
 import { type MeView, toMeView } from '../me-view'
 import type { ProfileLoader } from '../profile-loader'
 

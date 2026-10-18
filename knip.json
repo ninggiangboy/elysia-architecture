@@ -50,6 +50,10 @@
     "packages/kit-mail": {
       "entry": ["src/**/*.test.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-storage": {
+      "entry": [],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

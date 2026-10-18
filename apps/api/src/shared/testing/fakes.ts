@@ -1,6 +1,6 @@
 import type { Clock, DomainEvent, IdGenerator, UnitOfWork } from '@kit/core'
 import type { InboxGuard, OutboxWriter } from '@kit/messaging'
-import type { ObjectStat, ObjectStorage } from '#/shared/storage'
+import type { ObjectStat, ObjectStorage } from '@kit/storage'
 
 export class FakeClock implements Clock {
   constructor(private current = new Date('2026-01-01T00:00:00Z')) {}

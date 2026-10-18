@@ -3,6 +3,7 @@ import { Database } from '@kit/db'
 import type { Mailer } from '@kit/mail'
 import { SmtpMailer } from '@kit/mail'
 import { InProcessMessageBus, OutboxRelay } from '@kit/messaging'
+import { S3ObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
 import type { Config } from '#/bootstrap/config'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
@@ -29,7 +30,6 @@ import { createRealtimeModule } from '#/modules/realtime/realtime.module'
 import type { PrivacyParticipation } from '#/shared/privacy-participant'
 import type { AppModule } from '#/shared/runtime'
 import { MaintenanceMode, MaintenanceStore } from '#/shared/runtime'
-import { S3ObjectStorage } from '#/shared/storage'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.

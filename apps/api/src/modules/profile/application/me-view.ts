@@ -1,5 +1,5 @@
+import type { ObjectStorage } from '@kit/storage'
 import type { AccountDto } from '#/modules/identity/contracts'
-import type { ObjectStorage } from '#/shared/storage'
 import type { Profile } from '../domain/profile'
 
 export interface MeView {

@@ -27,6 +27,7 @@
         "@kit/i18n": "workspace:*",
         "@kit/mail": "workspace:*",
         "@kit/messaging": "workspace:*",
+        "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
         "@opentelemetry/exporter-trace-otlp-http": "^0.223.0",
@@ -203,6 +204,19 @@
       },
       "peerDependencies": {
         "drizzle-orm": "^0.45.4",
+        "zod": "^4.1.0",
+      },
+    },
+    "packages/kit-storage": {
+      "name": "@kit/storage",
+      "dependencies": {
+        "@kit/config": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
         "zod": "^4.1.0",
       },
     },
@@ -497,6 +511,8 @@
     "@kit/mail": ["@kit/mail@workspace:packages/kit-mail"],
 
     "@kit/messaging": ["@kit/messaging@workspace:packages/kit-messaging"],
+
+    "@kit/storage": ["@kit/storage@workspace:packages/kit-storage"],
 
     "@kit/telemetry": ["@kit/telemetry@workspace:packages/kit-telemetry"],
 
