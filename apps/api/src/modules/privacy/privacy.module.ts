@@ -32,6 +32,7 @@ import {
   ListDataExports,
   RequestDataExport,
 } from './application/use-cases/data-export'
+import type { PrivacyConfig } from './config'
 import { DrizzleAccountDeletionRepository } from './infrastructure/persistence/drizzle-deletion-repository'
 import { DrizzleDataExportRepository } from './infrastructure/persistence/drizzle-export-repository'
 import { inbox, outbox } from './infrastructure/persistence/schema'
@@ -49,9 +50,9 @@ export interface PrivacyModuleDeps {
   identity: IdentityApi
   verifier: TokenVerifier
   stepUp: StepUpPolicy
-  policy: PrivacyPolicy
-  /** How often the time-driven part of the jobs looks for work. */
-  jobsIntervalMs: number
+  config: PrivacyConfig
+  /** Who takes part in each job, by name: what the modules declare (`AppModule.privacy`). */
+  participants: { exports: readonly string[]; erases: readonly string[] }
 }
 
 export interface PrivacyModule extends AppModule<'privacy', ReturnType<typeof privacyRoutes>> {
@@ -67,9 +68,14 @@ export interface PrivacyModule extends AppModule<'privacy', ReturnType<typeof pr
 export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
   const { database, clock, ids, storage, log, identity, verifier, stepUp } = deps
   // Privacy erases its own leftovers like any other participant, so it always lists itself among the erasers.
+  const { config } = deps
   const policy: PrivacyPolicy = {
-    ...deps.policy,
-    deletionParticipants: [...new Set([...deps.policy.deletionParticipants, 'privacy'])].sort(),
+    exportParticipants: [...deps.participants.exports],
+    deletionParticipants: [...new Set([...deps.participants.erases, 'privacy'])].sort(),
+    deletionGraceMs: config.PRIVACY_DELETION_GRACE_PERIOD * 1000,
+    exportTtlMs: config.PRIVACY_EXPORT_TTL * 1000,
+    stallAfterMs: config.PRIVACY_STALL_AFTER * 1000,
+    maxNudges: config.PRIVACY_MAX_NUDGES,
   }
 
   const exports = new DrizzleDataExportRepository(database)
@@ -101,7 +107,7 @@ export function createPrivacyModule(deps: PrivacyModuleDeps): PrivacyModule {
 
   // Row claims keep two instances that tick together apart.
   const jobs = intervalJobs({
-    intervalMs: deps.jobsIntervalMs,
+    intervalMs: config.PRIVACY_JOBS_INTERVAL_SECONDS * 1000,
     run: () => privacyJobs.runOnce(),
     onError: (err) => log.error({ err }, 'privacy jobs failed'),
   })

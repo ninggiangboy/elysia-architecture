@@ -5,8 +5,8 @@
 // Fix why (the module's handler is failing, or its dead-lettered message needs `outbox:requeue`), then resume.
 // Resuming only writes an event: a running worker's relay delivers it.
 import { sql } from 'drizzle-orm'
+import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
-import { loadConfig } from '#/shared/infrastructure/config'
 import { createLogger } from '#/shared/infrastructure/logger'
 
 const [command, ...rest] = process.argv.slice(2)
@@ -18,7 +18,7 @@ if (command !== 'list' && !(command === 'resume' && id)) {
   process.exit(1)
 }
 
-const container = await createContainer(loadConfig(), createLogger('silent'))
+const container = await createContainer(loadAppConfig(), createLogger('silent'))
 try {
   if (command === 'resume' && id) {
     await container.modules.privacy.resumeDeletion(id)

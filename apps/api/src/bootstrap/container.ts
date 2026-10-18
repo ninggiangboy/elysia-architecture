@@ -1,4 +1,4 @@
-import { TOPUP_CURRENCIES } from '@app/shared-types'
+import type { Config } from '#/bootstrap/config'
 import type { PaymentGateway } from '#/modules/billing/application/ports'
 import { createBillingModule } from '#/modules/billing/billing.module'
 import { StripePaymentGateway } from '#/modules/billing/infrastructure/stripe-payment-gateway'
@@ -21,8 +21,6 @@ import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import { createRealtimeModule } from '#/modules/realtime/realtime.module'
 import type { Mailer } from '#/shared/application/ports'
-import { StepUpPolicy } from '#/shared/application/step-up-policy'
-import type { Config } from '#/shared/infrastructure/config'
 import { Database } from '#/shared/infrastructure/db/database'
 import type { Logger } from '#/shared/infrastructure/logger'
 import { SmtpMailer } from '#/shared/infrastructure/mail/smtp-mailer'
@@ -67,39 +65,39 @@ export async function createContainer(
 
   // One pool + one transaction context for all modules; modules differ only by Postgres schema.
   const database = new Database({
-    url: config.DATABASE_URL,
-    poolMax: config.DB_POOL_MAX,
-    prepare: config.DB_PREPARE,
+    url: config.db.DATABASE_URL,
+    poolMax: config.db.DB_POOL_MAX,
+    prepare: config.db.DB_PREPARE,
   })
 
+  const { storage: s3, mail: smtp } = config
   const storage = new S3ObjectStorage({
-    endpoint: config.S3_ENDPOINT,
-    publicEndpoint: config.S3_PUBLIC_ENDPOINT ?? config.S3_ENDPOINT,
-    region: config.S3_REGION,
-    bucket: config.S3_BUCKET,
-    accessKeyId: config.S3_ACCESS_KEY_ID,
-    secretAccessKey: config.S3_SECRET_ACCESS_KEY,
+    endpoint: s3.S3_ENDPOINT,
+    publicEndpoint: s3.S3_PUBLIC_ENDPOINT ?? s3.S3_ENDPOINT,
+    region: s3.S3_REGION,
+    bucket: s3.S3_BUCKET,
+    accessKeyId: s3.S3_ACCESS_KEY_ID,
+    secretAccessKey: s3.S3_SECRET_ACCESS_KEY,
   })
   const mailer =
     overrides.mailer ??
     new SmtpMailer(
       {
-        host: config.SMTP_HOST,
-        port: config.SMTP_PORT,
-        secure: config.SMTP_SECURE,
-        requireTls: config.SMTP_REQUIRE_TLS,
-        user: config.SMTP_USER,
-        password: config.SMTP_PASSWORD,
+        host: smtp.SMTP_HOST,
+        port: smtp.SMTP_PORT,
+        secure: smtp.SMTP_SECURE,
+        requireTls: smtp.SMTP_REQUIRE_TLS,
+        user: smtp.SMTP_USER,
+        password: smtp.SMTP_PASSWORD,
       },
-      config.MAIL_FROM,
+      smtp.MAIL_FROM,
     )
 
-  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = config
+  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = config.notification
   const webPush =
     VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY && VAPID_SUBJECT
       ? {
           publicKey: VAPID_PUBLIC_KEY,
-          quietWindowMs: config.PUSH_QUIET_WINDOW_SECONDS * 1000,
           sender:
             overrides.webPushSender ??
             new WebPushLibrarySender({
@@ -110,7 +108,7 @@ export async function createContainer(
         }
       : undefined
 
-  const { STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET } = config
+  const { STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET } = config.billing
   const payments =
     STRIPE_SECRET_KEY && STRIPE_PUBLISHABLE_KEY && STRIPE_WEBHOOK_SECRET
       ? {
@@ -123,7 +121,7 @@ export async function createContainer(
 
   const identity = await createIdentityModule({
     database,
-    config,
+    config: config.identity,
     clock,
     ids,
     storage,
@@ -142,7 +140,7 @@ export async function createContainer(
   const notification = createNotificationModule({
     database,
     mailer,
-    webAppUrl: config.WEB_APP_URL,
+    webAppUrl: config.core.WEB_APP_URL,
     clock,
     ids,
     log: logger,
@@ -153,16 +151,12 @@ export async function createContainer(
     // What gets said, per producer. Leave one out and its events simply produce no mail or notification.
     integrations: [identityNotifications, privacyNotifications, billingNotifications], // <kit:notification-integrations>
     sending: {
-      ratePerSecond: config.MAIL_RATE_PER_SECOND,
-      burst: config.MAIL_BURST,
-      dailyQuota: config.MAIL_DAILY_QUOTA,
+      ratePerSecond: smtp.MAIL_RATE_PER_SECOND,
+      burst: smtp.MAIL_BURST,
+      dailyQuota: smtp.MAIL_DAILY_QUOTA,
     },
     webPush,
-    retention: {
-      maxAgeMs: config.NOTIFICATION_RETENTION * 1000,
-      batchSize: 1000,
-      intervalMs: config.NOTIFICATION_PRUNE_INTERVAL_SECONDS * 1000,
-    },
+    config: config.notification,
   })
 
   const billing = createBillingModule({
@@ -174,20 +168,8 @@ export async function createContainer(
     verifier: identity.verifier,
     identity: identity.api,
     profile: profile.api,
-    seller: {
-      name: config.SELLER_NAME,
-      email: config.SELLER_EMAIL ?? null,
-      address: config.SELLER_ADDRESS ?? null,
-      taxId: config.SELLER_TAX_ID ?? null,
-    },
-    currencies: config.TOPUP_CURRENCIES.map((code) => ({ code, ...TOPUP_CURRENCIES[code] })),
+    config: config.billing,
     payments,
-    reconcileIntervalMs: config.BILLING_RECONCILE_INTERVAL_SECONDS * 1000,
-    reconcile: {
-      settleGraceMs: config.BILLING_SETTLE_GRACE * 1000,
-      giveUpAfterMs: config.BILLING_RECONCILE_MAX_AGE * 1000,
-      batchSize: 50,
-    },
   })
 
   const participants = (job: keyof PrivacyParticipation) =>
@@ -204,18 +186,11 @@ export async function createContainer(
     log: logger,
     identity: identity.api,
     verifier: identity.verifier,
-    stepUp: new StepUpPolicy(clock, config.STEP_UP_TTL),
-    jobsIntervalMs: config.PRIVACY_JOBS_INTERVAL_SECONDS * 1000,
-    policy: {
-      // Who takes part is what the modules declare (`privacy` on the module). A module that becomes a service stays
-      // in these lists and keeps answering with the same two events.
-      exportParticipants: participants('exports'),
-      deletionParticipants: participants('erases'),
-      deletionGraceMs: config.PRIVACY_DELETION_GRACE_PERIOD * 1000,
-      exportTtlMs: config.PRIVACY_EXPORT_TTL * 1000,
-      stallAfterMs: config.PRIVACY_STALL_AFTER * 1000,
-      maxNudges: config.PRIVACY_MAX_NUDGES,
-    },
+    stepUp: identity.stepUp,
+    config: config.privacy,
+    // Who takes part is what the modules declare (`privacy` on the module). A module that becomes a service stays in
+    // these lists and keeps answering with the same two events.
+    participants: { exports: participants('exports'), erases: participants('erases') },
   })
 
   const realtime = createRealtimeModule({
@@ -223,7 +198,7 @@ export async function createContainer(
     clock,
     log: logger,
     verifier: identity.verifier,
-    replayWindowMs: config.REALTIME_REPLAY_WINDOW_SECONDS * 1000,
+    config: config.realtime,
     // What reaches the open tabs: one integration per producer. Leave one out and its events simply stop being pushed.
     integrations: [identityRealtime, privacyRealtime, billingRealtime, notificationRealtime], // <kit:realtime-integrations>
   })
@@ -243,11 +218,14 @@ export async function createContainer(
     bus,
     logger,
     {
-      pollIntervalMs: config.OUTBOX_POLL_INTERVAL_MS,
-      batchSize: config.OUTBOX_BATCH_SIZE,
-      concurrency: Math.min(config.OUTBOX_CONCURRENCY, Math.max(1, config.DB_POOL_MAX - 2)),
-      leaseSeconds: config.OUTBOX_LEASE_SECONDS,
-      deferBudgetMs: config.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
+      pollIntervalMs: config.outbox.OUTBOX_POLL_INTERVAL_MS,
+      batchSize: config.outbox.OUTBOX_BATCH_SIZE,
+      concurrency: Math.min(
+        config.outbox.OUTBOX_CONCURRENCY,
+        Math.max(1, config.db.DB_POOL_MAX - 2),
+      ),
+      leaseSeconds: config.outbox.OUTBOX_LEASE_SECONDS,
+      deferBudgetMs: config.outbox.OUTBOX_DEFER_BUDGET_HOURS * 3600_000,
     },
   )
 
@@ -255,7 +233,7 @@ export async function createContainer(
   const maintenance = new MaintenanceMode(
     overrides.maintenanceStore ?? new MaintenanceStore(database),
     logger,
-    config.MAINTENANCE_POLL_INTERVAL_MS,
+    config.maintenance.MAINTENANCE_POLL_INTERVAL_MS,
   )
 
   /** Maintenance mode stops everything that starts work on its own: the relay and the timers behind the jobs. */

@@ -143,8 +143,8 @@ describe('full user journey', () => {
       accessToken,
       createLocalJWKSet(jwks.json),
       {
-        issuer: t.config.JWT_ISSUER,
-        audience: t.config.JWT_AUDIENCE,
+        issuer: t.config.identity.JWT_ISSUER,
+        audience: t.config.identity.JWT_AUDIENCE,
       },
     )
     expect(protectedHeader.alg).toBe('ES256')
@@ -504,7 +504,7 @@ describe('device sessions', () => {
 describe('abuse protection', () => {
   test('magic link requests are rate limited per email (database-backed, multi-instance safe)', async () => {
     const email = uniqueEmail('spam')
-    const limit = t.config.MAGIC_LINK_MAX_PER_EMAIL
+    const limit = t.config.identity.MAGIC_LINK_MAX_PER_EMAIL
     for (let i = 0; i < limit; i++) {
       expect((await api('POST', '/api/auth/magic-link', { body: { email } })).status).toBe(202)
     }
@@ -519,7 +519,7 @@ describe('abuse protection', () => {
 
   test('magic link requests are rate limited per IP', async () => {
     const ip = uniqueIp()
-    const limit = t.config.MAGIC_LINK_MAX_PER_IP
+    const limit = t.config.identity.MAGIC_LINK_MAX_PER_IP
     for (let i = 0; i < limit; i++) {
       expect(
         (await api('POST', '/api/auth/magic-link', { body: { email: uniqueEmail('ip') }, ip }))

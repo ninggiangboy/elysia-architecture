@@ -82,7 +82,10 @@ describe('notification retention', () => {
         data: {},
         createdAt,
       })
-    const [old, fresh] = [make(ago(t.config.NOTIFICATION_RETENTION / 86_400 + 1)), make(ago(1))]
+    const [old, fresh] = [
+      make(ago(t.config.notification.NOTIFICATION_RETENTION / 86_400 + 1)),
+      make(ago(1)),
+    ]
     await repo.insert(old)
     await repo.insert(fresh)
 

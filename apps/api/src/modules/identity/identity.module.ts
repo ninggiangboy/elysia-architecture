@@ -5,7 +5,6 @@ import type {
   ObjectStorage,
 } from '#/shared/application/ports'
 import { StepUpPolicy } from '#/shared/application/step-up-policy'
-import type { Config } from '#/shared/infrastructure/config'
 import type { Database } from '#/shared/infrastructure/db/database'
 import { DrizzleInboxGuard } from '#/shared/infrastructure/outbox/drizzle-inbox-guard'
 import { DrizzleOutboxWriter } from '#/shared/infrastructure/outbox/drizzle-outbox-writer'
@@ -49,6 +48,7 @@ import {
   VerifyStepUpCode,
 } from './application/use-cases/step-up'
 import { VerifyMagicLink } from './application/use-cases/verify-magic-link'
+import type { IdentityConfig } from './config'
 import type { AccessTokenVerifier } from './contracts/access-token-verifier'
 import { IdentityEvents } from './contracts/events'
 import type { IdentityApi } from './contracts/identity-api'
@@ -75,7 +75,7 @@ import { identityRoutes } from './presentation/routes'
 
 export interface IdentityModuleDeps {
   database: Database
-  config: Config
+  config: IdentityConfig
   clock: Clock
   ids: IdGenerator
   /** Where the data export is written. */
@@ -88,6 +88,8 @@ export interface IdentityModuleDeps {
 export interface IdentityModule extends AppModule<'identity', ReturnType<typeof identityRoutes>> {
   routes: ReturnType<typeof identityRoutes>
   api: IdentityApi
+  /** How recently someone must have signed in for a sensitive action; the same window every module that asks for it uses. */
+  stepUp: StepUpPolicy
   verifier: AccessTokenVerifier
   /** Takes part in the privacy data export and account erasure. */
   handlers: IntegrationEventHandler[]
@@ -110,6 +112,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
     ids,
   )
 
+  const webApp = new URL(config.WEB_APP_URL)
   const users = new DrizzleUserRepository(database)
   const magicLinks = new DrizzleMagicLinkRepository(database)
   const emailChanges = new DrizzleEmailChangeRequestRepository(database)
@@ -135,9 +138,9 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
   const webauthn =
     deps.webauthn ??
     new SimpleWebAuthnService({
-      rpId: config.WEBAUTHN_RP_ID,
+      rpId: config.WEBAUTHN_RP_ID ?? webApp.hostname,
       rpName: config.WEBAUTHN_RP_NAME,
-      origins: config.WEBAUTHN_ORIGINS,
+      origins: config.WEBAUTHN_ORIGINS ?? [webApp.origin],
     })
   const oauth =
     deps.oauth ??
@@ -304,6 +307,7 @@ export async function createIdentityModule(deps: IdentityModuleDeps): Promise<Id
     ],
     routes,
     api: new IdentityApiImpl(users),
+    stepUp,
     verifier: tokenService,
     handlers: participation.handlers,
     privacy: participation.privacy,

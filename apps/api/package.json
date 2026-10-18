@@ -10,6 +10,7 @@
     "start": "bun src/main.ts",
     "build": "bun build src/main.ts --target=bun --outdir=dist",
     "keys:generate": "bun scripts/generate-keys.ts",
+    "config:example": "bun scripts/config-example.ts",
     "db:generate": "bun --env-file=../../.env scripts/db.ts generate",
     "db:migrate": "bun --env-file=../../.env scripts/db.ts migrate",
     "db:studio": "MODULE=${MODULE:-identity} bunx --bun drizzle-kit studio",

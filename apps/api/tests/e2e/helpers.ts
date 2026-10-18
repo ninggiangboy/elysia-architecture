@@ -1,6 +1,6 @@
 import { buildApp } from '#/app'
+import { loadAppConfig } from '#/bootstrap/config'
 import { type ContainerOverrides, createContainer } from '#/bootstrap/container'
-import { loadConfig } from '#/shared/infrastructure/config'
 import { createLogger } from '#/shared/infrastructure/logger'
 
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
@@ -9,7 +9,7 @@ export async function createTestApp(
   overrides: ContainerOverrides = {},
   env: Record<string, string> = {},
 ) {
-  const config = loadConfig({
+  const config = loadAppConfig({
     ...process.env,
     OUTBOX_POLL_INTERVAL_MS: '200',
     LOG_LEVEL: 'silent',

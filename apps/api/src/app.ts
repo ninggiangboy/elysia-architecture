@@ -67,11 +67,11 @@ export function buildApp(container: Container) {
       .use(requestContextPlugin)
       .use(tracingPlugin)
       .use(errorHandlerPlugin(container.logger))
-      .use(cors({ origin: container.config.CORS_ORIGINS, credentials: true }))
+      .use(cors({ origin: container.config.core.CORS_ORIGINS, credentials: true }))
       .use(maintenancePlugin(container.maintenance))
       .use(
         openapi({
-          enabled: container.config.NODE_ENV === 'development',
+          enabled: container.config.core.NODE_ENV === 'development',
           path: '/openapi',
           // By default the plugin excludes paths with a file extension (.json) — which would drop /.well-known/jwks.json from the docs.
           exclude: { staticFile: false },

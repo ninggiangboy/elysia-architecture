@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 import { buildApp } from '#/app'
+import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
 import { API_PREFIX } from '#/shared/http/constants'
-import { loadConfig } from '#/shared/infrastructure/config'
 import { createLogger } from '#/shared/infrastructure/logger'
 
 describe('buildApp', () => {
@@ -10,7 +10,7 @@ describe('buildApp', () => {
   // The price is that a module can be forgotten there, which this test catches.
   test('mounts every route of every module', async () => {
     const container = await createContainer(
-      loadConfig({ ...process.env, LOG_LEVEL: 'silent' }),
+      loadAppConfig({ ...process.env, LOG_LEVEL: 'silent' }),
       createLogger('silent'),
     )
     try {

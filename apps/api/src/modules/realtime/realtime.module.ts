@@ -6,6 +6,7 @@ import { intervalJobs } from '#/shared/module/interval-jobs'
 import { PurgeUserEvents } from './application/handlers/purge-user-events'
 import { RealtimePushHandler } from './application/handlers/realtime-push-handler'
 import { SendTestEvent } from './application/use-cases/send-test-event'
+import type { RealtimeConfig } from './config'
 import type { RealtimeIntegration } from './contracts'
 import { PgRealtimeHub } from './infrastructure/pg-realtime-hub'
 import { realtimeRoutes } from './presentation/routes'
@@ -15,8 +16,7 @@ export interface RealtimeModuleDeps {
   clock: Clock
   log: Log
   verifier: TokenVerifier
-  /** How long a client can be disconnected and still replay what it missed via `Last-Event-ID`. */
-  replayWindowMs: number
+  config: RealtimeConfig
   /** What reaches the user's open tabs: one entry per producer module the app installs. */
   integrations: readonly RealtimeIntegration[]
 }
@@ -34,7 +34,8 @@ const PRUNE_INTERVAL_MS = 60_000
 
 /** Stateless-friendly live updates (SSE). Its only table is a short replay buffer; it otherwise just relays events to connected clients. */
 export function createRealtimeModule(deps: RealtimeModuleDeps): RealtimeModule {
-  const { database, clock, log, verifier, replayWindowMs } = deps
+  const { database, clock, log, verifier, config } = deps
+  const replayWindowMs = config.REALTIME_REPLAY_WINDOW_SECONDS * 1000
   const routes = deps.integrations.flatMap((i) => i.routes ?? [])
   const purges = deps.integrations.flatMap((i) => i.purgeOn ?? [])
   const hub = new PgRealtimeHub(database, clock, log)

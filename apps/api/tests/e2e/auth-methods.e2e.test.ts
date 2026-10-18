@@ -43,8 +43,8 @@ let rpId: string
 beforeAll(async () => {
   t = await createTestApp({ oauth: idp })
   api = client(t.app)
-  origin = t.config.WEBAUTHN_ORIGINS[0] as string
-  rpId = t.config.WEBAUTHN_RP_ID
+  origin = new URL(t.config.core.WEB_APP_URL).origin as string
+  rpId = new URL(t.config.core.WEB_APP_URL).hostname
 })
 
 afterAll(async () => {

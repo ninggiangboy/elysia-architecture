@@ -1,3 +1,4 @@
+import { TOPUP_CURRENCIES } from '@app/shared-types'
 import type { IdentityApi } from '#/modules/identity/contracts'
 import type { ProfileApi } from '#/modules/profile/contracts'
 import type {
@@ -24,6 +25,7 @@ import { HandlePaymentEvent } from './application/use-cases/handle-payment-event
 import { GetTopUp, GetWallet, ListTransactions } from './application/use-cases/read-billing'
 import { GetDocument, ListDocuments } from './application/use-cases/read-documents'
 import { type ReconcilePolicy, ReconcileTopUps } from './application/use-cases/reconcile-top-ups'
+import type { BillingConfig } from './config'
 import { BillingEvents } from './contracts/events'
 import type { Party } from './domain/document'
 import { ModuleBuyerDirectory } from './infrastructure/module-buyer-directory'
@@ -47,15 +49,9 @@ export interface BillingModuleDeps {
   /** Depend only on the CONTRACTS of identity and profile: who is paying, to put on the documents. */
   identity: IdentityApi
   profile: ProfileApi
-  /** Who the documents come from. */
-  seller: Party
-  /** Currencies a wallet can be topped up in. */
-  currencies: readonly CurrencyRule[]
+  config: BillingConfig
   /** Omit to run without payments: balances and history still read, but nobody can top up. */
   payments?: { gateway: PaymentGateway; publishableKey: string }
-  /** How often the reconciliation job asks the provider about payments whose webhook has not come. */
-  reconcileIntervalMs: number
-  reconcile: ReconcilePolicy
 }
 
 export interface BillingModule extends AppModule<'billing', ReturnType<typeof billingRoutes>> {
@@ -69,13 +65,29 @@ export interface BillingModule extends AppModule<'billing', ReturnType<typeof bi
 export function createBillingModule(deps: BillingModuleDeps): BillingModule {
   const { database, clock, ids, log, storage, verifier, payments } = deps
 
-  const currencies = new CurrencyPolicy(deps.currencies)
+  const { config } = deps
+  const seller: Party = {
+    name: config.SELLER_NAME,
+    email: config.SELLER_EMAIL ?? null,
+    address: config.SELLER_ADDRESS ?? null,
+    taxId: config.SELLER_TAX_ID ?? null,
+  }
+  const rules: CurrencyRule[] = config.TOPUP_CURRENCIES.map((code) => ({
+    code,
+    ...TOPUP_CURRENCIES[code],
+  }))
+  const reconcile: ReconcilePolicy = {
+    settleGraceMs: config.BILLING_SETTLE_GRACE * 1000,
+    giveUpAfterMs: config.BILLING_RECONCILE_MAX_AGE * 1000,
+    batchSize: 50,
+  }
+  const currencies = new CurrencyPolicy(rules)
   const topUps = new DrizzleTopUpRepository(database)
   const ledger = new DrizzleLedgerRepository(database)
   const documents = new DrizzleDocumentRepository(database)
   const issuer = new DocumentIssuer(
     documents,
-    deps.seller,
+    seller,
     new ModuleBuyerDirectory(deps.identity, deps.profile, log),
     ids,
   )
@@ -94,7 +106,7 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
     issuer,
   )
   const reconciler = payments
-    ? new ReconcileTopUps(topUps, payments.gateway, handlePaymentEvent, deps.reconcile, clock, log)
+    ? new ReconcileTopUps(topUps, payments.gateway, handlePaymentEvent, reconcile, clock, log)
     : undefined
 
   const participation = privacyParticipation({
@@ -116,7 +128,7 @@ export function createBillingModule(deps: BillingModuleDeps): BillingModule {
   // Row claims keep two instances that tick together apart.
   const jobs = reconciler
     ? intervalJobs({
-        intervalMs: deps.reconcileIntervalMs,
+        intervalMs: config.BILLING_RECONCILE_INTERVAL_SECONDS * 1000,
         run: () => reconciler.runOnce(),
         onError: (err) => log.error({ err }, 'top-up reconciliation failed'),
       })

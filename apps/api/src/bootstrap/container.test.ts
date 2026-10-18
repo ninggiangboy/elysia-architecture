@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { loadAppConfig } from '#/bootstrap/config'
 import { createContainer } from '#/bootstrap/container'
 import { MODULE_CATALOG } from '#/bootstrap/module-catalog'
 import type { WebPushSender } from '#/modules/notification/application/ports'
-import { loadConfig } from '#/shared/infrastructure/config'
 import { createLogger } from '#/shared/infrastructure/logger'
 import type { AppModule } from '#/shared/module/app-module'
 
@@ -76,7 +76,7 @@ const HANDLERS = [
 ]
 
 async function build() {
-  const config = loadConfig({
+  const config = loadAppConfig({
     ...process.env,
     LOG_LEVEL: 'silent',
     // Web Push on, so its two handlers are part of the list whatever the local .env says.
@@ -107,7 +107,7 @@ describe('container', () => {
     const container = await build()
     try {
       const root = join(import.meta.dir, '../..')
-      const names = MODULE_CATALOG.map((m) => m.name)
+      const names: string[] = MODULE_CATALOG.map((m) => m.name)
       expect(names.slice().sort()).toEqual(Object.keys(container.modules).sort())
       expect(names.slice().sort()).toEqual(readdirSync(join(root, 'src/modules')).sort())
       for (const m of MODULE_CATALOG) {

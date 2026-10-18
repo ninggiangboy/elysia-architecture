@@ -24,7 +24,7 @@ import { NotificationDataExporter } from './application/notification-data-export
 import { createNotificationRenderer } from './application/notification-renderer'
 import { payloadLocale } from './application/payload-locale'
 import type { WebPushSender } from './application/ports'
-import { PruneOldNotifications, type RetentionPolicy } from './application/prune-notifications'
+import { PruneOldNotifications } from './application/prune-notifications'
 import { ThrottledMailer } from './application/throttled-mailer'
 import {
   MarkAllNotificationsRead,
@@ -37,6 +37,7 @@ import {
   GetUnseenCount,
   ListNotifications,
 } from './application/use-cases/read-notifications'
+import type { NotificationConfig } from './config'
 import type { LocaleResolver, NotificationIntegration, TemplateValues } from './contracts'
 import { NotificationEvents } from './contracts/events'
 import { DrizzleNotificationDataEraser } from './infrastructure/persistence/drizzle-data-eraser'
@@ -65,11 +66,8 @@ export interface NotificationModuleDeps {
   messageOverrides?: MessagesOptions['overrides']
   sending: { ratePerSecond: number; burst?: number; dailyQuota: number }
   /** Omit to run without Web Push: the routes report no public key and no handler is registered. */
-  webPush?: { sender: WebPushSender; publicKey: string; quietWindowMs?: number }
-  retention: RetentionPolicy & {
-    /** How often the timer behind `jobs` looks for notifications past the retention. */
-    intervalMs: number
-  }
+  webPush?: { sender: WebPushSender; publicKey: string }
+  config: NotificationConfig
 }
 
 export interface NotificationModule
@@ -95,7 +93,7 @@ export function createNotificationModule({
   messageOverrides,
   sending,
   webPush,
-  retention,
+  config,
 }: NotificationModuleDeps): NotificationModule {
   const guard = new DrizzleInboxGuard(database, inbox)
   const appUrl = webAppUrl.replace(/\/$/, '')
@@ -128,6 +126,11 @@ export function createNotificationModule({
       answerType: NotificationEvents.UserDataErased,
     },
   })
+  const retention = {
+    maxAgeMs: config.NOTIFICATION_RETENTION * 1000,
+    batchSize: 1000,
+    intervalMs: config.NOTIFICATION_PRUNE_INTERVAL_SECONDS * 1000,
+  }
   const pruner = new PruneOldNotifications(notifications, retention, clock, log)
   // SKIP LOCKED keeps two instances that tick together apart.
   const jobs = intervalJobs({
@@ -172,7 +175,7 @@ export function createNotificationModule({
               clock,
               log,
               render,
-              webPush.quietWindowMs,
+              config.PUSH_QUIET_WINDOW_SECONDS * 1000,
               locales,
             ),
             ...integrations
