@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import type { Mailer } from '@kit/mail'
 import { MailPermanentError, MailRateLimitedError } from '@kit/mail'
+import { IdentityEvents } from '@mod/identity/contracts'
+import { outbox as identityOutbox } from '@mod/identity/schema'
 import { PostgresSendRateLimiter } from '@mod/notification/testing'
 import { eq, sql } from 'drizzle-orm'
-import { IdentityEvents } from '#/modules/identity/contracts'
-import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
 import { createTestApp, eventually, sleep, type TestApp, uniqueEmail } from './helpers'
 
 type Mail = Parameters<Mailer['send']>[0]

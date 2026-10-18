@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { LOCALES } from '@app/shared-types/locales'
 import { diffCatalogs } from '@kit/i18n'
+import { identityNotifications } from '@mod/identity/integrations/notification'
 import { createMessages } from '@mod/notification/testing'
 import { billingNotifications } from '#/modules/billing/integrations/notification'
-import { identityNotifications } from '#/modules/identity/integrations/notification'
 import { privacyNotifications } from '#/modules/privacy/integrations/notification'
 
 // The notification module checks its own pieces; this checks the catalogs the reference app actually installs.

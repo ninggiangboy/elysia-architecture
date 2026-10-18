@@ -17,8 +17,8 @@ import {
   PassthroughUnitOfWork,
   SequentialIds,
 } from '@kit/testing'
+import type { IdentityApi } from '@mod/identity/contracts'
 import { unzipSync } from 'fflate'
-import type { IdentityApi } from '#/modules/identity/contracts'
 import {
   type AccountErasureRequestedPayload,
   type DataExportRequestedPayload,

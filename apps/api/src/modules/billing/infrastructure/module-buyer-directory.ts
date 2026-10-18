@@ -1,5 +1,5 @@
 import type { Log } from '@kit/core'
-import type { IdentityApi } from '#/modules/identity/contracts'
+import type { IdentityApi } from '@mod/identity/contracts'
 import type { ProfileApi } from '#/modules/profile/contracts'
 import type { BuyerDirectory } from '../application/ports'
 

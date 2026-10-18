@@ -31,6 +31,7 @@
         "@kit/runtime": "workspace:*",
         "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
+        "@mod/identity": "workspace:*",
         "@mod/notification": "workspace:*",
         "@mod/realtime": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
@@ -90,6 +91,46 @@
         "typescript": "^5.9.0",
         "vite": "^8.3.4",
       },
+    },
+    "modules/identity": {
+      "name": "@mod/identity",
+      "dependencies": {
+        "@app/shared-types": "workspace:*",
+        "@kit/auth": "workspace:*",
+        "@kit/config": "workspace:*",
+        "@kit/core": "workspace:*",
+        "@kit/db": "workspace:*",
+        "@kit/http": "workspace:*",
+        "@kit/i18n": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/privacy-participant": "workspace:*",
+        "@kit/runtime": "workspace:*",
+        "@kit/storage": "workspace:*",
+        "@simplewebauthn/server": "^14.0.3",
+        "arctic": "^3.7.0",
+        "jose": "^6.1.0",
+      },
+      "devDependencies": {
+        "@kit/testing": "workspace:*",
+        "@mod/notification": "workspace:*",
+        "@mod/realtime": "workspace:*",
+        "@types/bun": "latest",
+        "drizzle-kit": "^0.31.0",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "@mod/notification": "workspace:*",
+        "@mod/realtime": "workspace:*",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "optionalPeers": [
+        "@mod/notification",
+        "@mod/realtime",
+      ],
     },
     "modules/notification": {
       "name": "@mod/notification",
@@ -655,6 +696,8 @@
     "@lezer/yaml": ["@lezer/yaml@1.0.4", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.4.0" } }, "sha512-2lrrHqxalACEbxIbsjhqGpSW8kWpUKuY6RHgnSAFZa6qK62wvnPxA8hGOwOoDbwHcOFs5M4o27mjGu+P7TvBmw=="],
 
     "@marijn/find-cluster-break": ["@marijn/find-cluster-break@1.0.4", "", {}, "sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ=="],
+
+    "@mod/identity": ["@mod/identity@workspace:modules/identity"],
 
     "@mod/notification": ["@mod/notification@workspace:modules/notification"],
 

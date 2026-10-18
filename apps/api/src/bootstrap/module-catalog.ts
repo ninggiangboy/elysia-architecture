@@ -2,12 +2,11 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ConfigSlice } from '@kit/config'
 import type { OutboxTable } from '@kit/messaging'
+import { identityManifest } from '@mod/identity/manifest'
 import { notificationManifest } from '@mod/notification/manifest'
 import { realtimeManifest } from '@mod/realtime/manifest'
 import { billingConfig } from '#/modules/billing/config'
 import { outbox as billingOutbox } from '#/modules/billing/infrastructure/persistence/schema'
-import { identityConfig } from '#/modules/identity/config'
-import { outbox as identityOutbox } from '#/modules/identity/infrastructure/persistence/schema'
 import { privacyConfig } from '#/modules/privacy/config'
 import { outbox as privacyOutbox } from '#/modules/privacy/infrastructure/persistence/schema'
 import { outbox as profileOutbox } from '#/modules/profile/infrastructure/persistence/schema'
@@ -47,7 +46,7 @@ const entry = <const Name extends string, const Slice extends ConfigSlice | unde
 
 // One line per module; removing a module removes its line. (Typed per entry so `Config` knows each slice.)
 export const MODULE_CATALOG = [
-  entry('identity', identityOutbox, identityConfig),
+  identityManifest,
   entry('profile', profileOutbox),
   notificationManifest,
   entry('privacy', privacyOutbox, privacyConfig),

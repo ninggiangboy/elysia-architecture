@@ -78,6 +78,10 @@
     "modules/notification": {
       "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
       "project": ["src/**/*.ts"]
+    },
+    "modules/identity": {
+      "entry": ["src/**/*.test.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

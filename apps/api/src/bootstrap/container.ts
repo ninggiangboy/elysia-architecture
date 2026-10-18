@@ -7,6 +7,13 @@ import type { AppModule } from '@kit/runtime'
 import { MaintenanceMode, MaintenanceStore } from '@kit/runtime'
 import { createObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
+import type { OAuthGateway, WebAuthnService } from '@mod/identity'
+import { createIdentityModule } from '@mod/identity'
+import {
+  identityLocaleResolver,
+  identityNotifications,
+} from '@mod/identity/integrations/notification'
+import { identityRealtime } from '@mod/identity/integrations/realtime'
 import type { WebPushSender } from '@mod/notification'
 import { createNotificationModule, WebPushLibrarySender } from '@mod/notification'
 import { notificationRealtime } from '@mod/notification/integrations/realtime'
@@ -17,13 +24,6 @@ import { createBillingModule } from '#/modules/billing/billing.module'
 import { StripePaymentGateway } from '#/modules/billing/infrastructure/stripe-payment-gateway'
 import { billingNotifications } from '#/modules/billing/integrations/notification'
 import { billingRealtime } from '#/modules/billing/integrations/realtime'
-import type { OAuthGateway, WebAuthnService } from '#/modules/identity/application/ports'
-import { createIdentityModule } from '#/modules/identity/identity.module'
-import {
-  identityLocaleResolver,
-  identityNotifications,
-} from '#/modules/identity/integrations/notification'
-import { identityRealtime } from '#/modules/identity/integrations/realtime'
 import { privacyNotifications } from '#/modules/privacy/integrations/notification'
 import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'

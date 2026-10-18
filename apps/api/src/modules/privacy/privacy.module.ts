@@ -7,7 +7,7 @@ import { participantEvents, privacyParticipation } from '@kit/privacy-participan
 import type { AppModule } from '@kit/runtime'
 import { intervalJobs } from '@kit/runtime'
 import type { ObjectStorage } from '@kit/storage'
-import type { IdentityApi } from '#/modules/identity/contracts'
+import type { IdentityApi } from '@mod/identity/contracts'
 import { AssembleExport } from './application/handlers/assemble-export'
 import { RecordErasure } from './application/handlers/record-erasure'
 import { RecordExportPart } from './application/handlers/record-export-part'

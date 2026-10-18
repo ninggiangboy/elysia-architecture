@@ -1,7 +1,7 @@
 import type { Clock, Log } from '@kit/core'
 import type { Envelope, InboxGuard, IntegrationEventHandler, OutboxWriter } from '@kit/messaging'
 import type { ObjectStorage } from '@kit/storage'
-import type { IdentityApi } from '#/modules/identity/contracts'
+import type { IdentityApi } from '@mod/identity/contracts'
 import type { DataExport, ExportPart } from '../../domain/data-export'
 import type { DataExportRepository } from '../../domain/repositories'
 import { exportArchiveKey } from '../keys'

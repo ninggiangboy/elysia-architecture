@@ -43,6 +43,7 @@
     "@kit/runtime": "workspace:*",
     "@kit/storage": "workspace:*",
     "@kit/telemetry": "workspace:*",
+    "@mod/identity": "workspace:*",
     "@mod/notification": "workspace:*",
     "@mod/realtime": "workspace:*",
     "@opentelemetry/api": "^1.9.1",

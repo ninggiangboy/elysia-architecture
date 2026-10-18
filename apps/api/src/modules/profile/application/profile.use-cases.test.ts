@@ -8,7 +8,7 @@ import {
   PassthroughUnitOfWork,
   SequentialIds,
 } from '@kit/testing'
-import type { IdentityApi } from '#/modules/identity/contracts'
+import type { IdentityApi } from '@mod/identity/contracts'
 import { ProfileEvents } from '../contracts/events'
 import type { Profile } from '../domain/profile'
 import type { ProfileRepository } from '../domain/profile-repository'

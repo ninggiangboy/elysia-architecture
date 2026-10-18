@@ -1,7 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import type { OAuthGateway, OAuthProfile, OAuthProviderId } from '@mod/identity/testing'
 import { decodeJwt } from 'jose'
-import type { OAuthGateway, OAuthProfile } from '#/modules/identity/application/ports'
-import type { OAuthProviderId } from '#/modules/identity/domain/oauth-account'
 import {
   client,
   createTestApp,
