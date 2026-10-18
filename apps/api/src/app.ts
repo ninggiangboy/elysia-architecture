@@ -62,28 +62,32 @@ function healthRoutes(container: Container) {
 
 /** Shared by main.ts and e2e tests. `App` is the type the web app uses to infer the client (Eden Treaty). */
 export function buildApp(container: Container) {
-  return new Elysia({ prefix: API_PREFIX })
-    .use(requestContextPlugin)
-    .use(tracingPlugin)
-    .use(errorHandlerPlugin(container.logger))
-    .use(cors({ origin: container.config.CORS_ORIGINS, credentials: true }))
-    .use(maintenancePlugin(container.maintenance))
-    .use(
-      openapi({
-        enabled: container.config.NODE_ENV === 'development',
-        path: '/openapi',
-        // By default the plugin excludes paths with a file extension (.json) — which would drop /.well-known/jwks.json from the docs.
-        exclude: { staticFile: false },
-        documentation: openapiDocumentation,
-      }),
-    )
-    .use(healthRoutes(container))
-    .use(container.modules.identity.routes)
-    .use(container.modules.profile.routes)
-    .use(container.modules.notification.routes)
-    .use(container.modules.privacy.routes)
-    .use(container.modules.billing.routes)
-    .use(container.modules.realtime.routes)
+  return (
+    new Elysia({ prefix: API_PREFIX })
+      .use(requestContextPlugin)
+      .use(tracingPlugin)
+      .use(errorHandlerPlugin(container.logger))
+      .use(cors({ origin: container.config.CORS_ORIGINS, credentials: true }))
+      .use(maintenancePlugin(container.maintenance))
+      .use(
+        openapi({
+          enabled: container.config.NODE_ENV === 'development',
+          path: '/openapi',
+          // By default the plugin excludes paths with a file extension (.json) — which would drop /.well-known/jwks.json from the docs.
+          exclude: { staticFile: false },
+          documentation: openapiDocumentation,
+        }),
+      )
+      .use(healthRoutes(container))
+      // One static `.use()` per module on purpose: Eden Treaty infers the client types from this chain, and a loop over the
+      // module list would turn them into `any`. `app.test.ts` fails when a module with routes is not mounted here.
+      .use(container.modules.identity.routes)
+      .use(container.modules.profile.routes)
+      .use(container.modules.notification.routes)
+      .use(container.modules.privacy.routes)
+      .use(container.modules.billing.routes)
+      .use(container.modules.realtime.routes)
+  )
 }
 
 export type App = ReturnType<typeof buildApp>
