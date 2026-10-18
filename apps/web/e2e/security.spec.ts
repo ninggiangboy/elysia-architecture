@@ -97,7 +97,7 @@ test.describe
 
     test('confirm with an emailed code, then remove the passkey', async () => {
       // A full page load restores the session from the cookie: stale again.
-      await page.goto('/security')
+      await page.goto('/settings/security')
       await expect(page.getByTestId('passkey')).toHaveCount(1)
       await page.getByRole('button', { name: 'Remove' }).click()
       await page

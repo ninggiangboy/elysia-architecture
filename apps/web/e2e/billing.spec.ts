@@ -59,15 +59,9 @@ test('the wallet pages: empty states, navigation, and the page Stripe returns to
     page.getByTestId('topup-disabled').or(page.getByTestId('currency-usd')),
   ).toBeVisible()
 
-  // The old addresses (bookmarks, notifications already sent) lead to the new ones.
-  await page.goto('/transactions')
-  await expect(page).toHaveURL(/\/settings\/wallet$/)
-  await page.goto('/wallet')
-  await expect(page).toHaveURL(/\/settings\/wallet$/)
-
   // Stripe appends its own parameters; ours is the only one the page reads.
   await page.goto(
-    '/topup/return?topUp=00000000-0000-7000-8000-000000000000&redirect_status=succeeded',
+    '/settings/wallet/topup/return?topUp=00000000-0000-7000-8000-000000000000&redirect_status=succeeded',
   )
   await expect(page.getByTestId('return-unknown')).toBeVisible()
   await expect(page.getByRole('link', { name: 'Try again' })).toBeVisible()
