@@ -58,6 +58,10 @@
     "packages/kit-privacy-participant": {
       "entry": [],
       "project": ["src/**/*.ts"]
+    },
+    "packages/kit-runtime": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
     }
   },
   "rules": {

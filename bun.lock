@@ -28,6 +28,7 @@
         "@kit/mail": "workspace:*",
         "@kit/messaging": "workspace:*",
         "@kit/privacy-participant": "workspace:*",
+        "@kit/runtime": "workspace:*",
         "@kit/storage": "workspace:*",
         "@kit/telemetry": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
@@ -217,6 +218,27 @@
       },
       "devDependencies": {
         "@types/bun": "latest",
+      },
+    },
+    "packages/kit-runtime": {
+      "name": "@kit/runtime",
+      "dependencies": {
+        "@kit/config": "workspace:*",
+        "@kit/db": "workspace:*",
+        "@kit/messaging": "workspace:*",
+        "@kit/privacy-participant": "workspace:*",
+        "@kit/telemetry": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
+      },
+      "peerDependencies": {
+        "drizzle-orm": "^0.45.4",
+        "elysia": "^1.4.0",
+        "zod": "^4.1.0",
       },
     },
     "packages/kit-storage": {
@@ -525,6 +547,8 @@
     "@kit/messaging": ["@kit/messaging@workspace:packages/kit-messaging"],
 
     "@kit/privacy-participant": ["@kit/privacy-participant@workspace:packages/kit-privacy-participant"],
+
+    "@kit/runtime": ["@kit/runtime@workspace:packages/kit-runtime"],
 
     "@kit/storage": ["@kit/storage@workspace:packages/kit-storage"],
 

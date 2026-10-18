@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { OutboxRelay } from '@kit/messaging'
+import type { MaintenanceState } from '@kit/runtime'
 import { eq } from 'drizzle-orm'
 import { outbox } from '#/modules/identity/infrastructure/persistence/schema'
-import type { MaintenanceState } from '#/shared/runtime'
 import { client, createTestApp, eventually, sleep, type TestApp } from './helpers'
 
 // The flag comes from an in-memory store, not the database: toggling the real one would put any other process on this

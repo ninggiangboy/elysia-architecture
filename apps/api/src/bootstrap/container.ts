@@ -4,6 +4,8 @@ import type { Mailer } from '@kit/mail'
 import { SmtpMailer } from '@kit/mail'
 import { InProcessMessageBus, OutboxRelay } from '@kit/messaging'
 import type { PrivacyParticipation } from '@kit/privacy-participant'
+import type { AppModule } from '@kit/runtime'
+import { MaintenanceMode, MaintenanceStore } from '@kit/runtime'
 import { S3ObjectStorage } from '@kit/storage'
 import type { Logger } from '@kit/telemetry'
 import type { Config } from '#/bootstrap/config'
@@ -28,8 +30,6 @@ import { privacyRealtime } from '#/modules/privacy/integrations/realtime'
 import { createPrivacyModule } from '#/modules/privacy/privacy.module'
 import { createProfileModule } from '#/modules/profile/profile.module'
 import { createRealtimeModule } from '#/modules/realtime/realtime.module'
-import type { AppModule } from '#/shared/runtime'
-import { MaintenanceMode, MaintenanceStore } from '#/shared/runtime'
 
 /**
  * Composition root — the ONLY place that knows concrete adapters and how modules are wired together.

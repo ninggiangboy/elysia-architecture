@@ -8,9 +8,9 @@ import {
   requestContextPlugin,
   tracingPlugin,
 } from '@kit/http'
+import { healthRoutes } from '@kit/runtime'
 import { Elysia } from 'elysia'
 import type { Container } from '#/bootstrap/container'
-import { healthRoutes } from '#/shared/runtime'
 
 /** Shared by main.ts and e2e tests. `App` is the type the web app uses to infer the client (Eden Treaty). */
 export function buildApp(container: Container) {

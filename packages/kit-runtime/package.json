@@ -1,0 +1,30 @@
+{
+  "name": "@kit/runtime",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src"
+  },
+  "dependencies": {
+    "@kit/config": "workspace:*",
+    "@kit/db": "workspace:*",
+    "@kit/messaging": "workspace:*",
+    "@kit/privacy-participant": "workspace:*",
+    "@kit/telemetry": "workspace:*"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-orm": "^0.45.4",
+    "elysia": "^1.4.0",
+    "zod": "^4.1.0"
+  }
+}
