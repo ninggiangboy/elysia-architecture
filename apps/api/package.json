@@ -30,6 +30,7 @@
     "@app/shared-types": "workspace:*",
     "@elysiajs/cors": "^1.4.0",
     "@elysiajs/openapi": "^1.4.0",
+    "@kit/context": "workspace:*",
     "@kit/core": "workspace:*",
     "@kit/i18n": "workspace:*",
     "@opentelemetry/api": "^1.9.1",

@@ -1,5 +1,5 @@
+import { requestContext } from '@kit/context'
 import { Elysia } from 'elysia'
-import { requestContext } from '#/shared/context'
 
 const SAFE_ID = /^[\w.-]{1,64}$/
 

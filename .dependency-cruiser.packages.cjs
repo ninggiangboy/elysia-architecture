@@ -4,9 +4,7 @@ const KIT_GRAPH = {
 }
 
 module.exports = {
-  forbidden: [
-    { name: 'no-circular', severity: 'error', from: {}, to: { circular: true } },
-  ],
+  forbidden: [{ name: 'no-circular', severity: 'error', from: {}, to: { circular: true } }],
   options: {
     doNotFollow: { path: 'node_modules' },
     tsPreCompilationDeps: true,

@@ -18,6 +18,7 @@
         "@app/shared-types": "workspace:*",
         "@elysiajs/cors": "^1.4.0",
         "@elysiajs/openapi": "^1.4.0",
+        "@kit/context": "workspace:*",
         "@kit/core": "workspace:*",
         "@kit/i18n": "workspace:*",
         "@opentelemetry/api": "^1.9.1",
@@ -80,6 +81,16 @@
         "tailwindcss": "^4.3.3",
         "typescript": "^5.9.0",
         "vite": "^8.3.4",
+      },
+    },
+    "packages/kit-context": {
+      "name": "@kit/context",
+      "devDependencies": {
+        "@opentelemetry/api": "^1.9.1",
+        "@types/bun": "latest",
+      },
+      "peerDependencies": {
+        "@opentelemetry/api": "^1.9.1",
       },
     },
     "packages/kit-core": {
@@ -347,6 +358,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@kit/context": ["@kit/context@workspace:packages/kit-context"],
 
     "@kit/core": ["@kit/core@workspace:packages/kit-core"],
 

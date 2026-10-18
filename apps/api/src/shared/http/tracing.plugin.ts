@@ -1,6 +1,6 @@
+import { requestContext } from '@kit/context'
 import { type Span, SpanStatusCode } from '@opentelemetry/api'
 import { Elysia } from 'elysia'
-import { requestContext } from '#/shared/context'
 import {
   contextFromTraceparent,
   recordSpanError,

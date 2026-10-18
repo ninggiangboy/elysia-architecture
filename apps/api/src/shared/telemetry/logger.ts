@@ -1,5 +1,5 @@
+import { requestContext } from '@kit/context'
 import pino from 'pino'
-import { requestContext } from '#/shared/context'
 
 export type Logger = pino.Logger
 

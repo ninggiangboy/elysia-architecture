@@ -1,5 +1,5 @@
+import { requestContext } from '@kit/context'
 import type { DomainEvent } from '@kit/core'
-import { requestContext } from '#/shared/context'
 import type { Database } from '#/shared/db'
 import { currentTraceparent } from '#/shared/telemetry'
 import type { OutboxWriter } from '../ports'

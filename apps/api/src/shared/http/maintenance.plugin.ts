@@ -1,5 +1,5 @@
+import { requestContext } from '@kit/context'
 import { Elysia } from 'elysia'
-import { requestContext } from '#/shared/context'
 import { API_PREFIX } from './constants'
 
 const HEALTH_PREFIX = `${API_PREFIX}/health/`

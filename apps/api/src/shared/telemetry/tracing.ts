@@ -1,3 +1,4 @@
+import { requestContext } from '@kit/context'
 import {
   type Attributes,
   type Context,
@@ -12,7 +13,6 @@ import {
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { resourceFromAttributes } from '@opentelemetry/resources'
 import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
-import { requestContext } from '#/shared/context'
 
 // Without a registered provider every call below is a no-op, so tracing costs nothing when it is not configured.
 const tracer = trace.getTracer('elysia-architecture')

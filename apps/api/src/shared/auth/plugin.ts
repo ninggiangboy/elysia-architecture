@@ -1,6 +1,6 @@
+import { requestContext } from '@kit/context'
 import { UnauthorizedError } from '@kit/core'
 import { Elysia } from 'elysia'
-import { requestContext } from '#/shared/context'
 import { bearerSecurity, errorResponse } from '#/shared/http'
 
 export interface AuthSession {
