@@ -23,7 +23,7 @@
     "@kit/config": "workspace:*",
     "@kit/core": "workspace:*",
     "@kit/messaging": "workspace:*",
-    "nodemailer": "^10.1.1"
+    "nodemailer": "^10.1.7"
   },
   "peerDependencies": {
     "zod": "^4.1.0"
