@@ -29,7 +29,7 @@
     "@mod/identity": "workspace:*",
     "@mod/profile": "workspace:*",
     "elysia": "^1.4.0",
-    "jose": "^6.1.0"
+    "jose": "^6.2.13"
   },
   "devDependencies": {
     "@types/bun": "latest"
