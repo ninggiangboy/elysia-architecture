@@ -74,7 +74,7 @@
     "@kit/storage": "workspace:*",
     "@mod/identity": "workspace:*",
     "@mod/profile": "workspace:*",
-    "stripe": "^23.0.0"
+    "stripe": "^23.0.1"
   },
   "peerDependencies": {
     "@mod/notification": "workspace:*",

@@ -37,12 +37,12 @@
     "check:docs": "bun scripts/package-docs.ts --check"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.0",
+    "@biomejs/biome": "^2.6.3",
     "@changesets/cli": "^2.29.0",
-    "dependency-cruiser": "^18.6.0",
+    "dependency-cruiser": "^18.7.0",
     "drizzle-kit": "^0.31.0",
-    "jscpd": "^5.4.1",
-    "knip": "^6.41.0",
+    "jscpd": "^5.4.2",
+    "knip": "^6.43.0",
     "postgres": "^3.4.7",
     "typescript": "^5.9.0"
   }
